@@ -1,0 +1,47 @@
+name: NAV LFS cross-toolchain stage
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  toolchain:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: Guarded verified-source binutils and GCC pass1
+      shell: bash
+      run: |
+        python3 - <<'NAV_GUARD'
+        import os,pathlib,shutil,subprocess,time,signal,json
+        mem=lambda: int(next(x.split()[1] for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:')))
+        assert os.cpu_count()>=4
+        assert mem()>8*1024**2
+        assert shutil.disk_usage('/mnt').free>12*1024**3
+        p=pathlib.Path('/tmp/nav-source-stage.sh');p.write_text('set -euo pipefail\nexport LFS=/mnt/nav-lfs\nexport LFS_TGT=x86_64-lfs-linux-gnu\nexport LC_ALL=POSIX\nexport PATH="$LFS/tools/bin:/usr/bin:/bin"\nexport CONFIG_SITE="$LFS/usr/share/config.site"\nexport MAKEFLAGS=-j2\nulimit -v 4194304\numask 022\nsudo mkdir -p "$LFS" /mnt/nav-build\nsudo chown "$(id -u):$(id -g)" "$LFS" /mnt/nav-build\n# Only the disposable build host shell changes. No binary host packages enter LFS.\nsudo ln -sf bash /bin/sh\nmkdir -p /mnt/nav-build/sources\ncd /mnt/nav-build/sources\npython3 - <<\'PY\'\nimport urllib.request,hashlib,pathlib,json\nlock=json.loads(\'{"foundation": "LFS13.1-systemd", "sources": [{"filename": "binutils-2.47.tar.xz", "url": "https://sourceware.org/pub/binutils/releases/binutils-2.47.tar.xz", "bytes": 29034716, "book_md5": "d772acfbd55a81644e9fe7b8189cd2a5", "sha256": "154ab23b60070e8f27013c22977f1129425d67d1e8acd6e13010e617811e4cff"}, {"filename": "gcc-16.2.0.tar.xz", "url": "https://ftpmirror.gnu.org/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz", "bytes": 107200820, "book_md5": "19b777fb19ea4982731392481306f0d3", "sha256": "e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e"}, {"filename": "mpfr-4.2.2.tar.xz", "url": "https://ftpmirror.gnu.org/mpfr/mpfr-4.2.2.tar.xz", "bytes": 1505596, "book_md5": "7c32c39b8b6e3ae85f25156228156061", "sha256": "b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01"}, {"filename": "gmp-6.3.0.tar.xz", "url": "https://ftpmirror.gnu.org/gmp/gmp-6.3.0.tar.xz", "bytes": 2094196, "book_md5": "956dc04e864001a9c22429f761f2c283", "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898"}, {"filename": "mpc-1.4.1.tar.xz", "url": "https://ftpmirror.gnu.org/mpc/mpc-1.4.1.tar.xz", "bytes": 531992, "book_md5": "40c5fba305125279ea46041160e81daf", "sha256": "91204cd32f164bd3b7c992d4a6a8ce6519511aadab30f78b6982d0bf8d73e931"}]}\')\nfor r in lock[\'sources\']:\n p=pathlib.Path(r[\'filename\'])\n with urllib.request.urlopen(r[\'url\'],timeout=90) as response:\n  b=response.read(r[\'bytes\']+1)\n assert len(b)==r[\'bytes\']\n assert hashlib.sha256(b).hexdigest()==r[\'sha256\'],r[\'filename\']\n p.write_bytes(b)\n print(\'SOURCE_SHA256_OK\',r[\'filename\'],flush=True)\nPY\ncd /mnt/nav-build\ntar -xf sources/binutils-2.47.tar.xz\nmkdir -p binutils-2.47/build\ncd binutils-2.47/build\nSECONDS=0\n../configure --prefix="$LFS/tools" --with-sysroot="$LFS" --target="$LFS_TGT" --disable-nls --enable-gprofng=no --disable-werror --enable-new-dtags --enable-default-hash-style=gnu\nmake -j2\nmake install\nprintf \'BINUTILS_PASS1_SECONDS=%s\\n\' "$SECONDS"\ncd /mnt/nav-build\ntar -xf sources/gcc-16.2.0.tar.xz\ncd gcc-16.2.0\nfor dep in mpfr-4.2.2 gmp-6.3.0 mpc-1.4.1; do tar -xf ../sources/"$dep".tar.xz; mv "$dep" "${dep%%-*}"; done\nsed -e \'/m64=/s/lib64/lib/\' -i.orig gcc/config/i386/t-linux64\nmkdir build\ncd build\n../configure --target="$LFS_TGT" --prefix="$LFS/tools" --with-glibc-version=2.44 --with-sysroot="$LFS" --with-newlib --without-headers --enable-default-pie --enable-default-ssp --disable-fixincludes --disable-nls --disable-shared --disable-multilib --disable-threads --disable-libatomic --disable-libgomp --disable-libquadmath --disable-libssp --disable-libvtv --disable-libstdcxx --enable-languages=c,c++ --with-matchpd-partitions=40\nmake -j2\nmake install\ncat ../gcc/{limitx,glimits,limity}.h > "$("$LFS_TGT-gcc" -print-file-name=include)/limits.h"\nprintf \'int nav_bootstrap_smoke(void){return 42;}\\n\' > /mnt/nav-build/smoke.c\n"$LFS_TGT-gcc" -ffreestanding -c /mnt/nav-build/smoke.c -o /mnt/nav-build/smoke.o\n"$LFS_TGT-readelf" -h /mnt/nav-build/smoke.o\n"$LFS_TGT-gcc" -dumpmachine\n"$LFS_TGT-gcc" --version | head -1\nprintf \'GCC_PASS1_COMPLETE: source-built cross compiler emitted target ELF. No libc, kernel or bootable system yet.\\n\'\ndu -sh "$LFS/tools"\ntest "$(du -sm "$LFS/tools" | cut -f1)" -lt 2048\n\nmkdir -p "$LFS/nav-build-metadata"\nprintf \'%s\\n\' \'LFS13.1-systemd source-built binutils pass1 + GCC pass1; not bootable\' > "$LFS/nav-build-metadata/stage.txt"\n')
+        start=time.monotonic();log=open('/tmp/nav-source-stage.log','w');proc=subprocess.Popen(['bash',str(p)],stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+        try:
+         while proc.poll() is None:
+          free=shutil.disk_usage('/mnt').free;available=mem()
+          if free<4*1024**3 or available<2*1024**2 or time.monotonic()-start>315*60:
+           raise RuntimeError('resource or stage-time safety floor reached')
+          print(json.dumps({'elapsed_seconds':round(time.monotonic()-start),'free_disk_bytes':free,'available_memory_kib':available}),flush=True)
+          time.sleep(20)
+         if proc.returncode:raise RuntimeError('source-build failed with status '+str(proc.returncode))
+        finally:
+         if proc.poll() is None:
+          os.killpg(proc.pid,signal.SIGTERM)
+          try:proc.wait(timeout=10)
+          except subprocess.TimeoutExpired:os.killpg(proc.pid,signal.SIGKILL);proc.wait()
+         log.close()
+         lines=pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()
+         print('\n'.join(lines[-80:]))
+        NAV_GUARD
+    - name: Save source-built tools only within free cache allowance
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+      with:
+        path: /mnt/nav-lfs
+        key: nav-lfs13.1-x86_64-cross-v1
