@@ -1,0 +1,60 @@
+name: NAV LFS target libc stage
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  target-libc:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: Prepare owned isolated target directory
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo mkdir -p /mnt/nav-lfs
+        sudo chown "$(id -u):$(id -g)" /mnt/nav-lfs
+    - name: Restore exact source-built cross tools
+      id: cross
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-lfs
+        key: nav-lfs13.1-x86_64-cross-v1
+        fail-on-cache-miss: true
+    - name: Guarded target kernel API headers glibc and libstdc++
+      shell: bash
+      run: |
+        python3 - <<'NAV_GUARD'
+        import os,pathlib,shutil,subprocess,time,signal,json
+        mem=lambda: int(next(x.split()[1] for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:')))
+        assert os.cpu_count()>=4
+        assert mem()>8*1024**2
+        assert shutil.disk_usage('/mnt').free>12*1024**3
+        p=pathlib.Path('/tmp/nav-source-stage.sh');p.write_text('set -euo pipefail\nexport LFS=/mnt/nav-lfs LFS_TGT=x86_64-lfs-linux-gnu LC_ALL=POSIX\nexport PATH="$LFS/tools/bin:/usr/bin:/bin"\nexport CONFIG_SITE="$LFS/usr/share/config.site"\nexport MAKEFLAGS=-j2\nulimit -v 4194304\numask 022\ntest -x "$LFS/tools/bin/$LFS_TGT-gcc"\ntest "$("$LFS_TGT-gcc" -dumpmachine)" = "$LFS_TGT"\nsudo mkdir -p /mnt/nav-build\nsudo chown "$(id -u):$(id -g)" /mnt/nav-build "$LFS"\nsudo ln -sf bash /bin/sh\nmkdir -p "$LFS"/{etc,var,usr/{bin,lib,sbin},tools,lib64}\nfor i in bin lib sbin; do ln -sfn "usr/$i" "$LFS/$i"; done\nln -sf ../lib/ld-linux-x86-64.so.2 "$LFS/lib64/ld-linux-x86-64.so.2"\nln -sf ../lib/ld-linux-x86-64.so.2 "$LFS/lib64/ld-lsb-x86-64.so.3"\nmkdir -p /mnt/nav-build/sources\ncd /mnt/nav-build/sources\npython3 - <<\'PY\'\nimport urllib.request,hashlib,pathlib,json\nlock=json.loads(\'{"foundation": "LFS13.1-systemd", "sources": [{"filename": "gcc-16.2.0.tar.xz", "url": "https://ftpmirror.gnu.org/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz", "bytes": 107200820, "book_md5": "19b777fb19ea4982731392481306f0d3", "sha256": "e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e"}, {"filename": "linux-7.1.8.tar.xz", "url": "https://www.kernel.org/pub/linux/kernel/v7.x/linux-7.1.8.tar.xz", "bytes": 158434924, "book_md5": "807584f564568b40162e9e4a72bf191f", "sha256": "ff01dcb449279d5b4cfccdb01fee639cf5ff1803f1749a77844dd33915422c49"}, {"filename": "glibc-2.44.tar.xz", "url": "https://ftpmirror.gnu.org/glibc/glibc-2.44.tar.xz", "bytes": 20620544, "book_md5": "7677da43ef759c68e005f5d4c37986a6", "sha256": "37f600f2bef3c5e8300147059568b2a2e40a7ad6ccc65ce942556d49429cc667"}, {"filename": "glibc-fhs-1.patch", "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/glibc-fhs-1.patch", "bytes": 2804, "book_md5": "9a5997c3452909b1769918c759eff8a2", "sha256": "643552db030e2f2d7ffde4f558e0f5f83d3fabf34a2e0e56ebdb49750ac27b0d"}, {"filename": "glibc-2.44-upstream_fixes-1.patch", "url": "https://www.linuxfromscratch.org/patches/lfs/13.1/glibc-2.44-upstream_fixes-1.patch", "bytes": 175367, "book_md5": "990574184b25aa3029a2444e81865098", "sha256": "500567ff0a22e295bfe3b55e9b397796f71a19f01e1ff7fb29c9189482ee1809"}]}\')\nfor r in lock[\'sources\']:\n with urllib.request.urlopen(r[\'url\'],timeout=90) as response:b=response.read(r[\'bytes\']+1)\n assert len(b)==r[\'bytes\']\n assert hashlib.sha256(b).hexdigest()==r[\'sha256\'],r[\'filename\']\n pathlib.Path(r[\'filename\']).write_bytes(b)\n print(\'SOURCE_SHA256_OK\',r[\'filename\'],flush=True)\nPY\ncd /mnt/nav-build\ntar -xf sources/linux-7.1.8.tar.xz\ncd linux-7.1.8\nmake mrproper\nmake -j2 headers\nfind usr/include -type f ! -name \'*.h\' -delete\ncp -r usr/include "$LFS/usr"\nprintf \'KERNEL_API_HEADERS_INSTALLED: not a kernel build.\\n\'\ncd /mnt/nav-build\ncp sources/glibc-*.patch .\ntar -xf sources/glibc-2.44.tar.xz\ncd glibc-2.44\npatch -Np1 -i ../glibc-fhs-1.patch\npatch -Np1 -i ../glibc-2.44-upstream_fixes-1.patch\nmkdir build\ncd build\nprintf \'rootsbindir=/usr/sbin\\n\' > configparms\n../configure --prefix=/usr --host="$LFS_TGT" --build="$(../scripts/config.guess)" --disable-nscd libc_cv_slibdir=/usr/lib --enable-kernel=5.10\nmake -j2\nmake DESTDIR="$LFS" install\nsed \'/RTLDLIST=/s@/usr@@g\' -i "$LFS/usr/bin/ldd"\ncd /mnt/nav-build\nprintf \'#include <stdio.h>\\nint main(void){puts("NAV_TARGET_LIBC_OK");return 0;}\\n\' > libc-smoke.c\n"$LFS_TGT-gcc" libc-smoke.c -o libc-smoke -v -Wl,--verbose > libc-link.log 2>&1\n"$LFS_TGT-readelf" -l libc-smoke | grep \'interpreter: /lib64/ld-linux-x86-64.so.2\'\ngrep -F "$LFS/usr/include" libc-link.log\ngrep -F "$LFS/usr/lib/libc.so.6 succeeded" libc-link.log\n"$LFS/usr/lib/ld-linux-x86-64.so.2" --library-path "$LFS/usr/lib" ./libc-smoke\nprintf \'TARGET_LIBC_LINK_AND_EXEC_PASS\\n\'\ntar -xf sources/gcc-16.2.0.tar.xz\ncd gcc-16.2.0\nmkdir build\ncd build\n../libstdc++-v3/configure --host="$LFS_TGT" --build="$(../config.guess)" CXX="$LFS_TGT-gcc" --prefix=/usr --disable-multilib --disable-nls --disable-libstdcxx-pch --with-gxx-include-dir="/tools/$LFS_TGT/include/c++/16.2.0"\nmake -j2\nmake DESTDIR="$LFS" install\nrm -f "$LFS/usr/lib/libstdc++.la" "$LFS/usr/lib/libstdc++exp.la" "$LFS/usr/lib/libstdc++fs.la" "$LFS/usr/lib/libsupc++.la"\ncd /mnt/nav-build\nprintf \'#include <iostream>\\n#include <vector>\\nint main(){std::vector<int> v{19,23};std::cout<<"NAV_TARGET_CXX_OK "<<v[0]+v[1]<<"\\\\n";return 0;}\\n\' > cxx-smoke.cc\n"$LFS_TGT-g++" cxx-smoke.cc -o cxx-smoke\n"$LFS/usr/lib/ld-linux-x86-64.so.2" --library-path "$LFS/usr/lib" ./cxx-smoke\n"$LFS/usr/lib/ld-linux-x86-64.so.2" --library-path "$LFS/usr/lib" --list ./cxx-smoke\nmkdir -p "$LFS/nav-build-metadata"\nprintf \'LFS13.1 chapter5 complete: binutils/GCC pass1,API headers,glibc,libstdc++. Not bootable. No chapter8 test suites claimed.\\n\' > "$LFS/nav-build-metadata/stage.txt"\nsha256sum "$LFS/tools/bin/$LFS_TGT-gcc" "$LFS/usr/lib/libc.so.6" "$LFS/usr/lib/libstdc++.so.6" > "$LFS/nav-build-metadata/stage2-hashes.txt"\nprintf \'LFS_CHAPTER5_COMPLETE: target C and C++ link and execution smoke checks passed.\\n\'\ndu -sh "$LFS"\ntest "$(du -sm "$LFS" | cut -f1)" -lt 3072\n')
+        start=time.monotonic();log=open('/tmp/nav-source-stage.log','w');proc=subprocess.Popen(['bash',str(p)],stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+        try:
+         while proc.poll() is None:
+          free=shutil.disk_usage('/mnt').free;available=mem()
+          if free<4*1024**3 or available<2*1024**2 or time.monotonic()-start>315*60:
+           raise RuntimeError('resource or stage-time safety floor reached')
+          print(json.dumps({'elapsed_seconds':round(time.monotonic()-start),'free_disk_bytes':free,'available_memory_kib':available}),flush=True)
+          time.sleep(20)
+         if proc.returncode:raise RuntimeError('source-build failed with status '+str(proc.returncode))
+        finally:
+         if proc.poll() is None:
+          os.killpg(proc.pid,signal.SIGTERM)
+          try:proc.wait(timeout=10)
+          except subprocess.TimeoutExpired:os.killpg(proc.pid,signal.SIGKILL);proc.wait()
+         log.close()
+         lines=pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()
+         print('\n'.join(lines[-80:]))
+        NAV_GUARD
+    - name: Preserve chapter5 checkpoint within free cache
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-lfs
+        key: nav-lfs13.1-x86_64-chapter5-v1
