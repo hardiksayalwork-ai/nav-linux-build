@@ -1,0 +1,40 @@
+name: NAV source-build capacity preflight
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  capacity:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check public standard-runner capacity without downloads or uploads
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = hardiksayalwork-ai/nav-linux-build
+          printf 'Public source-build preflight only. No artifacts, cache, private minutes or paid runners.\n'
+          uname -m
+          nproc
+          free -h
+          df -h "$GITHUB_WORKSPACE" /mnt
+          python3 - <<'PY'
+          import json,os,pathlib,shutil
+          mem=dict((x.split(':')[0],int(x.split()[1])) for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if len(x.split())>=2)
+          disk=shutil.disk_usage(os.environ['GITHUB_WORKSPACE'])
+          r={'cpus':os.cpu_count(),'available_memory_kib':mem['MemAvailable'],'workspace_free_bytes':disk.free,'architecture':os.uname().machine,'build_started':False}
+          print(json.dumps(r,indent=2))
+          assert r['architecture']=='x86_64'
+          assert r['cpus']>=4
+          assert r['available_memory_kib']>=8*1024**2
+          assert disk.free>=12*1024**3,'Need at least12GiB free for guarded bootstrap planning'
+          PY
+          gcc --version | head -1
+          g++ --version | head -1
+          command -v bison makeinfo gawk make
+          sudo -n true
+          printf 'PREFLIGHT_PASS: hardware checks passed; no compiler build started.\n'
