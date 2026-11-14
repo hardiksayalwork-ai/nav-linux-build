@@ -29,21 +29,42 @@ jobs:
     - name: Restore audited c evidence
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
       with:
-        path: /mnt/nav-audits/c
+        path: /mnt/nav-gcc-report
         key: nav-lfs13.1-x86_64-gcc-test-c-v1
         fail-on-cache-miss: true
+    - name: Stage c audit
+      shell: bash
+      run: 'sudo cp -a /mnt/nav-gcc-report/. /mnt/nav-audits/c/
+
+        rm -rf /mnt/nav-gcc-report
+
+        '
     - name: Restore audited cxx evidence
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
       with:
-        path: /mnt/nav-audits/cxx
+        path: /mnt/nav-gcc-report
         key: nav-lfs13.1-x86_64-gcc-test-cxx-v1
         fail-on-cache-miss: true
+    - name: Stage cxx audit
+      shell: bash
+      run: 'sudo cp -a /mnt/nav-gcc-report/. /mnt/nav-audits/cxx/
+
+        rm -rf /mnt/nav-gcc-report
+
+        '
     - name: Restore audited runtime evidence
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
       with:
-        path: /mnt/nav-audits/runtime
+        path: /mnt/nav-gcc-report
         key: nav-lfs13.1-x86_64-gcc-test-runtime-v1
         fail-on-cache-miss: true
+    - name: Stage runtime audit
+      shell: bash
+      run: 'sudo cp -a /mnt/nav-gcc-report/. /mnt/nav-audits/runtime/
+
+        rm -rf /mnt/nav-gcc-report
+
+        '
     - name: Verify all audits install and prove final compiler
       shell: bash
       run: "python3 - <<'NAV_GUARD'\nimport os,pathlib,shutil,subprocess,time,signal,json\nos.environ[\"NAV_GCC_TEST_GROUP\"]=\"runtime\"\nassert os.environ[\"NAV_GCC_TEST_GROUP\"] in (\"c\",\"cxx\",\"runtime\")\nmem=lambda: int(next(x.split()[1] for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:')))\nassert os.cpu_count()>=4\nassert mem()>8*1024**2\nassert shutil.disk_usage('/mnt').free>12*1024**3\np=pathlib.Path('/tmp/nav-source-stage.sh');p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\npython3 - <<\\'ARCHIVE_VERIFY\\'\\nimport pathlib,json,hashlib\\np=pathlib.Path(\\'/mnt/nav-gcc-checkpoint\\');m=json.loads((p/\\'manifest.json\\').read_text());h=hashlib.sha256()\\nwith (p/\\'root.tar.zst\\').open(\\'rb\\') as f:\\n for b in iter(lambda:f.read(8*1024**2),b\\'\\'):h.update(b)\\nassert m[\\'sha256\\']==h.hexdigest() and m[\\'bytes\\']==(p/\\'root.tar.zst\\').stat().st_size\\nprint(\\'NAV_GCC_TEST_ARCHIVE_SHA256_OK\\\
