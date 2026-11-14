@@ -14,9 +14,9 @@ jobs:
     steps:
     - name: Prepare owned isolated target directory
       shell: bash
-      run: 'sudo mkdir -p /mnt/nav-gcc-checkpoint /mnt/nav-audits/{c,cxx,runtime}
+      run: 'sudo mkdir -p /mnt/nav-gcc-checkpoint /mnt/nav-gcc-report /mnt/nav-audits/{c,cxx,runtime}
 
-        sudo chown -R "$(id -u):$(id -g)" /mnt/nav-gcc-checkpoint /mnt/nav-audits
+        sudo chown -R "$(id -u):$(id -g)" /mnt/nav-gcc-checkpoint /mnt/nav-gcc-report /mnt/nav-audits
 
         '
     - name: Restore immutable build-only archive
@@ -36,7 +36,7 @@ jobs:
       shell: bash
       run: 'sudo cp -a /mnt/nav-gcc-report/. /mnt/nav-audits/c/
 
-        rm -rf /mnt/nav-gcc-report
+        rm -rf /mnt/nav-gcc-report/*
 
         '
     - name: Restore audited cxx evidence
@@ -49,7 +49,7 @@ jobs:
       shell: bash
       run: 'sudo cp -a /mnt/nav-gcc-report/. /mnt/nav-audits/cxx/
 
-        rm -rf /mnt/nav-gcc-report
+        rm -rf /mnt/nav-gcc-report/*
 
         '
     - name: Restore audited runtime evidence
@@ -62,7 +62,7 @@ jobs:
       shell: bash
       run: 'sudo cp -a /mnt/nav-gcc-report/. /mnt/nav-audits/runtime/
 
-        rm -rf /mnt/nav-gcc-report
+        rm -rf /mnt/nav-gcc-report/*
 
         '
     - name: Verify all audits install and prove final compiler
