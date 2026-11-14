@@ -1,0 +1,44 @@
+name: NAV source CMake strict CTest suite
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  cmake:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: Prepare owned isolated target directory
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo mkdir -p /mnt/nav-lfs
+
+        sudo chown "$(id -u):$(id -g)" /mnt/nav-lfs
+
+        '
+    - name: Restore tested build infrastructure checkpoint
+      id: cross
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-lfs
+        key: nav-blfs13.1-x86_64-network-base-v1
+        fail-on-cache-miss: true
+    - name: Build CMake and run strict CTest
+      shell: bash
+      run: "python3 - <<'NAV_GUARD'\nimport os,pathlib,shutil,subprocess,time,signal,json\nmem=lambda: int(next(x.split()[1] for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:')))\nassert os.cpu_count()>=4\nassert mem()>8*1024**2\nassert shutil.disk_usage('/mnt').free>12*1024**3\np=pathlib.Path('/tmp/nav-source-stage.sh');p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\ntest -x \"$LFS/usr/bin/gcc\"\\ntest -f \"$LFS/nav-build-metadata/stage.txt\"\\nmkdir -p \"$LFS/sources\"\\ncd \"$LFS/sources\"\\npython3 - <<\\'LOCKED_SOURCES\\'\\nimport urllib.request,hashlib,pathlib,json\\nlock=json.loads(\\'{\"foundation\": \"BLFS13.1-systemd\", \"sources\": [{\"filename\": \"cmake-4.4.2.tar.gz\", \"url\": \"https://cmake.org/files/v4.4/cmake-4.4.2.tar.gz\", \"bytes\": 13283673, \"book_md5\": \"6911f0379d901db23619413f092b99ef\", \"sha256\": \"1db9e61e60b6e0874c86386340b910382f3c5e75b9fbfb44d122063129a2789d\"\
+        }]}\\')\\nfor r in lock[\\'sources\\']:\\n with urllib.request.urlopen(r[\\'url\\'],timeout=90) as response:b=response.read(r[\\'bytes\\']+1)\\n assert len(b)==r[\\'bytes\\'] and hashlib.sha256(b).hexdigest()==r[\\'sha256\\'],r[\\'filename\\']\\n pathlib.Path(r[\\'filename\\']).write_bytes(b)\\n print(\\'SOURCE_SHA256_OK\\',r[\\'filename\\'],flush=True)\\nLOCKED_SOURCES\\npython3 - <<\\'INNER_SCRIPT\\'\\nimport pathlib\\npathlib.Path(\\'/mnt/nav-lfs/sources/cmake.sh\\').write_text(\\'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir -p /nav-build-metadata/tests\\\\nrun_test(){\\\\n local name=\"$1\";shift\\\\n set +e\\\\n \"$@\" > \"/nav-build-metadata/tests/$name.log\" 2>&1\\\\n local rc=$?\\\\n set -e\\\\n cat \"/nav-build-metadata/tests/$name.log\"\\\\n if [ \"$rc\" -ne 0 ]; then\\\\n  printf \\\\\\'NAV_TEST_FAILURE %s status%s\\\\\\\\n\\\\\\' \"$name\" \"$rc\"\\\\n  tail -500 \"/nav-build-metadata/tests/$name.log\" | sed \"s/^/NAV_TEST_DIAGNOSTIC\
+        \ $name /\"\\\\n  find . -name test-suite.log -o -name testsuite.log -o -name LastTestsFailed.log -o -name LastTest.log | while read -r log; do\\\\n   printf \\\\\\'NAV_TEST_DIAGNOSTIC_FILE %s %s\\\\\\\\n\\\\\\' \"$name\" \"$log\"\\\\n   tail -1000 \"$log\" | sed \"s/^/NAV_TEST_DIAGNOSTIC $name /\"\\\\n  done\\\\n  exit \"$rc\"\\\\n fi\\\\n printf \\\\\\'NAV_PACKAGE_TEST_PASS %s\\\\\\\\n\\\\\\' \"$name\"\\\\n}\\\\ncd /sources\\\\ntar -xf cmake-4.4.2.tar.gz\\\\ncd cmake-4.4.2\\\\nsed -i \\\\\\'/\"lib64\"/s/64//\\\\\\' Modules/GNUInstallDirs.cmake &&\\\\n\\\\n./bootstrap --prefix=/usr        \\\\\\\\\\\\n            --system-libs        \\\\\\\\\\\\n            --mandir=/share/man  \\\\\\\\\\\\n            --no-system-jsoncpp  \\\\\\\\\\\\n            --no-system-cppdap   \\\\\\\\\\\\n            --no-system-librhash \\\\\\\\\\\\n            --docdir=/share/doc/cmake-4.4.2 &&\\\\nmake\\\\nchown -R tester:tester .\\\\nrun_test cmake su tester -c \"bin/ctest --output-on-failure -j2\"\
+        \\\\nmake install\\\\ncmake --version\\\\nctest --version\\\\nmkdir /tmp/nav-cmake-smoke\\\\ncd /tmp/nav-cmake-smoke\\\\nprintf \\\\\\'cmake_minimum_required(VERSION 3.20)\\\\nproject(NAVSmoke C CXX)\\\\nenable_testing()\\\\nadd_executable(nav hello.cpp)\\\\nadd_test(NAME native COMMAND nav)\\\\n\\\\\\' > CMakeLists.txt\\\\nprintf \\\\\\'#include <iostream>\\\\nint main(){std::cout << \"NAV_CMAKE_NATIVE_OK\";return 0;}\\\\n\\\\\\' > hello.cpp\\\\ncmake -S . -B build\\\\ncmake --build build -j2\\\\nctest --test-dir build --output-on-failure\\\\ncd /sources\\\\nrm -rf cmake-4.4.2\\\\nln -sfn /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf\\\\nprintf \\\\\\'BLFS13.1 CMake strict configured CTest suite passed nonroot; native C/C++ project build and test passed.\\\\n\\\\\\' > /nav-build-metadata/stage.txt\\\\nfind /tmp -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +\\\\nprintf \\\\\\'NAV_CMAKE_STAGE_COMPLETE\\\\n\\\\\\'\\\\n\\')\\nINNER_SCRIPT\\nsudo rm -f \"$LFS/etc/resolv.conf\"\
+        \\nsudo cp -L /etc/resolv.conf \"$LFS/etc/resolv.conf\"\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"\
+        $LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/cmake.sh\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nNAV_MOUNT_BUILD\\n# Namespace exit unmounts virtual filesystems before checkpoint. Restore builder\\n# ownership only for readable cache packaging; next native build resets root ownership.\\nsudo rm -f \"$LFS/sources/\"*.tar.* \"$LFS/sources/cmake.sh\"\\nsudo chown -hR \"$(id -u):$(id -g)\" \"$LFS\"\\ndu -sh \"$LFS\"\\ntest \"$(du -sm \"$LFS\" | cut -f1)\" -lt 5120\\n')\nstart=time.monotonic();log=open('/tmp/nav-source-stage.log','w');proc=subprocess.Popen(['bash',str(p)],stdout=log,stderr=subprocess.STDOUT,start_new_session=True)\ntry:\n while\
+        \ proc.poll() is None:\n  free=shutil.disk_usage('/mnt').free;available=mem()\n  if free<4*1024**3 or available<2*1024**2 or time.monotonic()-start>315*60:\n   raise RuntimeError('resource or stage-time safety floor reached')\n  print(json.dumps({'elapsed_seconds':round(time.monotonic()-start),'free_disk_bytes':free,'available_memory_kib':available}),flush=True)\n  time.sleep(20)\n if proc.returncode:raise RuntimeError('source-build failed with status '+str(proc.returncode))\nfinally:\n if proc.poll() is None:\n  os.killpg(proc.pid,signal.SIGTERM)\n  try:proc.wait(timeout=10)\n  except subprocess.TimeoutExpired:os.killpg(proc.pid,signal.SIGKILL);proc.wait()\n log.close()\n lines=pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n print('\\n'.join(lines[-80:]));print('\\n'.join(x for x in lines if any(k in x for k in ['SOURCE_SHA256_OK','BEGIN_FINAL_PACKAGE','DONE_FINAL_PACKAGE','NAV_PACKAGE','NAV_CMAKE','NAV_TEST','NAV_BISON','NAV_TESTER'])))\nNAV_GUARD\n"
+    - name: Preserve tested CMake
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-lfs
+        key: nav-blfs13.1-x86_64-cmake-v1
