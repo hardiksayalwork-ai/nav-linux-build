@@ -1,0 +1,45 @@
+name: NAV LFS stripped base compiler and runtime smoke
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  base-strip:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: Prepare owned isolated target directory
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo mkdir -p /mnt/nav-lfs
+
+        sudo chown "$(id -u):$(id -g)" /mnt/nav-lfs
+
+        '
+    - name: Restore tested build infrastructure checkpoint
+      id: cross
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-lfs
+        key: nav-lfs13.1-x86_64-storage-tools-v1
+        fail-on-cache-miss: true
+    - name: Strip base per LFS and verify native tools
+      shell: bash
+      run: "python3 - <<'NAV_GUARD'\nimport os,pathlib,shutil,subprocess,time,signal,json\nmem=lambda: int(next(x.split()[1] for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:')))\nassert os.cpu_count()>=4\nassert mem()>8*1024**2\nassert shutil.disk_usage('/mnt').free>12*1024**3\np=pathlib.Path('/tmp/nav-source-stage.sh');p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\ntest -x \"$LFS/usr/bin/gcc\"\\ntest -f \"$LFS/nav-build-metadata/stage.txt\"\\nmkdir -p \"$LFS/sources\"\\ncd \"$LFS/sources\"\\npython3 - <<\\'INNER_SCRIPT\\'\\nimport pathlib\\npathlib.Path(\\'/mnt/nav-lfs/sources/base-strip.sh\\').write_text(\\'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nchmod 1777 /tmp /var/tmp\\\\nprintf \\\\\\'NAV_STRIP_BEFORE_KIB \\\\\\';du -xsk /\\\\nsave_usrlib=\"$(cd /usr/lib; ls ld-linux*[^g])\\\\n             libc.so.6\\\\n             libthread_db.so.1\\\\n             libquadmath.so.0.0.0\\\
+        \\n             libstdc++.so.6.0.36\\\\n             libitm.so.1.0.0\\\\n             libatomic.so.1.2.0\"\\\\n\\\\ncd /usr/lib\\\\n\\\\nfor LIB in $save_usrlib; do\\\\n    objcopy --only-keep-debug --compress-debug-sections=zstd $LIB $LIB.dbg\\\\n    cp $LIB /tmp/$LIB\\\\n    strip --strip-unneeded /tmp/$LIB\\\\n    objcopy --add-gnu-debuglink=$LIB.dbg /tmp/$LIB\\\\n    install -vm755 /tmp/$LIB /usr/lib\\\\n    rm /tmp/$LIB\\\\ndone\\\\n\\\\nonline_usrbin=\"bash find strip\"\\\\nonline_usrlib=\"libbfd-2.47.20260726.so\\\\n               libsframe.so.3.0.0\\\\n               libhistory.so.8.3\\\\n               libncursesw.so.6.6\\\\n               libm.so.6\\\\n               libreadline.so.8.3\\\\n               libz.so.1.3.2\\\\n               libzstd.so.1.5.7\\\\n               $(cd /usr/lib; find libnss*.so* -type f)\"\\\\n\\\\nfor BIN in $online_usrbin; do\\\\n    cp /usr/bin/$BIN /tmp/$BIN\\\\n    strip --strip-unneeded /tmp/$BIN\\\\n    install -vm755 /tmp/$BIN /usr/bin\\\
+        \\n    rm /tmp/$BIN\\\\ndone\\\\n\\\\nfor LIB in $online_usrlib; do\\\\n    cp /usr/lib/$LIB /tmp/$LIB\\\\n    strip --strip-unneeded /tmp/$LIB\\\\n    install -vm755 /tmp/$LIB /usr/lib\\\\n    rm /tmp/$LIB\\\\ndone\\\\n\\\\nfor i in $(find /usr/lib -type f -name \\\\\\\\*.so* ! -name \\\\\\\\*dbg) \\\\\\\\\\\\n         $(find /usr/lib -type f -name \\\\\\\\*.a)                 \\\\\\\\\\\\n         $(find /usr/{bin,sbin,libexec} -type f); do\\\\n    case \"$online_usrbin $online_usrlib $save_usrlib\" in\\\\n        *$(basename $i)* )\\\\n            ;;\\\\n        * ) if file -b \"$i\" | grep -Eq \"ELF|current ar archive\"; then strip --strip-unneeded \"$i\"; fi\\\\n            ;;\\\\n    esac\\\\ndone\\\\n\\\\nunset BIN LIB save_usrlib online_usrbin online_usrlib\\\\n\\\\nfind /usr/lib /usr/libexec -name \\\\\\'*.la\\\\\\' -delete\\\\nfind /tmp -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +\\\\nldconfig\\\\ncat > /tmp/nav-native.c <<\\\\\\'C\\\\\\'\\\\n#include <stdio.h>\\\\nint\
+        \ main(void){puts(\"NAV_STRIPPED_C_OK\");return 0;}\\\\nC\\\\ngcc /tmp/nav-native.c -o /tmp/nav-native\\\\n/tmp/nav-native\\\\ncat > /tmp/nav-native.cc <<\\\\\\'CXX\\\\\\'\\\\n#include <iostream>\\\\n#include <vector>\\\\nint main(){std::vector<int> x{6,7};std::cout<<x[0]*x[1]<<std::endl;}\\\\nCXX\\\\ng++ /tmp/nav-native.cc -o /tmp/nav-native-cxx\\\\ntest \"$(/tmp/nav-native-cxx)\" = 42\\\\npython3 - <<\\\\\\'PY_SMOKE\\\\\\'\\\\nimport ssl,sqlite3,ctypes,decimal,subprocess\\\\nassert sqlite3.connect(\\\\\\':memory:\\\\\\').execute(\\\\\\'select 6*7\\\\\\').fetchone()==(42,)\\\\nassert decimal.Decimal(\\\\\\'1.2\\\\\\')*2==decimal.Decimal(\\\\\\'2.4\\\\\\')\\\\nassert subprocess.check_output([\\\\\\'bash\\\\\\',\\\\\\'-c\\\\\\',\\\\\\'printf OK\\\\\\'])==b\\\\\\'OK\\\\\\'\\\\nprint(\\\\\\'NAV_STRIPPED_PYTHON_CXX_OK\\\\\\')\\\\nPY_SMOKE\\\\n/usr/lib/systemd/systemd --version\\\\nudevadm --version\\\\nopenssl version\\\\ntest \"$(printf abc | openssl dgst -sha256 | awk \\\\\\'{print\
+        \ $NF}\\\\\\')\" = ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\\\\nvim --clean -es +\\\\\\'call writefile([\"NAV_VIM_STRIPPED_OK\"], \"/tmp/nav-vim\")\\\\\\' +q\\\\ngrep -Fx NAV_VIM_STRIPPED_OK /tmp/nav-vim\\\\nbash -c \\\\\\'test \"$(printf hi | sed s/hi/ok/)\" = ok\\\\\\'\\\\nmake --version\\\\nfind /usr/lib -maxdepth 1 -name \\\\\\'*.dbg\\\\\\' -type f | sort > /nav-build-metadata/preserved-debug-files.txt\\\\nprintf \\\\\\'NAV_STRIP_AFTER_KIB \\\\\\';du -xsk /\\\\nprintf \\\\\\'LFS13.1 base stripped per chapter8, selected debug symbols preserved. Compiler C/C++, Python, systemd, OpenSSL and Vim smoke passed. No boot or desktop claim. Tester retained for later BLFS checks.\\\\n\\\\\\' > /nav-build-metadata/stage.txt\\\\nfind /tmp -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +\\\\nprintf \\\\\\'NAV_BASE_STRIP_STAGE_COMPLETE\\\\n\\\\\\'\\\\n\\')\\nINNER_SCRIPT\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\"\
+        \ unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/base-strip.sh\\\
+        nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nNAV_MOUNT_BUILD\\n# Namespace exit unmounts virtual filesystems before checkpoint. Restore builder\\n# ownership only for readable cache packaging; next native build resets root ownership.\\nsudo rm -f \"$LFS/sources/\"*.tar.* \"$LFS/sources/base-strip.sh\"\\nsudo chown -hR \"$(id -u):$(id -g)\" \"$LFS\"\\ndu -sh \"$LFS\"\\ntest \"$(du -sm \"$LFS\" | cut -f1)\" -lt 5120\\n')\nstart=time.monotonic();log=open('/tmp/nav-source-stage.log','w');proc=subprocess.Popen(['bash',str(p)],stdout=log,stderr=subprocess.STDOUT,start_new_session=True)\ntry:\n while proc.poll() is None:\n  free=shutil.disk_usage('/mnt').free;available=mem()\n  if free<4*1024**3 or available<2*1024**2 or time.monotonic()-start>315*60:\n\
+        \   raise RuntimeError('resource or stage-time safety floor reached')\n  print(json.dumps({'elapsed_seconds':round(time.monotonic()-start),'free_disk_bytes':free,'available_memory_kib':available}),flush=True)\n  time.sleep(20)\n if proc.returncode:raise RuntimeError('source-build failed with status '+str(proc.returncode))\nfinally:\n if proc.poll() is None:\n  os.killpg(proc.pid,signal.SIGTERM)\n  try:proc.wait(timeout=10)\n  except subprocess.TimeoutExpired:os.killpg(proc.pid,signal.SIGKILL);proc.wait()\n log.close()\n lines=pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n print('\\n'.join(lines[-80:]));print('\\n'.join(x for x in lines if any(k in x for k in ['SOURCE_SHA256_OK','BEGIN_FINAL_PACKAGE','DONE_FINAL_PACKAGE','NAV_PACKAGE','NAV_BASE','NAV_STRIP','NAV_STRIPPED','NAV_TEST','NAV_PACKAGE','NAV_BISON','NAV_TESTER'])))\nNAV_GUARD\n"
+    - name: Preserve stripped verified base
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-lfs
+        key: nav-lfs13.1-x86_64-base-strip-v1
