@@ -1,0 +1,60 @@
+name: NAV LLVM saved test evidence audit
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  evidence:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private
+      == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+    - name: Prepare owned isolated target directory
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo mkdir -p /mnt/nav-lfs
+
+        sudo chown "$(id -u):$(id -g)" /mnt/nav-lfs
+
+        '
+    - name: Restore tested build infrastructure checkpoint
+      id: cross
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-lfs
+        key: nav-blfs13.1-x86_64-llvm-core-v1
+        fail-on-cache-miss: true
+    - name: Read saved LLVM test evidence without rebuild or new cache
+      shell: bash
+      run: 'set -euo pipefail
+
+        LFS=/mnt/nav-lfs
+
+        cat "$LFS/nav-build-metadata/stage.txt"
+
+        test -s "$LFS/nav-build-metadata/tests/llvm-core.log"
+
+        test -s "$LFS/nav-build-metadata/tests/llvm-lit-preflight.log"
+
+        sed ''s/^/NAV_TEST_DIAGNOSTIC llvm-preflight /'' "$LFS/nav-build-metadata/tests/llvm-lit-preflight.log"
+
+        tail -180 "$LFS/nav-build-metadata/tests/llvm-core.log" | sed ''s/^/NAV_TEST_DIAGNOSTIC
+        llvm-summary /''
+
+        grep -q NAV_LLVM_LIT_TIMEOUT_PREFLIGHT_OK "$LFS/nav-build-metadata/tests/llvm-lit-preflight.log"
+
+        if grep -E ''^FAILED:|^FAIL:|^UNRESOLVED:|^Timed Out|[1-9][0-9]* tests failed|error:.*tests
+        failed'' "$LFS/nav-build-metadata/tests/llvm-core.log"; then exit 1; fi
+
+        sha256sum "$LFS/nav-build-metadata/tests/llvm-core.log" "$LFS/nav-build-metadata/tests/llvm-lit-preflight.log"
+
+        du -sm "$LFS"
+
+        printf ''NAV_LLVM_SAVED_EVIDENCE_READ_COMPLETE\n''
+
+        '
