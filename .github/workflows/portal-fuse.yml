@@ -1,4 +1,4 @@
-name: NAV source Rust conditional transitional checkpoint gaps OPEN
+name: NAV color management image test prerequisites original suites
 'on':
   workflow_dispatch: {}
 permissions:
@@ -31,207 +31,111 @@ jobs:
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
       with:
         path: /mnt/nav-lfs
-        key: nav-blfs13.1-x86_64-portal-authgeo-open-v1
+        key: nav-blfs13.1-x86_64-rust-open-v1
         fail-on-cache-miss: true
-    - name: Build source Rust with original suites inside capped disposable scratch
+    - name: Build Little CMS GoogleTest Highway with full original configured suites
       shell: bash
       run: "python3 - <<'NAV_GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
         \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\nassert os.cpu_count()\
-        \ >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 30 * 1024 ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\n\
-        p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\ntest -x \"\
-        $LFS/usr/bin/gcc\"\\ntest -f \"$LFS/nav-build-metadata/portal-testdeps/AUTHGEO-TRANSITIONAL-OPEN.json\"\\n# Fresh\
-        \ precondition before downloads, sparse allocation or any Rust work.\\npython3 - <<\\'PREFLIGHT\\'\\nimport shutil,os\\\
-        nfree=shutil.disk_usage(\\'/mnt\\').free\\nprint(\\'NAV_RUST_HOST_FREE_PREFLIGHT\\',free,flush=True)\\nassert free>30*1024**3,\
-        \ \\'Rust host free-space precondition not met\\'\\nassert len(os.sched_getaffinity(0))>=2\\n# All child processes\
-        \ inherit exactly two CPUs, even test runners that ignore jobs.\\ncpus=sorted(os.sched_getaffinity(0))[:2]\\nprint(\\\
-        'NAV_RUST_CPU_SET\\',cpus,flush=True)\\nPREFLIGHT\\nmkdir -p \"$LFS/sources\"\\npython3 - <<\\'LOCKED_SOURCES\\'\\\
-        nimport urllib.request,hashlib,pathlib,json\\nlock=json.loads(\"[{\\\\\"filename\\\\\": \\\\\"libssh2-1.11.1.tar.gz\\\
-        \\\", \\\\\"sha256\\\\\": \\\\\"d9ec76cbe34db98eec3539fe2c899d26b0c837cb3eb466a56b0f109cabf658f7\\\\\", \\\\\"url\\\
-        \\\": \\\\\"https://www.libssh2.org/download/libssh2-1.11.1.tar.gz\\\\\"}, {\\\\\"filename\\\\\": \\\\\"libssh2-1.11.1-security_fixes-1.patch\\\
-        \\\", \\\\\"sha256\\\\\": \\\\\"919a91a0ef99a97efe1f94e2bed7600ce12fdf5f3e6c978b8eba37fe4526ec5e\\\\\", \\\\\"url\\\
-        \\\": \\\\\"https://www.linuxfromscratch.org/patches/blfs/13.1/libssh2-1.11.1-security_fixes-1.patch\\\\\"}, {\\\\\
-        \"filename\\\\\": \\\\\"rustc-1.96.0-x86_64-unknown-linux-gnu.tar.xz\\\\\", \\\\\"url\\\\\": \\\\\"https://static.rust-lang.org/dist/2026-05-28/rustc-1.96.0-x86_64-unknown-linux-gnu.tar.xz\\\
-        \\\", \\\\\"sha256\\\\\": \\\\\"7d7fa1d0cfb0fab71a956bb78f41107202c17f30ab56c45288e869a37fd9633d\\\\\"}, {\\\\\"filename\\\
-        \\\": \\\\\"rust-std-1.96.0-x86_64-unknown-linux-gnu.tar.xz\\\\\", \\\\\"url\\\\\": \\\\\"https://static.rust-lang.org/dist/2026-05-28/rust-std-1.96.0-x86_64-unknown-linux-gnu.tar.xz\\\
-        \\\", \\\\\"sha256\\\\\": \\\\\"c09c7c646248f14f473f5f7a029af15ee57c3a9f9bc93dfa72d9621938586b82\\\\\"}, {\\\\\"filename\\\
-        \\\": \\\\\"cargo-1.96.0-x86_64-unknown-linux-gnu.tar.xz\\\\\", \\\\\"url\\\\\": \\\\\"https://static.rust-lang.org/dist/2026-05-28/cargo-1.96.0-x86_64-unknown-linux-gnu.tar.xz\\\
-        \\\", \\\\\"sha256\\\\\": \\\\\"dee75c3c8f9f600ad75bc0c93249e767d3047845a4dd668327ce43ab039ba266\\\\\"}, {\\\\\"filename\\\
-        \\\": \\\\\"rustc-1.97.1-src.tar.xz\\\\\", \\\\\"url\\\\\": \\\\\"https://static.rust-lang.org/dist/rustc-1.97.1-src.tar.xz\\\
-        \\\", \\\\\"sha256\\\\\": \\\\\"0ed06fdaffd4722a7702e0b4eebfafc897ab8f513e8e1b247cdd7e5c6df6ded2\\\\\"}]\")\\nfor\
-        \ x in lock:\\n p=pathlib.Path(\\'/mnt/nav-lfs/sources\\')/x[\\'filename\\']\\n with urllib.request.urlopen(x[\\'url\\\
-        '],timeout=120)as r, p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\n assert hashlib.file_digest(p.open(\\\
-        'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\'],x[\\'filename\\']\\n print(\\'SOURCE_SHA256_OK\\',x[\\'filename\\\
-        '],flush=True)\\npathlib.Path(\\'/mnt/nav-lfs/sources/rust-source-lock.json\\').write_text(json.dumps(lock,indent=2))\\\
-        nLOCKED_SOURCES\\npython3 - <<\\'INNER_SCRIPT\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/rust-diagnostic.sh\\\
-        ').write_text(\\'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport MAKEFLAGS=-j2 PATH=/usr/bin:/usr/sbin:/bin:/sbin\
+        \ >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024 ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\n\
+        p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\ntest -f \"\
+        $LFS/nav-build-metadata/rust/RUST-TRANSITIONAL-OPEN.json\"\\ntest -x \"$LFS/opt/rustc/bin/rustc\"\\npython3 - <<\\\
+        'DOWNLOADS\\'\\nfrom pathlib import Path\\nimport urllib.request,hashlib,json\\nlock=json.loads(\"[{\\\\\"filename\\\
+        \\\": \\\\\"lcms2-2.19.1.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://github.com/mm2/Little-CMS/releases/download/lcms2.19.1/lcms2-2.19.1.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"bfc54f7bab59fbc921012014a8032e4cba4abd46db47d46b76416a8c0b2815c8\\\\\", \\\\\"md5\\\
+        \\\": \\\\\"541978f73749499e9e0277bfe5a3c868\\\\\"}, {\\\\\"filename\\\\\": \\\\\"highway-1.4.0.tar.gz\\\\\", \\\\\
+        \"url\\\\\": \\\\\"https://github.com/google/highway/archive/1.4.0/highway-1.4.0.tar.gz\\\\\", \\\\\"sha256\\\\\"\
+        : \\\\\"e72241ac9524bb653ae52ced768b508045d4438726a303f10181a38f764a453c\\\\\", \\\\\"md5\\\\\": \\\\\"9d335797777e17f827c7980b8313a34b\\\
+        \\\"}, {\\\\\"filename\\\\\": \\\\\"googletest-1.18.0.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://github.com/google/googletest/archive/refs/tags/v1.18.0.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"6e3191c1455468b3fc35a417fb565c1c5071aee1b7e7f85e30cf48a98d37d8b5\\\\\", \\\\\"md5\\\
+        \\\": \\\\\"ae87634285dbe148a7abc6d19c4c05bd\\\\\"}]\")\\nfor x in lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\\
+        'filename\\']\\n with urllib.request.urlopen(x[\\'url\\'],timeout=120)as r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\\
+        n assert hashlib.file_digest(p.open(\\'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\\
+        ',x[\\'filename\\'],flush=True)\\nPath(\\'/mnt/nav-lfs/sources/image-cms-jxl-source-lock.json\\').write_text(json.dumps(lock,indent=2))\\\
+        nDOWNLOADS\\npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/cms-stage.sh\\').write_text(\\\
+        'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport MAKEFLAGS=-j2 PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
         \ LANG=C.UTF-8 CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir\
-        \ -p /nav-build-metadata/rust /nav-build-metadata/tests\\\\ncd /sources\\\\ntest \"$(llvm-config --version)\" = 22.1.8\\\
-        \\npkg-config --modversion sqlite3 libcurl openssl\\\\nprintf \\\\\\'NAV_RUST_SYSTEM_LLVM \\\\\\'; llvm-config --shared-mode\\\
-        \\n# Real libssh2, with the official BLFS security patch. No test-source changes.\\\\ntar -xf libssh2-1.11.1.tar.gz\\\
-        \\ncd libssh2-1.11.1\\\\npatch -Np1 -i ../libssh2-1.11.1-security_fixes-1.patch\\\\n./configure --prefix=/usr --disable-docker-tests\
-        \ --disable-static\\\\nmake -j2\\\\nchown -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin;\
-        \ make -j2 check\\\\\\' > /nav-build-metadata/tests/libssh2.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/tests/libssh2.log\\\
-        \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/rust/libssh2.exit\\\\nfind . -type f \\\\\\\\( -name\
-        \ \\\\\\'*.trs\\\\\\' -o -name \\\\\\'test-suite.log\\\\\\' -o -name config.log \\\\\\\\) -exec cp --parents \\\\\\\
-        '{}\\\\\\' /nav-build-metadata/rust/ \\\\\\\\;\\\\ntest \"$rc\" = 0\\\\nmake install\\\\nldconfig\\\\npkg-config --modversion\
-        \ libssh2\\\\ncd /sources/rust-work\\\\ntest -d lost+found\\\\ncp /sources/rustc-1.97.1-src.tar.xz .\\\\ntar -xf rustc-1.97.1-src.tar.xz\\\
-        \\nrm rustc-1.97.1-src.tar.xz\\\\ncd rustc-1.97.1-src\\\\ncp /sources/rust-bootstrap-reviewed.toml bootstrap.toml\\\
-        \\ncp bootstrap.toml /nav-build-metadata/rust/\\\\ncp src/stage0 /nav-build-metadata/rust/upstream-stage0.txt\\\\\
-        npython3 - <<\\\\\\'BOOTSTRAP_LOCK\\\\\\'\\\\nfrom pathlib import Path\\\\ns=Path(\\\\\\'src/stage0\\\\\\').read_text()\\\
-        \\nassert \\\\\\'dist_server=https://static.rust-lang.org\\\\\\' in s\\\\nassert \\\\\\'dist/2026-05-28/rustc-1.96.0-x86_64-unknown-linux-gnu.tar.xz=7d7fa1d0cfb0fab71a956bb78f41107202c17f30ab56c45288e869a37fd9633d\\\
-        \\\\' in s\\\\nassert \\\\\\'dist/2026-05-28/rust-std-1.96.0-x86_64-unknown-linux-gnu.tar.xz=c09c7c646248f14f473f5f7a029af15ee57c3a9f9bc93dfa72d9621938586b82\\\
-        \\\\' in s\\\\nassert \\\\\\'dist/2026-05-28/cargo-1.96.0-x86_64-unknown-linux-gnu.tar.xz=dee75c3c8f9f600ad75bc0c93249e767d3047845a4dd668327ce43ab039ba266\\\
-        \\\\' in s\\\\nprint(\\\\\\'NAV_RUST_UPSTREAM_STAGE0_LOCKS_CONFIRMED\\\\\\')\\\\nBOOTSTRAP_LOCK\\\\npython3 - <<\\\
-        \\\\'BOOTSTRAP_BYTES\\\\\\'\\\\nimport hashlib,json\\\\nfrom pathlib import Path\\\\nlock=json.loads(Path(\\\\\\'/sources/rust-source-lock.json\\\
-        \\\\').read_text())\\\\nfor x in lock:\\\\n if \\\\\\'1.96.0\\\\\\' in x[\\\\\\'filename\\\\\\']:\\\\n  p=Path(\\\\\
-        \\'/sources\\\\\\')/x[\\\\\\'filename\\\\\\'];assert hashlib.file_digest(p.open(\\\\\\'rb\\\\\\'),\\\\\\'sha256\\\\\
-        \\').hexdigest()==x[\\\\\\'sha256\\\\\\'],x[\\\\\\'filename\\\\\\']\\\\nprint(\\\\\\'NAV_RUST_BOOTSTRAP_BYTES_VERIFIED\\\
-        \\\\')\\\\nBOOTSTRAP_BYTES\\\\nmkdir -p build/cache/2026-05-28\\\\ncp /sources/rustc-1.96.0-x86_64-unknown-linux-gnu.tar.xz\
-        \ /sources/rust-std-1.96.0-x86_64-unknown-linux-gnu.tar.xz /sources/cargo-1.96.0-x86_64-unknown-linux-gnu.tar.xz build/cache/2026-05-28/\\\
-        \\nexport LIBSSH2_SYS_USE_PKG_CONFIG=1 LIBSQLITE3_SYS_USE_PKG_CONFIG=1\\\\n# Stage0 is only the upstream-pinned bootstrap.\
-        \ Source stage2 and shared LLVM\\\\n# are explicit; no prebuilt final compiler or CI LLVM substitutes.\\\\nchown -R\
-        \ tester /sources/rust-work\\\\nprintf \\\\\\'NAV_RUST_SOURCE_BUILD_BEGIN\\\\\\\\n\\\\\\'\\\\nset +e\\\\nsu tester\
-        \ -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2 LIBSSH2_SYS_USE_PKG_CONFIG=1\
-        \ LIBSQLITE3_SYS_USE_PKG_CONFIG=1; ./x.py build --jobs 2\\\\\\' > /nav-build-metadata/tests/rust-build.log 2>&1\\\\\
-        nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/rust/build.exit\\\\ntail -80\
-        \ /nav-build-metadata/tests/rust-build.log\\\\ntest \"$rc\" = 0\\\\nprintf \\\\\\'NAV_RUST_SOURCE_BUILD_COMPLETE\\\
-        \\\\\\n\\\\\\'\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2\
-        \ LIBSSH2_SYS_USE_PKG_CONFIG=1 LIBSQLITE3_SYS_USE_PKG_CONFIG=1; ./x.py test --no-fail-fast --jobs 2\\\\\\' > /nav-build-metadata/tests/rust-tests.log\
-        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/rust/tests.exit\\\\\
-        ntail -100 /nav-build-metadata/tests/rust-tests.log\\\\n# Full original suites completed. Separate unchanged embed\
-        \ test, detailed output.\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin CARGO_BUILD_JOBS=2\
-        \ RUST_TEST_THREADS=2 LIBSSH2_SYS_USE_PKG_CONFIG=1 LIBSQLITE3_SYS_USE_PKG_CONFIG=1; ./x.py test --jobs 2 tests/run-make/embed-source-dwarf\
-        \ --test-args=--no-capture\\\\\\' > /nav-build-metadata/tests/rust-embed-detail.log 2>&1\\\\ndetail_rc=$?\\\\nset\
-        \ -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$detail_rc\" > /nav-build-metadata/rust/embed-detail.exit\\\\ntail -70\
-        \ /nav-build-metadata/tests/rust-embed-detail.log\\\\npython3 - <<\\\\\\'RUST_AUDIT\\\\\\'\\\\nfrom pathlib import\
-        \ Path\\\\nimport re,json,collections\\\\np=Path(\\\\\\'/nav-build-metadata\\\\\\');logs={n:(p/\\\\\\'tests\\\\\\\
-        '/f\\\\\\'{n}.log\\\\\\').read_text(errors=\\\\\\'replace\\\\\\')for n in [\\\\\\'libssh2\\\\\\',\\\\\\'rust-build\\\
-        \\\\',\\\\\\'rust-tests\\\\\\',\\\\\\'rust-embed-detail\\\\\\']}\\\\nassert all((p/\\\\\\'rust\\\\\\'/f\\\\\\'{n}.exit\\\
-        \\\\').read_text().strip()==\\\\\\'0\\\\\\'for n in [\\\\\\'libssh2\\\\\\',\\\\\\'build\\\\\\'])\\\\nassert (p/\\\\\
-        \\'rust\\\\\\'/\\\\\\'tests.exit\\\\\\').read_text().strip()==\\\\\\'1\\\\\\'\\\\nt=logs[\\\\\\'rust-tests\\\\\\'];matches=list(re.finditer(r\\\
-        \\\\'(?m)^test result: (ok|FAILED)\\\\\\\\. (\\\\\\\\d+) passed; (\\\\\\\\d+) failed; (\\\\\\\\d+) ignored; (\\\\\\\
-        \\d+) measured; (\\\\\\\\d+) filtered out\\\\\\',t));assert len(matches)==342,\\\\\\'Suite record count changed\\\\\
-        \\'\\\\nrows=[{\\\\\\'status\\\\\\':m[1],**dict(zip([\\\\\\'passed\\\\\\',\\\\\\'failed\\\\\\',\\\\\\'ignored\\\\\\\
-        ',\\\\\\'measured\\\\\\',\\\\\\'filtered_out\\\\\\'],map(int,m.groups()[1:]))),\\\\\\'original\\\\\\':m[0]}for m in\
-        \ matches]\\\\nexpected={\\\\\\'[ui] tests/ui/codegen/huge-stacks.rs#optimized\\\\\\',\\\\\\'[ui] tests/ui/codegen/huge-stacks.rs#unoptimized\\\
-        \\\\',\\\\\\'[ui] tests/rustdoc-ui/ice-bug-report-url.rs\\\\\\',\\\\\\'[run-make] tests/run-make/embed-source-dwarf\\\
-        \\\\',\\\\\\'[run-make] tests/run-make/remap-path-prefix-std\\\\\\',\\\\\\'[run-make] tests/run-make/rustdoc-target-modifiers\\\
-        \\\\',\\\\\\'[run-make] tests/run-make/short-ice\\\\\\'}\\\\nfailures=re.findall(r\\\\\\'^---- (.+) stdout ----$\\\
-        \\\\',t,re.M)\\\\nassert len(failures)==7 and set(failures)==expected,\\\\\\'Failure set changed\\\\\\'\\\\nassert\
-        \ sum(r[\\\\\\'failed\\\\\\']for r in rows)==7\\\\nassert len(re.findall(r\\\\\\'process didn.t exit successfully:.*rustc_data_structures[^\\\
-        \\\\\\n]*\\\\\\\\(signal: 6, SIGABRT: process abort signal\\\\\\\\)\\\\\\',t))==1,\\\\\\'Expected aborted harness\
-        \ missing/changed\\\\\\'\\\\nassert len(re.findall(r\\\\\\'\\\\\\\\(signal: \\\\\\\\d+,\\\\\\',t))==1,\\\\\\'New signal\
-        \ failure\\\\\\'\\\\nassert t.count(\\\\\\'memory allocation of 2147483648 bytes failed\\\\\\')==1\\\\nassert re.search(r\\\
-        \\\\'Build completed unsuccessfully in [\\\\\\\\d:]+\\\\\\\\s*$\\\\\\',t),\\\\\\'Full no-fail-fast footer missing\\\
-        \\\\'\\\\nfor n in [\\\\\\'rust-tests\\\\\\',\\\\\\'rust-embed-detail\\\\\\']:\\\\n x=logs[n];a=x.index(\\\\\\'&sources\
-        \ = {\\\\\\');b=x.index(\"thread \\\\\\'main\\\\\\'\",a);sources=re.findall(r\\\\\\'^    \"([^\"\\\\\\\\n]+)\":\\\\\
-        \\',x[a:b],re.M)\\\\n assert len(sources)==7 and set(sources)=={\\\\\\'main.rs\\\\\\',\\\\\\'process.rs\\\\\\',\\\\\
-        \\'function.rs\\\\\\',\\\\\\'rt.rs\\\\\\',\\\\\\'backtrace.rs\\\\\\',\\\\\\'hint.rs\\\\\\',\\\\\\'common.rs\\\\\\\
-        '},\\\\\\'Embed source set changed\\\\\\'\\\\n assert re.search(r\\\\\\'left: 7\\\\\\\\s+right: 1\\\\\\',x[b:]),\\\
-        \\\\'Embed mismatch changed\\\\\\'\\\\n assert \\\\\\'\"main.rs\": \"// hello\\\\\\\\\\\\\\\\nfn main() {}\\\\\\\\\
-        \\\\\\\\n\"\\\\\\' in x[a:b]\\\\nassert (p/\\\\\\'rust\\\\\\'/\\\\\\'embed-detail.exit\\\\\\').read_text().strip()==\\\
-        \\\\'1\\\\\\'\\\\nassert re.search(r\\\\\\'test result: FAILED\\\\\\\\. 0 passed; 1 failed;\\\\\\',logs[\\\\\\'rust-embed-detail\\\
-        \\\\'])\\\\nassert not re.search(r\\\\\\'(?i)SIGSEGV|signal:?\\\\\\\\s*11\\\\\\\\b|segmentation fault\\\\\\',\\\\\\\
-        '\\\\\\\\n\\\\\\'.join(logs.values())),\\\\\\'SIGSEGV blocks save\\\\\\'\\\\nignored=[l for l in t.splitlines()if\
-        \ re.search(r\\\\\\'\\\\\\\\bignored\\\\\\\\b|\\\\\\\\bSKIP\\\\\\\\b\\\\\\',l)]\\\\ncounts={k:sum(r[k]for r in rows)for\
-        \ k in [\\\\\\'passed\\\\\\',\\\\\\'failed\\\\\\',\\\\\\'ignored\\\\\\',\\\\\\'measured\\\\\\',\\\\\\'filtered_out\\\
-        \\\\']}\\\\nlibssh=collections.Counter()\\\\nfor k,v in re.findall(r\\\\\\'(?m)^# (TOTAL|PASS|SKIP|XFAIL|FAIL|XPASS|ERROR):\\\
-        \\\\\\s+(\\\\\\\\d+)\\\\\\',logs[\\\\\\'libssh2\\\\\\']):libssh[k]+=int(v)\\\\nassert libssh[\\\\\\'PASS\\\\\\']==1\
-        \ and libssh[\\\\\\'FAIL\\\\\\']==0 and libssh[\\\\\\'ERROR\\\\\\']==0\\\\nembed={\\\\\\'classification\\\\\\':\\\\\
-        \\'OPEN: environment-dependent embed accounting, expectation mismatch\\\\\\',\\\\\\'explanation\\\\\\':\\\\\\'Rust\
-        \ deliberately embeds dependency source when available: metadata.rs 611-617 loads external source when local source\
-        \ is absent; source_map.rs 1058-1081 reads dependency path with source-hash verification. All seven records sit in\
-        \ main.rs compilation unit, naming real existing library paths. main.rs content matches expected source. Four manual\
-        \ probes (default, LTO-off, ThinLTO, dynamic std) all compiled and produced the same seven-source set. Not attributed\
-        \ to ThinLTO.\\\\\\',\\\\\\'sources\\\\\\':[\\\\\\'https://raw.githubusercontent.com/rust-lang/rust/1.97.1/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs\\\
-        \\\\',\\\\\\'https://raw.githubusercontent.com/rust-lang/rust/1.97.1/compiler/rustc_span/src/source_map.rs\\\\\\',\\\
-        \\\\'https://raw.githubusercontent.com/rust-lang/rust/1.97.1/tests/run-make/embed-source-dwarf/rmake.rs\\\\\\'],\\\
-        \\\\'diagnostic_job\\\\\\':\\\\\\'https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44084789694/job/134044282666\\\
-        \\\\',\\\\\\'targeted_original_test\\\\\\':\\\\\\'Re-executed unchanged with --no-capture; same seven-source set and\
-        \ original 7-versus-1 assertion failure, remains OPEN\\\\\\'}\\\\nout={\\\\\\'classification\\\\\\':\\\\\\'TRANSITIONAL\
-        \ ONLY. Not tested-Rust. Every failure, ignore, skip, filtered case and unavailable integration OPEN; no waivers.\\\
-        \\\\',\\\\\\'rust_suite_records\\\\\\':rows,\\\\\\'totals\\\\\\':counts,\\\\\\'named_failures_OPEN\\\\\\':failures,\\\
-        \\\\'aborted_harness_OPEN\\\\\\':{\\\\\\'name\\\\\\':\\\\\\'rustc_data_structures\\\\\\',\\\\\\'announced_tests\\\\\
-        \\':118,\\\\\\'completed_case_count\\\\\\':\\\\\\'unknown, no summary; not included in passes\\\\\\',\\\\\\'signal\\\
-        \\\\':\\\\\\'SIGABRT\\\\\\',\\\\\\'allocation_bytes\\\\\\':2147483648,\\\\\\'cause\\\\\\':\\\\\\'4GiB cap pressure\
-        \ suspected from VecCache virtual reservations; exact subtest unproven\\\\\\'},\\\\\\'embed_source_OPEN\\\\\\':embed,\\\
-        \\\\'original_ignore_skip_lines\\\\\\':ignored,\\\\\\'libssh2_original_harness_counts\\\\\\':dict(libssh),\\\\\\'open\\\
-        \\\\':[\\\\\\'Every original failed/ignored/skipped/filtered Rust case in full retained log stays OPEN\\\\\\',\\\\\
-        \\'huge-stacks requests5GiB stack under4GiB cap; no cap change\\\\\\',\\\\\\'Four BLFS-documented rustdoc/run-make\
-        \ failures remain OPEN\\\\\\',\\\\\\'libssh2 Docker and unprovided sshd integrations OPEN\\\\\\',\\\\\\'Native x86_64\
-        \ and shared system LLVM X86 only\\\\\\',\\\\\\'All inherited portal/image/Valgrind/booted-VM gates OPEN; desktop/installer/ISO\
-        \ unfinished\\\\\\'],\\\\\\'configuration\\\\\\':(p/\\\\\\'rust\\\\\\'/\\\\\\'bootstrap.toml\\\\\\').read_text()}\\\
-        \\n(p/\\\\\\'rust\\\\\\'/\\\\\\'RUST-TRANSITIONAL-OPEN.json\\\\\\').write_text(json.dumps(out,indent=2));(p/\\\\\\\
-        'stage.txt\\\\\\').write_text(out[\\\\\\'classification\\\\\\']+\\\\\\'\\\\\\\\n\\\\\\'+\\\\\\'\\\\\\\\n\\\\\\'.join(out[\\\
-        \\\\'open\\\\\\'])+\\\\\\'\\\\\\\\n\\\\\\')\\\\nprint(\\\\\\'NAV_RUST_TRANSITIONAL_AUDIT\\\\\\',json.dumps({\\\\\\\
-        'totals\\\\\\':counts,\\\\\\'suite_records\\\\\\':len(rows),\\\\\\'named_failures_OPEN\\\\\\':failures,\\\\\\'additional_aborted_harness_OPEN\\\
-        \\\\':1,\\\\\\'separate_targeted_embed_test\\\\\\':\\\\\\'0pass1fail OPEN\\\\\\',\\\\\\'libssh2\\\\\\':dict(libssh),\\\
-        \\\\'open_ignore_lines\\\\\\':len(ignored)}),flush=True)\\\\nRUST_AUDIT\\\\n\\\\nmkdir -p /opt/rustc-1.97.1\\\\nln\
-        \ -sfn rustc-1.97.1 /opt/rustc\\\\n./x.py install --jobs 2 > /nav-build-metadata/tests/rust-install.log 2>&1\\\\nexport\
-        \ PATH=/opt/rustc/bin:$PATH\\\\nrustc --version\\\\ncargo --version\\\\nrustc --version | grep -F \\\\\\'rustc 1.97.1\\\
-        \\\\'\\\\nmkdir -p /home/tester/rust-smoke/src\\\\nprintf \\\\\\'fn main() { assert_eq!(6 * 7, 42); println!(\"NAV_RUST_SOURCE_STAGE2_SMOKE_OK\"\
-        ); }\\\\\\\\n\\\\\\' > /home/tester/rust-smoke/src/main.rs\\\\nprintf \\\\\\'[package]\\\\\\\\nname = \"nav-source-smoke\"\
-        \\\\\\\\nversion = \"0.1.0\"\\\\\\\\nedition = \"2024\"\\\\\\\\n\\\\\\' > /home/tester/rust-smoke/Cargo.toml\\\\nchown\
-        \ -R tester /home/tester/rust-smoke\\\\nsu tester -c \\\\\\'export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin;\
-        \ cd /home/tester/rust-smoke; cargo run --offline --jobs 2\\\\\\' > /nav-build-metadata/tests/rust-smoke.log 2>&1\\\
-        \\ncat /nav-build-metadata/tests/rust-smoke.log\\\\ngrep -F NAV_RUST_SOURCE_STAGE2_SMOKE_OK /nav-build-metadata/tests/rust-smoke.log\\\
-        \\nldd /opt/rustc/bin/cargo > /nav-build-metadata/rust/cargo-linkage.txt\\\\ncat /nav-build-metadata/rust/cargo-linkage.txt\\\
-        \\ngrep -F libssh2.so /nav-build-metadata/rust/cargo-linkage.txt\\\\ngrep -F libsqlite3.so /nav-build-metadata/rust/cargo-linkage.txt\\\
-        \\nmkdir -p /etc/profile.d\\\\nprintf \\\\\\'export PATH=/opt/rustc/bin:$PATH\\\\\\\\n\\\\\\' > /etc/profile.d/rustc.sh\\\
-        \\ncp /sources/rust-source-lock.json /nav-build-metadata/rust/\\\\nrm -rf /home/tester/rust-smoke\\\\ncd /sources\\\
-        \\nrm -rf libssh2-1.11.1\\\\npython3 - <<\\\\\\'FINAL_RUNTIME_AUDIT\\\\\\'\\\\nfrom pathlib import Path\\\\nimport\
-        \ re\\\\nfor n in [\\\\\\'rust-build\\\\\\',\\\\\\'rust-tests\\\\\\',\\\\\\'rust-install\\\\\\',\\\\\\'rust-smoke\\\
-        \\\\']:\\\\n t=Path(\\\\\\'/nav-build-metadata/tests/\\\\\\'+n+\\\\\\'.log\\\\\\').read_text(errors=\\\\\\'replace\\\
-        \\\\')\\\\n assert not re.search(r\\\\\\'(?i)SIGSEGV|signal:?\\\\\\\\s*11\\\\\\\\b|segmentation fault\\\\\\',t),n\\\
-        \\nFINAL_RUNTIME_AUDIT\\\\nprintf \\\\\\'NAV_RUST_INSTALL_AND_SMOKE_COMPLETE\\\\\\\\n\\\\\\' \\\\n\\')\\nPath(\\'/mnt/nav-lfs/sources/rust-bootstrap-reviewed.toml\\\
-        ').write_text(\\'change-id = 154587\\\\n[llvm]\\\\nlink-shared = true\\\\ntargets = \"X86\"\\\\ndownload-ci-llvm =\
-        \ false\\\\nlink-jobs = 1\\\\n[build]\\\\ndescription = \"NAV source build based on BLFS 13.1\"\\\\ndocs = false\\\
-        \\njobs = 2\\\\nbuild-stage = 2\\\\ntest-stage = 2\\\\nextended = true\\\\ntools = [\"cargo\", \"clippy\", \"rustdoc\"\
-        , \"rustfmt\", \"src\"]\\\\n[install]\\\\nprefix = \"/opt/rustc-1.97.1\"\\\\ndocdir = \"share/doc/rustc-1.97.1\"\\\
-        \\n[rust]\\\\nchannel = \"stable\"\\\\nlto = \"thin\"\\\\ncodegen-units = 1\\\\nllvm-bitcode-linker = false\\\\ndownload-rustc\
-        \ = false\\\\n[target.x86_64-unknown-linux-gnu]\\\\nllvm-config = \"/usr/bin/llvm-config\"\\\\ncc = \"/usr/bin/gcc\"\
-        \\\\ncxx = \"/usr/bin/g++\"\\\\nlinker = \"/usr/bin/gcc\"\\\\n\\')\\nINNER_SCRIPT\\n# Dedicated capped scratch, never\
-        \ a root/cache size-limit increase.\\ntest ! -e /mnt/nav-rust-scratch.ext4\\nsudo truncate -s 24G /mnt/nav-rust-scratch.ext4\\\
-        nsudo mkfs.ext4 -q -F /mnt/nav-rust-scratch.ext4\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\
-        \\nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\\
-        nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS/sources/rust-work\"\\npython3 -c \\'import shutil; assert shutil.disk_usage(\"\
-        /mnt\").free>30*1024**3\\'\\nmount -o loop /mnt/nav-rust-scratch.ext4 \"$LFS/sources/rust-work\"\\ncleanup_rust_scratch()\
-        \ { rc=$?; trap - EXIT; rm -rf \"$LFS/sources/rust-work/\"*; umount \"$LFS/sources/rust-work\"; rm -f /mnt/nav-rust-scratch.ext4;\
-        \ exit \"$rc\"; }\\ntrap cleanup_rust_scratch EXIT\\nfindmnt \"$LFS/sources/rust-work\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\\
-        nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc\
-        \ \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif\
-        \ [ -h \"$LFS/dev/shm\" ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev\
-        \ tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin\
-        \ /bin/bash --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm\
-        \ /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb\
-        \ PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/rust-diagnostic.sh\\\
-        nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash\
-        \ --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke;\
-        \ printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nNAV_MOUNT_BUILD\\n# No checkpoint save in this diagnostic. Namespace exit\
-        \ removes all mounts.\\nif findmnt -rn \"$LFS/sources/rust-work\"; then exit 1; fi\\nsudo rm -f /mnt/nav-rust-scratch.ext4\\\
-        nprintf \\'NAV_RUST_DISPOSABLE_SCRATCH_REMOVED\\n\\'\\ntest ! -e /mnt/nav-rust-scratch.ext4\\nsudo rm -f \"$LFS/sources/\"\
-        *.tar.* \"$LFS/sources/rust-diagnostic.sh\" \"$LFS/sources/rust-bootstrap-reviewed.toml\" \"$LFS/sources/rust-source-lock.json\"\
-        \ \"$LFS/sources/libssh2-1.11.1-security_fixes-1.patch\"\\nsudo chown -hR \"$(id -u):$(id -g)\" \"$LFS\"\\ndu -sh\
-        \ \"$LFS\"\\ntest \"$(du -sm \"$LFS\" | cut -f1)\" -lt 5120\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log',\
-        \ 'w')\nproc = subprocess.Popen(['bash', str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda\
-        \ : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free\
-        \ = shutil.disk_usage('/mnt').free\n        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 *\
-        \ 1024 ** 2 or time.monotonic() - start > 315 * 60:\n            raise RuntimeError('resource or stage-time safety\
-        \ floor reached')\n        print(json.dumps({'elapsed_seconds': round(time.monotonic() - start), 'free_disk_bytes':\
-        \ free, 'available_memory_kib': available}), flush=True)\n        time.sleep(20)\n    if proc.returncode:\n      \
-        \  raise RuntimeError('source-build failed with status ' + str(proc.returncode))\nfinally:\n    if proc.poll() is\
-        \ None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n        except\
-        \ subprocess.TimeoutExpired:\n            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n    log.close()\n\
-        \    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n    print('\\n'.join(lines[-80:]))\n\
-        \    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK', 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE',\
-        \ 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON', 'NAV_TESTER', 'NAV_KF6', 'Totals:',\
-        \ 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE', 'NAV_PORTAL'])))))\n    import base64\n\
-        \    for name in ['libssh2', 'rust-build', 'rust-tests', 'rust-embed-detail', 'rust-install', 'rust-smoke']:\n   \
-        \     f = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/tests/' + name + '.log')\n        if f.exists():\n       \
-        \     data = f.read_bytes()\n            for i in range(0, len(data), 3000):\n                print('NAV_RUST_' +\
-        \ name.upper().replace('-', '_') + '_B64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n    for f in\
-        \ pathlib.Path('/mnt/nav-lfs/nav-build-metadata/rust').glob('*.exit'):\n        print('NAV_RUST_EXIT', f.name, f.read_text().strip(),\
-        \ flush=True)\nNAV_GUARD\n"
+        \ -p /nav-build-metadata/cms /nav-build-metadata/tests\\\\ncd /sources\\\\nprintf \\\\\\'NAV_CMS_PREREQUISITES\\\\\
+        \\\\n\\\\\\'\\\\npkg-config --modversion libjpeg libtiff-4 libpng libbrotlidec\\\\nrustc --version\\\\ncp /sources/image-cms-jxl-source-lock.json\
+        \ /nav-build-metadata/cms/\\\\n# Real original GoogleTest suites supply test support, no external downloads.\\\\ntar\
+        \ -xf googletest-1.18.0.tar.gz\\\\ncd googletest-1.18.0\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr\
+        \ -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -Dgtest_build_tests=ON -Dgmock_build_tests=ON -DCMAKE_CXX_STANDARD=17\\\
+        \\ncmake --build build --parallel 2\\\\nchown -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin;\
+        \ cd /sources/googletest-1.18.0/build; ctest --output-on-failure -j2\\\\\\' > /nav-build-metadata/tests/googletest.log\
+        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/tests/googletest.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\'\
+        \ \"$rc\" > /nav-build-metadata/cms/googletest.exit\\\\ncp build/Testing/Temporary/LastTest.log /nav-build-metadata/cms/googletest-original.log\\\
+        \\ncp build/CMakeCache.txt /nav-build-metadata/cms/googletest-config.txt\\\\ntest \"$rc\" = 0\\\\ncmake --install\
+        \ build\\\\nldconfig\\\\ncd /sources\\\\nrm -rf googletest-1.18.0\\\\n# BLFS Little CMS with JPEG/TIFF tools and unmodified\
+        \ testbed.\\\\ntar -xf lcms2-2.19.1.tar.gz\\\\ncd lcms2-2.19.1\\\\nmeson setup build --prefix=/usr --buildtype=release\
+        \ -Dutils=true -Dtests=enabled -Djpeg=enabled -Dtiff=enabled\\\\nninja -C build -j2\\\\nchown -R tester .\\\\nset\
+        \ +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/lcms2-2.19.1; meson test -C build\
+        \ --print-errorlogs --no-rebuild --num-processes 2\\\\\\' > /nav-build-metadata/tests/lcms2.log 2>&1\\\\nrc=$?\\\\\
+        nset -e\\\\ncat /nav-build-metadata/tests/lcms2.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/cms/lcms2.exit\\\
+        \\ncp build/meson-logs/testlog.* /nav-build-metadata/cms/\\\\ncp build/meson-info/intro-tests.json /nav-build-metadata/cms/lcms2-tests.json\\\
+        \\ntest \"$rc\" = 0\\\\nninja -C build install\\\\nldconfig\\\\ncd /sources\\\\nrm -rf lcms2-2.19.1\\\\n# Highway\
+        \ builds full upstream tests with installed real GoogleTest.\\\\ntar -xf highway-1.4.0.tar.gz\\\\ncd highway-1.4.0\\\
+        \\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON\
+        \ -DHWY_ENABLE_TESTS=ON -DHWY_SYSTEM_GTEST=ON -DCMAKE_CXX_STANDARD=17\\\\ncmake --build build --parallel 2\\\\nchown\
+        \ -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/highway-1.4.0/build;\
+        \ ctest --output-on-failure -j2\\\\\\' > /nav-build-metadata/tests/highway.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/tests/highway.log\\\
+        \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/cms/highway.exit\\\\ncp build/Testing/Temporary/LastTest.log\
+        \ /nav-build-metadata/cms/highway-original.log\\\\ncp build/CMakeCache.txt /nav-build-metadata/cms/highway-config.txt\\\
+        \\ntest \"$rc\" = 0\\\\ncmake --install build\\\\nldconfig\\\\ncd /sources\\\\nrm -rf highway-1.4.0\\\\npkg-config\
+        \ --modversion lcms2 libhwy gtest\\\\npython3 - <<\\\\\\'AUDIT\\\\\\'\\\\nfrom pathlib import Path\\\\nimport json,re\\\
+        \\np=Path(\\\\\\'/nav-build-metadata\\\\\\');counts={}\\\\nfor n in [\\\\\\'googletest\\\\\\',\\\\\\'highway\\\\\\\
+        ']:\\\\n t=(p/\\\\\\'tests\\\\\\'/f\\\\\\'{n}.log\\\\\\').read_text();assert (p/\\\\\\'cms\\\\\\'/f\\\\\\'{n}.exit\\\
+        \\\\').read_text().strip()==\\\\\\'0\\\\\\'\\\\n m=re.search(r\\\\\\'(\\\\\\\\d+)% tests passed, (\\\\\\\\d+) tests\
+        \ failed out of (\\\\\\\\d+)\\\\\\',t);assert m and m[1]==\\\\\\'100\\\\\\' and m[2]==\\\\\\'0\\\\\\' and int(m[3])>0\\\
+        \\n assert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation fault|Subprocess aborted|\\\\\\\\*\\\\\\\\*\\\\\\\\*Exception\\\
+        \\\\',t)\\\\n counts[n]={\\\\\\'original_ctest_total\\\\\\':int(m[3]),\\\\\\'failed\\\\\\':0,\\\\\\'skip_lines\\\\\
+        \\':[x for x in t.splitlines()if re.search(r\\\\\\'(?i)skip|not run|disabled\\\\\\',x)]}\\\\nrows=[json.loads(l)for\
+        \ l in (p/\\\\\\'cms\\\\\\'/\\\\\\'testlog.json\\\\\\').read_text().splitlines()if l.strip()];assert rows and all(r[\\\
+        \\\\'result\\\\\\']==\\\\\\'OK\\\\\\'for r in rows)\\\\ncounts[\\\\\\'lcms2\\\\\\']={\\\\\\'meson_total\\\\\\':len(rows),\\\
+        \\\\'results\\\\\\':[{\\\\\\'name\\\\\\':r[\\\\\\'name\\\\\\'],\\\\\\'result\\\\\\':r[\\\\\\'result\\\\\\'],\\\\\\\
+        'stdout\\\\\\':r[\\\\\\'stdout\\\\\\']}for r in rows]}\\\\nfor r in rows:assert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation\
+        \ fault\\\\\\',r[\\\\\\'stdout\\\\\\'])\\\\n(p/\\\\\\'cms\\\\\\'/\\\\\\'CMS-TESTS-OPEN.json\\\\\\').write_text(json.dumps({\\\
+        \\\\'counts\\\\\\':counts,\\\\\\'classification\\\\\\':\\\\\\'Original configured suites passed, not full OS acceptance.\
+        \ All inherited Rust/portal/image/VM/Valgrind gaps remain OPEN. Every skipped, disabled or unsupported case remains\
+        \ OPEN.\\\\\\',\\\\\\'rust_inherited_audit\\\\\\':\\\\\\'/nav-build-metadata/rust/RUST-TRANSITIONAL-OPEN.json\\\\\\\
+        ',\\\\\\'remaining\\\\\\':\\\\\\'JPEG XL,HEIF,SVG,Glycin/GTK image chain unfinished\\\\\\'},indent=2))\\\\nprint(\\\
+        \\\\'NAV_CMS_AUDIT\\\\\\',json.dumps(counts),flush=True)\\\\nAUDIT\\\\nprintf \\\\\\'NAV_CMS_ORIGINAL_SUITES_COMPLETE\\\
+        \\\\\\n\\\\\\'\\\\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\\
+        nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\\
+        nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t\
+        \ devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs\
+        \ \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ]; then\\n install -d\
+        \ -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot\
+        \ --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile\
+        \ --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke;\
+        \ printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin\
+        \ MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/cms-stage.sh\\nchroot --userspec=101:101\
+        \ \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\\
+        'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\
+        \\n\"\\'\\nNAV_MOUNT_BUILD\\n# Namespace exit unmounts virtual filesystems before checkpoint. Restore builder\\n#\
+        \ ownership only for readable cache packaging; next native build resets root ownership.\\nsudo rm -f \"$LFS/sources/\"\
+        *.whl \"$LFS/sources/\"*.zip \"$LFS/sources/\"*.ttf \"$LFS/sources/\"*.tar.* \"$LFS/sources/cms-stage.sh\"\\nsudo\
+        \ chown -hR \"$(id -u):$(id -g)\" \"$LFS\"\\ndu -sh \"$LFS\"\\ntest \"$(du -sm \"$LFS\" | cut -f1)\" -lt 5120\\nsudo\
+        \ rm -f \"$LFS/sources/cms-stage.sh\" \"$LFS/sources/image-cms-jxl-source-lock.json\"\\n# Recursive packaging ownership\
+        \ resets setuid. Restore upstream fusermount3 mode.\\nsudo chown root:root \"$LFS/usr/bin/fusermount3\"\\nsudo chmod\
+        \ 4755 \"$LFS/usr/bin/fusermount3\"\\ntest \"$(du -sb \"$LFS\" | cut -f1)\" -lt 5368709120\\n')\nstart = time.monotonic()\n\
+        log = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash', str(p)], stdout=log, stderr=subprocess.STDOUT,\
+        \ start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\ntry:\n\
+        \    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n        available = mem()\n      \
+        \  if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start > 315 * 60:\n            raise\
+        \ RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds': round(time.monotonic()\
+        \ - start), 'free_disk_bytes': free, 'available_memory_kib': available}), flush=True)\n        time.sleep(20)\n  \
+        \  if proc.returncode:\n        raise RuntimeError('source-build failed with status ' + str(proc.returncode))\nfinally:\n\
+        \    if proc.poll() is None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n\
+        \        except subprocess.TimeoutExpired:\n            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n\
+        \    log.close()\n    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n\
+        \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
+        \ 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON',\
+        \ 'NAV_TESTER', 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
+        \ 'NAV_PORTAL'])))))\n    import base64\n    for name in ['googletest', 'lcms2', 'highway']:\n        f = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/tests/'\
+        \ + name + '.log')\n        if f.exists():\n            data = f.read_bytes()\n            for i in range(0, len(data),\
+        \ 3000):\n                print('NAV_CMS_' + name.upper() + '_B64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n\
+        \    f = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/cms/CMS-TESTS-OPEN.json')\n    if f.exists():\n        print('NAV_CMS_AUDIT_JSON_B64',\
+        \ base64.b64encode(f.read_bytes()).decode(), flush=True)\nNAV_GUARD\n"
     - name: Fail closed on free-cache worst-case capacity before save
       shell: bash
       env:
@@ -255,9 +159,9 @@ jobs:
 
         keys={x[''key'']for x in data[''actions_caches'']}
 
-        assert ''nav-blfs13.1-x86_64-portal-authgeo-open-v1'' in keys
+        assert ''nav-blfs13.1-x86_64-rust-open-v1'' in keys
 
-        assert ''nav-blfs13.1-x86_64-rust-open-v1'' not in keys
+        assert ''nav-blfs13.1-x86_64-cms-open-v1'' not in keys
 
         required=[''final-gcc'',''gcc-test-runtime'',''gcc-test-cxx'',''gcc-test-c'',''access-tools'',''final-math'']
 
@@ -278,4 +182,4 @@ jobs:
       uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
       with:
         path: /mnt/nav-lfs
-        key: nav-blfs13.1-x86_64-rust-open-v1
+        key: nav-blfs13.1-x86_64-cms-open-v1
