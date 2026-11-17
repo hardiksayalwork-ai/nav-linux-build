@@ -85,29 +85,30 @@ jobs:
         \ /nav-build-metadata/cms/lcms2-tests.json\\\\ntest \"$rc\" = 0\\\\nninja -C build install\\\\nldconfig\\\\ncd /sources\\\
         \\nrm -rf lcms2-2.19.1\\\\n# Highway builds full upstream tests with installed real GoogleTest.\\\\ntar -xf highway-1.4.0.tar.gz\\\
         \\ncd highway-1.4.0\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON\
-        \ -DBUILD_TESTING=ON -DHWY_ENABLE_TESTS=ON -DHWY_SYSTEM_GTEST=ON -DCMAKE_CXX_STANDARD=17\\\\ncmake --build build --parallel\
-        \ 2\\\\nchown -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/highway-1.4.0/build;\
-        \ ctest --output-on-failure -j2\\\\\\' > /nav-build-metadata/tests/highway.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/tests/highway.log\\\
-        \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/cms/highway.exit\\\\ncp build/Testing/Temporary/LastTest.log\
-        \ /nav-build-metadata/cms/highway-original.log\\\\ncp build/CMakeCache.txt /nav-build-metadata/cms/highway-config.txt\\\
-        \\ntest \"$rc\" = 0\\\\ncmake --install build\\\\nldconfig\\\\ncd /sources\\\\nrm -rf highway-1.4.0\\\\npkg-config\
-        \ --modversion lcms2 libhwy gtest\\\\npython3 - <<\\\\\\'AUDIT\\\\\\'\\\\nfrom pathlib import Path\\\\nimport json,re\\\
-        \\np=Path(\\\\\\'/nav-build-metadata\\\\\\');counts={}\\\\nfor n in [\\\\\\'brotli\\\\\\',\\\\\\'googletest\\\\\\\
-        ',\\\\\\'highway\\\\\\']:\\\\n t=(p/\\\\\\'tests\\\\\\'/f\\\\\\'{n}.log\\\\\\').read_text();assert (p/\\\\\\'cms\\\
-        \\\\'/f\\\\\\'{n}.exit\\\\\\').read_text().strip()==\\\\\\'0\\\\\\'\\\\n m=re.search(r\\\\\\'(\\\\\\\\d+)% tests passed,\
-        \ (\\\\\\\\d+) tests failed out of (\\\\\\\\d+)\\\\\\',t);assert m and m[1]==\\\\\\'100\\\\\\' and m[2]==\\\\\\'0\\\
-        \\\\' and int(m[3])>0\\\\n assert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation fault|Subprocess aborted|\\\\\\\\\
-        *\\\\\\\\*\\\\\\\\*Exception\\\\\\',t)\\\\n counts[n]={\\\\\\'original_ctest_total\\\\\\':int(m[3]),\\\\\\'failed\\\
-        \\\\':0,\\\\\\'skip_lines\\\\\\':[x for x in t.splitlines()if re.search(r\\\\\\'(?i)skip|not run|disabled\\\\\\',x)]}\\\
-        \\nrows=[json.loads(l)for l in (p/\\\\\\'cms\\\\\\'/\\\\\\'testlog.json\\\\\\').read_text().splitlines()if l.strip()];assert\
-        \ rows and all(r[\\\\\\'result\\\\\\']==\\\\\\'OK\\\\\\'for r in rows)\\\\ncounts[\\\\\\'lcms2\\\\\\']={\\\\\\'meson_total\\\
-        \\\\':len(rows),\\\\\\'results\\\\\\':[{\\\\\\'name\\\\\\':r[\\\\\\'name\\\\\\'],\\\\\\'result\\\\\\':r[\\\\\\'result\\\
-        \\\\'],\\\\\\'stdout\\\\\\':r[\\\\\\'stdout\\\\\\']}for r in rows]}\\\\nfor r in rows:assert not re.search(r\\\\\\\
-        '(?i)SIGSEGV|segmentation fault\\\\\\',r[\\\\\\'stdout\\\\\\'])\\\\n(p/\\\\\\'cms\\\\\\'/\\\\\\'CMS-TESTS-OPEN.json\\\
-        \\\\').write_text(json.dumps({\\\\\\'counts\\\\\\':counts,\\\\\\'classification\\\\\\':\\\\\\'Original configured\
-        \ suites passed, not full OS acceptance. All inherited Rust/portal/image/VM/Valgrind gaps remain OPEN. Every skipped,\
-        \ disabled or unsupported case remains OPEN.\\\\\\',\\\\\\'rust_inherited_audit\\\\\\':\\\\\\'/nav-build-metadata/rust/RUST-TRANSITIONAL-OPEN.json\\\
-        \\\\',\\\\\\'remaining\\\\\\':\\\\\\'JPEG XL,HEIF,SVG,Glycin/GTK image chain unfinished\\\\\\'},indent=2))\\\\nprint(\\\
+        \ -DBUILD_TESTING=ON -DHWY_ENABLE_TESTS=ON -DHWY_SYSTEM_GTEST=ON -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_FLAGS_RELEASE=\"\
+        -O1 -DNDEBUG\"\\\\ncmake --build build --parallel 2\\\\nchown -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export\
+        \ PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/highway-1.4.0/build; ctest --output-on-failure -j2\\\\\\' > /nav-build-metadata/tests/highway.log\
+        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/tests/highway.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"\
+        $rc\" > /nav-build-metadata/cms/highway.exit\\\\ncp build/Testing/Temporary/LastTest.log /nav-build-metadata/cms/highway-original.log\\\
+        \\ncp build/CMakeCache.txt /nav-build-metadata/cms/highway-config.txt\\\\ntest \"$rc\" = 0\\\\ncmake --install build\\\
+        \\nldconfig\\\\ncd /sources\\\\nrm -rf highway-1.4.0\\\\npkg-config --modversion lcms2 libhwy gtest\\\\npython3 -\
+        \ <<\\\\\\'AUDIT\\\\\\'\\\\nfrom pathlib import Path\\\\nimport json,re\\\\np=Path(\\\\\\'/nav-build-metadata\\\\\\\
+        ');counts={}\\\\nfor n in [\\\\\\'brotli\\\\\\',\\\\\\'googletest\\\\\\',\\\\\\'highway\\\\\\']:\\\\n t=(p/\\\\\\\
+        'tests\\\\\\'/f\\\\\\'{n}.log\\\\\\').read_text();assert (p/\\\\\\'cms\\\\\\'/f\\\\\\'{n}.exit\\\\\\').read_text().strip()==\\\
+        \\\\'0\\\\\\'\\\\n m=re.search(r\\\\\\'100% tests passed(?:, 0 tests failed)? out of (\\\\\\\\d+)\\\\\\',t);assert\
+        \ m and int(m[1])>0;assert not re.search(r\\\\\\'(?m)^\\\\\\\\s*\\\\\\\\d+/\\\\\\\\d+.*(?:Failed|Timeout|Not Run)\\\
+        \\\\',t)\\\\n assert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation fault|Subprocess aborted|\\\\\\\\*\\\\\\\\*\\\\\
+        \\\\*Exception\\\\\\',t)\\\\n counts[n]={\\\\\\'original_ctest_total\\\\\\':int(m[1]),\\\\\\'failed\\\\\\':0,\\\\\\\
+        'skip_lines\\\\\\':[x for x in t.splitlines()if re.search(r\\\\\\'(?i)skip|not run|disabled\\\\\\',x)]}\\\\nrows=[json.loads(l)for\
+        \ l in (p/\\\\\\'cms\\\\\\'/\\\\\\'testlog.json\\\\\\').read_text().splitlines()if l.strip()];assert rows and all(r[\\\
+        \\\\'result\\\\\\']==\\\\\\'OK\\\\\\'for r in rows)\\\\ncounts[\\\\\\'lcms2\\\\\\']={\\\\\\'meson_total\\\\\\':len(rows),\\\
+        \\\\'results\\\\\\':[{\\\\\\'name\\\\\\':r[\\\\\\'name\\\\\\'],\\\\\\'result\\\\\\':r[\\\\\\'result\\\\\\'],\\\\\\\
+        'stdout\\\\\\':r[\\\\\\'stdout\\\\\\']}for r in rows]}\\\\nfor r in rows:assert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation\
+        \ fault\\\\\\',r[\\\\\\'stdout\\\\\\'])\\\\n(p/\\\\\\'cms\\\\\\'/\\\\\\'CMS-TESTS-OPEN.json\\\\\\').write_text(json.dumps({\\\
+        \\\\'counts\\\\\\':counts,\\\\\\'classification\\\\\\':\\\\\\'Original configured suites passed, not full OS acceptance.\
+        \ All inherited Rust/portal/image/VM/Valgrind gaps remain OPEN. Every skipped, disabled or unsupported case remains\
+        \ OPEN.\\\\\\',\\\\\\'rust_inherited_audit\\\\\\':\\\\\\'/nav-build-metadata/rust/RUST-TRANSITIONAL-OPEN.json\\\\\\\
+        ',\\\\\\'remaining\\\\\\':\\\\\\'JPEG XL,HEIF,SVG,Glycin/GTK image chain unfinished\\\\\\'},indent=2))\\\\nprint(\\\
         \\\\'NAV_CMS_AUDIT\\\\\\',json.dumps(counts),flush=True)\\\\nAUDIT\\\\nprintf \\\\\\'NAV_CMS_ORIGINAL_SUITES_COMPLETE\\\
         \\\\\\n\\\\\\'\\\\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\\
         nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\\
