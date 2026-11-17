@@ -1,4 +1,4 @@
-name: NAV Highway GC strict3281 transitional checkpoint
+name: NAV JPEG XL original full tests no-save diagnostic
 'on':
   workflow_dispatch: {}
 permissions:
@@ -31,155 +31,79 @@ jobs:
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
       with:
         path: /mnt/nav-lfs
-        key: nav-blfs13.1-x86_64-cms-open-v1
+        key: nav-blfs13.1-x86_64-highway-open-v1
         fail-on-cache-miss: true
-    - name: Highway GC original strict3281 suites install transitional
+    - name: JPEG XL full original suites and roundtrip no-save diagnostic
       shell: bash
       run: "python3 - <<'NAV_GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
         \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\nassert os.cpu_count()\
         \ >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024 ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\n\
         p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\ntest -f \"\
-        $LFS/nav-build-metadata/cms/CMS-TESTS-OPEN.json\"\\npython3 - <<\\'DOWNLOADS\\'\\nfrom pathlib import Path\\nimport\
-        \ urllib.request,hashlib,json\\nlock=json.loads(\"[{\\\\\"filename\\\\\": \\\\\"highway-1.4.0.tar.gz\\\\\", \\\\\"\
-        url\\\\\": \\\\\"https://github.com/google/highway/archive/1.4.0/highway-1.4.0.tar.gz\\\\\", \\\\\"sha256\\\\\": \\\
-        \\\"e72241ac9524bb653ae52ced768b508045d4438726a303f10181a38f764a453c\\\\\", \\\\\"md5\\\\\": \\\\\"9d335797777e17f827c7980b8313a34b\\\
-        \\\"}]\")\\nfor x in lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\'filename\\']\\n with urllib.request.urlopen(x[\\\
-        'url\\'],timeout=120)as r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\n assert hashlib.file_digest(p.open(\\\
-        'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\',x[\\'filename\\'],flush=True)\\\
-        nDOWNLOADS\\npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/highway-gc.sh\\').write_text(\\\
+        $LFS/nav-build-metadata/highway-gc/HIGHWAY-TRANSITIONAL-OPEN.json\"\\npython3 - <<\\'DOWNLOADS\\'\\nfrom pathlib import\
+        \ Path\\nimport urllib.request,hashlib,json\\nlock=json.loads(\"[{\\\\\"filename\\\\\": \\\\\"libjxl-0.12.0.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://github.com/libjxl/libjxl/archive/v0.12.0/libjxl-0.12.0.tar.gz\\\\\", \\\\\"sha256\\\
+        \\\": \\\\\"03e9be69a30be4011f559da75328b6d7cea8ad921fabfbd551ce10bf45cdc992\\\\\", \\\\\"md5\\\\\": \\\\\"a0fd3ac7b474525dadb99bbcb5d814f9\\\
+        \\\"}, {\\\\\"filename\\\\\": \\\\\"libjxl-testdata-73695d303670c90e4d506ea89d9901b081385089.tar.gz\\\\\", \\\\\"\
+        url\\\\\": \\\\\"https://github.com/libjxl/testdata/archive/73695d303670c90e4d506ea89d9901b081385089.tar.gz\\\\\"\
+        , \\\\\"sha256\\\\\": \\\\\"380a58890e11513d34f1ed1e686e3c2cee97931cc9faaa80b33fd6c8d2640301\\\\\", \\\\\"upstream_tag_submodule_url\\\
+        \\\": \\\\\"https://github.com/libjxl/testdata/tree/73695d303670c90e4d506ea89d9901b081385089\\\\\"}]\")\\nfor x in\
+        \ lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\'filename\\']\\n with urllib.request.urlopen(x[\\'url\\'],timeout=120)as\
+        \ r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\n assert hashlib.file_digest(p.open(\\'rb\\'),\\\
+        'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\',x[\\'filename\\'],flush=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/jxl\\\
+        ').mkdir(exist_ok=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/jxl/source-lock.json\\').write_text(json.dumps(lock,indent=2))\\\
+        nDOWNLOADS\\ncd \"$LFS/sources\"\\ntar -xf libjxl-0.12.0.tar.gz\\ncd libjxl-0.12.0\\n# Recover authentic tag metadata\
+        \ only, leaving hash-checked archive sources untouched.\\ngit init\\ngit remote add origin https://github.com/libjxl/libjxl.git\\\
+        ngit fetch --depth 1 origin tag v0.12.0\\ngit reset --mixed FETCH_HEAD\\ngit diff --exit-code --ignore-submodules=all\\\
+        ntest \"$(git ls-tree HEAD testdata | awk \\'{print $3}\\')\" = 73695d303670c90e4d506ea89d9901b081385089\\nmkdir -p\
+        \ testdata\\ntar -xf ../libjxl-testdata-73695d303670c90e4d506ea89d9901b081385089.tar.gz -C testdata --strip-components=1\\\
+        ncd /\\npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/jxl-stage.sh\\').write_text(\\\
         'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport MAKEFLAGS=-j2 PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
-        \ LANG=C.UTF-8\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir -p /nav-build-metadata/highway-gc\\\
-        \\ncd /sources\\\\n{ command -v gcc g++\\\\ngcc --version\\\\ng++ --version\\\\ng++ -Q --help=params | grep -E \\\\\
-        \\'ggc-min-(expand|heapsize)\\\\\\'\\\\ng++ -Q --param=ggc-min-expand=10 --param=ggc-min-heapsize=4096 --help=params\
-        \ | grep -E \\\\\\'ggc-min-(expand|heapsize)\\\\\\'\\\\npkg-config --modversion gtest\\\\nulimit -a\\\\nlscpu; } >\
-        \ /nav-build-metadata/highway-gc/preflight.log 2>&1\\\\ncat /nav-build-metadata/highway-gc/preflight.log\\\\n# Fresh\
-        \ unchanged upstream source, default Release optimization, all upstream target selection unchanged.\\\\ntar -xf highway-1.4.0.tar.gz\\\
-        \\ncd highway-1.4.0\\\\nset +e\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release\
-        \ -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_CXX_FLAGS=\"--param=ggc-min-expand=10 --param=ggc-min-heapsize=4096\"\
-        \ -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON -DHWY_ENABLE_TESTS=ON -DHWY_ENABLE_CONTRIB=ON -DHWY_ENABLE_EXAMPLES=ON\
-        \ -DHWY_SYSTEM_GTEST=ON -DCMAKE_CXX_STANDARD=17 > /nav-build-metadata/highway-gc/config.log 2>&1\\\\nrc=$?\\\\nset\
-        \ -e\\\\ncat /nav-build-metadata/highway-gc/config.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/highway-gc/config.exit\\\
-        \\ntest \"$rc\" = 0\\\\ncp build/CMakeCache.txt /nav-build-metadata/highway-gc/CMakeCache.txt\\\\nset +e\\\\ncmake\
-        \ --build build --parallel 2 > /nav-build-metadata/highway-gc/build.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ntail -100 /nav-build-metadata/highway-gc/build.log\\\
-        \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/highway-gc/build.exit\\\\ntest \"$rc\" = 0\\\\nchown\
-        \ -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/highway-1.4.0/build;\
-        \ ctest --no-tests=error --output-on-failure -j2\\\\\\' > /nav-build-metadata/highway-gc/tests.log 2>&1\\\\nrc=$?\\\
-        \\nset -e\\\\ncat /nav-build-metadata/highway-gc/tests.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/highway-gc/tests.exit\\\
-        \\ncp build/Testing/Temporary/LastTest.log /nav-build-metadata/highway-gc/original.log\\\\ntest \"$rc\" = 0\\\\npython3\
-        \ - <<\\\\\\'AUDIT\\\\\\'\\\\nfrom pathlib import Path\\\\nimport json,re,collections,hashlib\\\\np=Path(\\\\\\'/nav-build-metadata/highway-gc\\\
-        \\\\')\\\\nt=(p/\\\\\\'tests.log\\\\\\').read_text();o=(p/\\\\\\'original.log\\\\\\').read_text();c=(p/\\\\\\'CMakeCache.txt\\\
-        \\\\').read_text();pre=(p/\\\\\\'preflight.log\\\\\\').read_text();build=(p/\\\\\\'build.log\\\\\\').read_text()\\\
-        \\nassert (p/\\\\\\'config.exit\\\\\\').read_text().strip()==\\\\\\'0\\\\\\'\\\\nassert (p/\\\\\\'build.exit\\\\\\\
-        ').read_text().strip()==\\\\\\'0\\\\\\'\\\\nassert (p/\\\\\\'tests.exit\\\\\\').read_text().strip()==\\\\\\'0\\\\\\\
-        '\\\\nassert re.search(r\\\\\\'100% tests passed(?:, 0 tests failed)? out of 3281\\\\\\\\b\\\\\\',t)\\\\npasses=re.findall(r\\\
-        \\\\'(?m)^\\\\\\\\s*\\\\\\\\d+/3281 Test\\\\\\\\s+#(\\\\\\\\d+): (.*?)\\\\\\\\s+Passed\\\\\\\\s+[\\\\\\\\d.]+ sec\\\
-        \\\\',t)\\\\nassert len(passes)==3281 and len({int(n)for n,_ in passes})==3281 and {int(n)for n,_ in passes}==set(range(1,3282))\\\
-        \\nassert o.count(\\\\\\'Test Passed.\\\\\\')==3281\\\\nbad=r\\\\\\'(?i)\\\\\\\\[\\\\\\\\s*SKIPPED\\\\\\\\s*\\\\\\\
-        \\]|Test Failed|Not Run|SIGSEGV|segmentation fault|Subprocess aborted|\\\\\\\\*\\\\\\\\*\\\\\\\\*Exception|\\\\\\\\\
-        *\\\\\\\\*\\\\\\\\*Failed|Timeout|DISABLED TEST\\\\\\'\\\\nassert not re.search(bad,t+\\\\\\'\\\\\\\\n\\\\\\'+o)\\\
-        \\nexpected={(f\\\\\\'BitPackTest.TestAllPack{n}\\\\\\',target)for n in [8,16,32,64]for target in [\\\\\\'AVX3_SPR\\\
-        \\\\',\\\\\\'AVX3_DL\\\\\\',\\\\\\'AVX3\\\\\\',\\\\\\'AVX2\\\\\\',\\\\\\'SSE4\\\\\\',\\\\\\'SSSE3\\\\\\',\\\\\\'SSE2\\\
-        \\\\',\\\\\\'EMU128\\\\\\']}\\\\nactual={(m[0],m[1])for _,name in passes for m in re.findall(r\\\\\\'(BitPackTest\\\
-        \\\\\\.TestAllPack\\\\\\\\d+)/(\\\\\\\\w+)\\\\\\',name)}\\\\nassert actual==expected\\\\nfor k in [\\\\\\'BUILD_TESTING:BOOL=ON\\\
-        \\\\',\\\\\\'HWY_ENABLE_TESTS:BOOL=ON\\\\\\',\\\\\\'HWY_ENABLE_CONTRIB:BOOL=ON\\\\\\',\\\\\\'HWY_ENABLE_EXAMPLES:BOOL=ON\\\
-        \\\\',\\\\\\'HWY_SYSTEM_GTEST:BOOL=ON\\\\\\',\\\\\\'CMAKE_CXX_FLAGS_RELEASE:STRING=-O3 -DNDEBUG\\\\\\',\\\\\\'CMAKE_CXX_FLAGS:STRING=--param=ggc-min-expand=10\
-        \ --param=ggc-min-heapsize=4096\\\\\\']:assert k in c,k\\\\nassert not re.search(r\\\\\\'HWY_(?:DISABLED_TARGETS|COMPILE_ONLY|BASELINE_TARGETS)\\\
-        \\\\',c)\\\\nassert re.search(r\\\\\\'--param=ggc-min-expand=\\\\\\\\s+10\\\\\\\\b\\\\\\',pre) and re.search(r\\\\\
-        \\'--param=ggc-min-heapsize=\\\\\\\\s+4096\\\\\\\\b\\\\\\',pre)\\\\nassert re.search(r\\\\\\'virtual memory.*4194304\\\
-        \\\\',pre)\\\\nassert \\\\\\'[239/239]\\\\\\' in build and \\\\\\'Linking CXX executable tests/bit_pack_test\\\\\\\
-        ' in build\\\\nassert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation fault|LLVM ERROR|virtual memory exhausted|FAILED:\\\
-        \\\\',build)\\\\naudit={\\\\\\'classification\\\\\\':\\\\\\'TRANSITIONAL. Highway full original configured suite passed;\
-        \ not OS acceptance. All inherited Rust/portal/image/VM/Valgrind gaps remain OPEN.\\\\\\',\\\\\\'ctest_pass\\\\\\\
-        ':3281,\\\\\\'ctest_fail\\\\\\':0,\\\\\\'actual_skips\\\\\\':0,\\\\\\'original_pass_records\\\\\\':3281,\\\\\\'bit_pack_cases\\\
-        \\\\':sorted(actual),\\\\\\'compiler\\\\\\':\\\\\\'GCC16.2.0 Release-O3\\\\\\',\\\\\\'GC_params\\\\\\':{\\\\\\'ggc-min-expand\\\
-        \\\\':10,\\\\\\'ggc-min-heapsize\\\\\\':4096},\\\\\\'cap_KiB\\\\\\':4194304,\\\\\\'jobs\\\\\\':2,\\\\\\'inherited_CMS_audit\\\
-        \\\\':\\\\\\'/nav-build-metadata/cms/CMS-TESTS-OPEN.json\\\\\\',\\\\\\'prior_Highway_build_failures_resolved_for_this_config_only\\\
-        \\\\':[\\\\\\'44130774687 GCC-O3\\\\\\',\\\\\\'44138643384 GCC-O1\\\\\\',\\\\\\'44157594647 Clang22-O3\\\\\\'],\\\\\
-        \\'diagnostic_success\\\\\\':\\\\\\'44169273084\\\\\\',\\\\\\'logs_sha256\\\\\\':{f.name:hashlib.sha256(f.read_bytes()).hexdigest()for\
-        \ f in p.glob(\\\\\\'*\\\\\\')if f.is_file()},\\\\\\'preflight_proof\\\\\\':pre}\\\\n(p/\\\\\\'HIGHWAY-TRANSITIONAL-OPEN.json\\\
-        \\\\').write_text(json.dumps(audit,indent=2));print(\\\\\\'NAV_HIGHWAY_STRICT_ORIGINAL_GATE_3281_OK\\\\\\',flush=True)\\\
-        \\nAUDIT\\\\ncmake --install build\\\\nldconfig\\\\npkg-config --modversion libhwy\\\\npkg-config --modversion libhwy\
-        \ | grep -x \\\\\\'1.4.0\\\\\\'\\\\nldd /usr/lib/libhwy.so | tee /nav-build-metadata/highway-gc/installed-linkage.log\\\
-        \\n! grep -q \\\\\\'not found\\\\\\' /nav-build-metadata/highway-gc/installed-linkage.log\\\\nprintf \\\\\\'NAV_HIGHWAY_GC_FULL_SUITE_INSTALLED_TRANSITIONAL\\\
-        \\\\\\n\\\\\\'\\\\ncd /sources\\\\nrm -rf highway-1.4.0\\\\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo\
-        \ chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\\
-        'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\\
-        nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc\
-        \ \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif\
-        \ [ -h \"$LFS/dev/shm\" ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev\
-        \ tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin\
-        \ /bin/bash --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm\
-        \ /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb\
-        \ PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/highway-gc.sh\\\
-        nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash\
-        \ --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke;\
-        \ printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nNAV_MOUNT_BUILD\\nsudo rm -f \"$LFS/sources/highway-gc.sh\" \"$LFS/sources/highway-1.4.0.tar.gz\"\
-        \\nsudo rm -f \"$LFS/sources/\"*.tar.*\\nsudo chown -hR \"$(id -u):$(id -g)\" \"$LFS\"\\nsudo chown root:root \"$LFS/usr/bin/fusermount3\"\
-        \\nsudo chmod 4755 \"$LFS/usr/bin/fusermount3\"\\ntest \"$(du -sb \"$LFS\" | cut -f1)\" -lt 5368709120\\nprintf \\\
-        'NAV_HIGHWAY_TRANSITIONAL_INSTALL_COMPLETE\\\\n\\' \\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log',\
-        \ 'w')\nproc = subprocess.Popen(['bash', str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda\
-        \ : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free\
-        \ = shutil.disk_usage('/mnt').free\n        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 *\
-        \ 1024 ** 2 or time.monotonic() - start > 315 * 60:\n            raise RuntimeError('resource or stage-time safety\
-        \ floor reached')\n        print(json.dumps({'elapsed_seconds': round(time.monotonic() - start), 'free_disk_bytes':\
-        \ free, 'available_memory_kib': available}), flush=True)\n        time.sleep(20)\n    if proc.returncode:\n      \
-        \  raise RuntimeError('source-build failed with status ' + str(proc.returncode))\nfinally:\n    if proc.poll() is\
-        \ None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n        except\
-        \ subprocess.TimeoutExpired:\n            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n    log.close()\n\
-        \    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n    print('\\n'.join(lines[-80:]))\n\
-        \    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK', 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE',\
-        \ 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON', 'NAV_TESTER', 'NAV_KF6', 'Totals:',\
-        \ 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE', 'NAV_PORTAL'])))))\n    import base64\n\
-        \    f = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/cms/CMS-TESTS-OPEN.json')\n    import base64\n    for f in\
-        \ sorted(pathlib.Path('/mnt/nav-lfs/nav-build-metadata/highway-gc').glob('*')):\n        if f.is_file():\n       \
-        \     data = f.read_bytes()\n            for i in range(0, len(data), 3000):\n                print('NAV_HIGHWAY_GC_'\
-        \ + f.name.replace('.', '_').upper() + '_B64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\nNAV_GUARD\n"
-    - name: Fail closed on free-cache worst-case capacity before save
-      shell: bash
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      run: 'set -euo pipefail
-
-        python3 - <<''BUDGET''
-
-        import urllib.request,json,os,subprocess
-
-        root=int(subprocess.check_output([''du'',''-sb'',''/mnt/nav-lfs'']).split()[0])
-
-        assert root<5120*1024**2,root
-
-        request=urllib.request.Request(''https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/actions/caches?per_page=100'',headers={''Authorization'':''Bearer
-        ''+os.environ[''GITHUB_TOKEN''],''Accept'':''application/vnd.github+json'',''X-GitHub-Api-Version'':''2022-11-28''})
-
-        with urllib.request.urlopen(request,timeout=60)as r:data=json.load(r)
-
-        assert data[''total_count'']==len(data[''actions_caches'']) and data[''total_count'']<=100
-
-        keys={x[''key'']for x in data[''actions_caches'']}
-
-        assert ''nav-blfs13.1-x86_64-rust-open-v1'' not in keys
-
-        assert ''nav-blfs13.1-x86_64-cms-open-v1'' in keys
-
-        assert ''nav-blfs13.1-x86_64-highway-open-v1'' not in keys
-
-        required=[''final-gcc'',''gcc-test-runtime'',''gcc-test-cxx'',''gcc-test-c'',''access-tools'',''final-math'']
-
-        assert all(''nav-lfs13.1-x86_64-''+x+''-v1'' in keys for x in required)
-
-        total=sum(x[''size_in_bytes'']for x in data[''actions_caches''])
-
-        worst=5184*1024**2
-
-        print(''NAV_CACHE_BUDGET'',{''existing'':total,''root_apparent_bytes'':root,''new_cache_maximum'':worst,''worst_total'':total+worst,''limit'':10*1024**3},flush=True)
-
-        assert total+worst<10*1024**3
-
-        BUDGET
-
-        '
-    - name: Preserve transitional checkpoint with all gaps OPEN
-      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
-      with:
-        path: /mnt/nav-lfs
-        key: nav-blfs13.1-x86_64-highway-open-v1
+        \ LANG=C.UTF-8\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir -p /nav-build-metadata/jxl\\\\ncd\
+        \ /sources/libjxl-0.12.0\\\\n{ gcc --version; pkg-config --modversion libhwy lcms2 libbrotlidec libpng libjpeg gtest;\
+        \ git --version; ulimit -a; lscpu; git rev-parse HEAD; git ls-tree HEAD testdata; git diff --exit-code --ignore-submodules=all;\
+        \ test \"$(git ls-files | wc -l)\" -gt 500; } > /nav-build-metadata/jxl/preflight.log 2>&1\\\\ncat /nav-build-metadata/jxl/preflight.log\\\
+        \\nset +e\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON\
+        \ -DBUILD_TESTING=ON -DJPEGXL_TEST_TOOLS=ON -DJPEGXL_ENABLE_DEVTOOLS=ON -DJPEGXL_ENABLE_SKCMS=OFF -DJPEGXL_ENABLE_SJPEG=OFF\
+        \ -DJPEGXL_ENABLE_PLUGINS=OFF -DJPEGXL_INSTALL_JARDIR=/usr/share/java -DJPEGXL_FORCE_SYSTEM_BROTLI=ON -DJPEGXL_FORCE_SYSTEM_HWY=ON\
+        \ -DJPEGXL_FORCE_SYSTEM_LCMS2=ON -DJPEGXL_FORCE_SYSTEM_GTEST=ON > /nav-build-metadata/jxl/config.log 2>&1\\\\nrc=$?\\\
+        \\nset -e\\\\ncat /nav-build-metadata/jxl/config.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/jxl/config.exit\\\
+        \\ntest \"$rc\" = 0\\\\ncp build/CMakeCache.txt /nav-build-metadata/jxl/CMakeCache.txt\\\\nset +e\\\\ncmake --build\
+        \ build --parallel 2 > /nav-build-metadata/jxl/build.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ntail -100 /nav-build-metadata/jxl/build.log\\\
+        \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/jxl/build.exit\\\\ntest \"$rc\" = 0\\\\nchown -R\
+        \ tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/libjxl-0.12.0/build;\
+        \ ctest --show-only=json-v1\\\\\\' > /nav-build-metadata/jxl/tests-discovered.json 2>&1\\\\nrc=$?\\\\nset -e\\\\ntest\
+        \ \"$rc\" = 0\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/libjxl-0.12.0/build;\
+        \ ctest --no-tests=error --output-on-failure -j2\\\\\\' > /nav-build-metadata/jxl/tests.log 2>&1\\\\nrc=$?\\\\nset\
+        \ -e\\\\ncat /nav-build-metadata/jxl/tests.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/jxl/tests.exit\\\
+        \\ncp build/Testing/Temporary/LastTest.log /nav-build-metadata/jxl/original.log\\\\ntest \"$rc\" = 0\\\\nprintf \\\
+        \\\\'NAV_JXL_FULL_ORIGINAL_SUITES_NO_SAVE_NO_INSTALL\\\\\\\\n\\\\\\'\\\\ncd /sources\\\\nrm -rf libjxl-0.12.0\\\\\
+        n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\"\
+        \ unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\nmount --bind \"$LFS\"\
+        \ \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620\
+        \ \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o\
+        \ nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\
+        \\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env\
+        \ -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test\
+        \ \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\
+        \\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2\
+        \ LC_ALL=POSIX /bin/bash --noprofile --norc /sources/jxl-stage.sh\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env\
+        \ -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test\
+        \ \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\
+        \\'\\nNAV_MOUNT_BUILD\\nsudo rm -f \"$LFS/sources/jxl-stage.sh\" \"$LFS/sources/\"*.tar.*\\nprintf \\'NAV_JXL_DIAGNOSTIC_NO_SAVE_NO_INSTALL\\\
+        \\n\\'\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash',\
+        \ str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0,\
+        \ sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n\
+        \        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start\
+        \ > 315 * 60:\n            raise RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds':\
+        \ round(time.monotonic() - start), 'free_disk_bytes': free, 'available_memory_kib': available}), flush=True)\n   \
+        \     time.sleep(20)\n    if proc.returncode:\n        raise RuntimeError('source-build failed with status ' + str(proc.returncode))\n\
+        finally:\n    if proc.poll() is None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n\
+        \        except subprocess.TimeoutExpired:\n            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n\
+        \    log.close()\n    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n\
+        \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
+        \ 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON',\
+        \ 'NAV_TESTER', 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
+        \ 'NAV_PORTAL'])))))\n    import base64\n    for f in sorted(pathlib.Path('/mnt/nav-lfs/nav-build-metadata/jxl').glob('*')):\n\
+        \        if f.is_file():\n            data = f.read_bytes()\n            for i in range(0, len(data), 3000):\n   \
+        \             print('NAV_JXL_' + f.name.replace('.', '_').upper() + '_B64', base64.b64encode(data[i:i + 3000]).decode(),\
+        \ flush=True)\nNAV_GUARD\n"
