@@ -48,56 +48,66 @@ jobs:
         : \\\\\"e72241ac9524bb653ae52ced768b508045d4438726a303f10181a38f764a453c\\\\\", \\\\\"md5\\\\\": \\\\\"9d335797777e17f827c7980b8313a34b\\\
         \\\"}, {\\\\\"filename\\\\\": \\\\\"googletest-1.18.0.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://github.com/google/googletest/archive/refs/tags/v1.18.0.tar.gz\\\
         \\\", \\\\\"sha256\\\\\": \\\\\"6e3191c1455468b3fc35a417fb565c1c5071aee1b7e7f85e30cf48a98d37d8b5\\\\\", \\\\\"md5\\\
-        \\\": \\\\\"ae87634285dbe148a7abc6d19c4c05bd\\\\\"}]\")\\nfor x in lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\\
-        'filename\\']\\n with urllib.request.urlopen(x[\\'url\\'],timeout=120)as r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\\
-        n assert hashlib.file_digest(p.open(\\'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\\
-        ',x[\\'filename\\'],flush=True)\\nPath(\\'/mnt/nav-lfs/sources/image-cms-jxl-source-lock.json\\').write_text(json.dumps(lock,indent=2))\\\
-        nDOWNLOADS\\npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/cms-stage.sh\\').write_text(\\\
+        \\\": \\\\\"ae87634285dbe148a7abc6d19c4c05bd\\\\\"}, {\\\\\"filename\\\\\": \\\\\"brotli-1.2.0.tar.gz\\\\\", \\\\\"\
+        url\\\\\": \\\\\"https://github.com/google/brotli/archive/v1.2.0/brotli-1.2.0.tar.gz\\\\\", \\\\\"md5\\\\\": \\\\\"\
+        8fbfae9a5ecbc278ae7f761ecb6d1285\\\\\", \\\\\"sha256\\\\\": \\\\\"816c96e8e8f193b40151dad7e8ff37b1221d019dbcb9c35cd3fadbfe6477dfec\\\
+        \\\"}]\")\\nfor x in lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\'filename\\']\\n with urllib.request.urlopen(x[\\\
+        'url\\'],timeout=120)as r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\n assert hashlib.file_digest(p.open(\\\
+        'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\',x[\\'filename\\'],flush=True)\\\
+        nPath(\\'/mnt/nav-lfs/sources/image-cms-jxl-source-lock.json\\').write_text(json.dumps(lock,indent=2))\\nDOWNLOADS\\\
+        npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/cms-stage.sh\\').write_text(\\\
         'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport MAKEFLAGS=-j2 PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
         \ LANG=C.UTF-8 CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir\
         \ -p /nav-build-metadata/cms /nav-build-metadata/tests\\\\ncd /sources\\\\nprintf \\\\\\'NAV_CMS_PREREQUISITES\\\\\
-        \\\\n\\\\\\'\\\\npkg-config --modversion libjpeg libtiff-4 libpng libbrotlidec\\\\nrustc --version\\\\ncp /sources/image-cms-jxl-source-lock.json\
-        \ /nav-build-metadata/cms/\\\\n# Real original GoogleTest suites supply test support, no external downloads.\\\\ntar\
-        \ -xf googletest-1.18.0.tar.gz\\\\ncd googletest-1.18.0\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr\
-        \ -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -Dgtest_build_tests=ON -Dgmock_build_tests=ON -DCMAKE_CXX_STANDARD=17\\\
-        \\ncmake --build build --parallel 2\\\\nchown -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin;\
-        \ cd /sources/googletest-1.18.0/build; ctest --output-on-failure -j2\\\\\\' > /nav-build-metadata/tests/googletest.log\
-        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/tests/googletest.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\'\
-        \ \"$rc\" > /nav-build-metadata/cms/googletest.exit\\\\ncp build/Testing/Temporary/LastTest.log /nav-build-metadata/cms/googletest-original.log\\\
-        \\ncp build/CMakeCache.txt /nav-build-metadata/cms/googletest-config.txt\\\\ntest \"$rc\" = 0\\\\ncmake --install\
-        \ build\\\\nldconfig\\\\ncd /sources\\\\nrm -rf googletest-1.18.0\\\\n# BLFS Little CMS with JPEG/TIFF tools and unmodified\
-        \ testbed.\\\\ntar -xf lcms2-2.19.1.tar.gz\\\\ncd lcms2-2.19.1\\\\nmeson setup build --prefix=/usr --buildtype=release\
-        \ -Dutils=true -Dtests=enabled -Djpeg=enabled -Dtiff=enabled\\\\nninja -C build -j2\\\\nchown -R tester .\\\\nset\
-        \ +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/lcms2-2.19.1; meson test -C build\
-        \ --print-errorlogs --no-rebuild --num-processes 2\\\\\\' > /nav-build-metadata/tests/lcms2.log 2>&1\\\\nrc=$?\\\\\
-        nset -e\\\\ncat /nav-build-metadata/tests/lcms2.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/cms/lcms2.exit\\\
-        \\ncp build/meson-logs/testlog.* /nav-build-metadata/cms/\\\\ncp build/meson-info/intro-tests.json /nav-build-metadata/cms/lcms2-tests.json\\\
-        \\ntest \"$rc\" = 0\\\\nninja -C build install\\\\nldconfig\\\\ncd /sources\\\\nrm -rf lcms2-2.19.1\\\\n# Highway\
-        \ builds full upstream tests with installed real GoogleTest.\\\\ntar -xf highway-1.4.0.tar.gz\\\\ncd highway-1.4.0\\\
-        \\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON\
-        \ -DHWY_ENABLE_TESTS=ON -DHWY_SYSTEM_GTEST=ON -DCMAKE_CXX_STANDARD=17\\\\ncmake --build build --parallel 2\\\\nchown\
-        \ -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/highway-1.4.0/build;\
+        \\\\n\\\\\\'\\\\npkg-config --modversion libjpeg libtiff-4 libpng\\\\nrustc --version\\\\ncp /sources/image-cms-jxl-source-lock.json\
+        \ /nav-build-metadata/cms/\\\\n# Brotli source prerequisite and original native suites.\\\\ntar -xf brotli-1.2.0.tar.gz\\\
+        \\ncd brotli-1.2.0\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release\\\\ncmake\
+        \ --build build --parallel 2\\\\nchown -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin;\
+        \ cd /sources/brotli-1.2.0/build; ctest --output-on-failure -j2\\\\\\' > /nav-build-metadata/tests/brotli.log 2>&1\\\
+        \\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/tests/brotli.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/cms/brotli.exit\\\
+        \\ncp build/Testing/Temporary/LastTest.log /nav-build-metadata/cms/brotli-original.log\\\\ncp build/CMakeCache.txt\
+        \ /nav-build-metadata/cms/brotli-config.txt\\\\ntest \"$rc\" = 0\\\\ncmake --install build\\\\nldconfig\\\\npkg-config\
+        \ --modversion libbrotlidec\\\\ncd /sources\\\\nrm -rf brotli-1.2.0\\\\n# Real original GoogleTest suites supply test\
+        \ support, no external downloads.\\\\ntar -xf googletest-1.18.0.tar.gz\\\\ncd googletest-1.18.0\\\\ncmake -S . -B\
+        \ build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -Dgtest_build_tests=ON\
+        \ -Dgmock_build_tests=ON -DCMAKE_CXX_STANDARD=17\\\\ncmake --build build --parallel 2\\\\nchown -R tester .\\\\nset\
+        \ +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/googletest-1.18.0/build; ctest\
+        \ --output-on-failure -j2\\\\\\' > /nav-build-metadata/tests/googletest.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/tests/googletest.log\\\
+        \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/cms/googletest.exit\\\\ncp build/Testing/Temporary/LastTest.log\
+        \ /nav-build-metadata/cms/googletest-original.log\\\\ncp build/CMakeCache.txt /nav-build-metadata/cms/googletest-config.txt\\\
+        \\ntest \"$rc\" = 0\\\\ncmake --install build\\\\nldconfig\\\\ncd /sources\\\\nrm -rf googletest-1.18.0\\\\n# BLFS\
+        \ Little CMS with JPEG/TIFF tools and unmodified testbed.\\\\ntar -xf lcms2-2.19.1.tar.gz\\\\ncd lcms2-2.19.1\\\\\
+        nmeson setup build --prefix=/usr --buildtype=release -Dutils=true -Dtests=enabled -Djpeg=enabled -Dtiff=enabled\\\\\
+        nninja -C build -j2\\\\nchown -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin;\
+        \ cd /sources/lcms2-2.19.1; meson test -C build --print-errorlogs --no-rebuild --num-processes 2\\\\\\' > /nav-build-metadata/tests/lcms2.log\
+        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/tests/lcms2.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\"\
+        \ > /nav-build-metadata/cms/lcms2.exit\\\\ncp build/meson-logs/testlog.* /nav-build-metadata/cms/\\\\ncp build/meson-info/intro-tests.json\
+        \ /nav-build-metadata/cms/lcms2-tests.json\\\\ntest \"$rc\" = 0\\\\nninja -C build install\\\\nldconfig\\\\ncd /sources\\\
+        \\nrm -rf lcms2-2.19.1\\\\n# Highway builds full upstream tests with installed real GoogleTest.\\\\ntar -xf highway-1.4.0.tar.gz\\\
+        \\ncd highway-1.4.0\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON\
+        \ -DBUILD_TESTING=ON -DHWY_ENABLE_TESTS=ON -DHWY_SYSTEM_GTEST=ON -DCMAKE_CXX_STANDARD=17\\\\ncmake --build build --parallel\
+        \ 2\\\\nchown -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/highway-1.4.0/build;\
         \ ctest --output-on-failure -j2\\\\\\' > /nav-build-metadata/tests/highway.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/tests/highway.log\\\
         \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/cms/highway.exit\\\\ncp build/Testing/Temporary/LastTest.log\
         \ /nav-build-metadata/cms/highway-original.log\\\\ncp build/CMakeCache.txt /nav-build-metadata/cms/highway-config.txt\\\
         \\ntest \"$rc\" = 0\\\\ncmake --install build\\\\nldconfig\\\\ncd /sources\\\\nrm -rf highway-1.4.0\\\\npkg-config\
         \ --modversion lcms2 libhwy gtest\\\\npython3 - <<\\\\\\'AUDIT\\\\\\'\\\\nfrom pathlib import Path\\\\nimport json,re\\\
-        \\np=Path(\\\\\\'/nav-build-metadata\\\\\\');counts={}\\\\nfor n in [\\\\\\'googletest\\\\\\',\\\\\\'highway\\\\\\\
-        ']:\\\\n t=(p/\\\\\\'tests\\\\\\'/f\\\\\\'{n}.log\\\\\\').read_text();assert (p/\\\\\\'cms\\\\\\'/f\\\\\\'{n}.exit\\\
-        \\\\').read_text().strip()==\\\\\\'0\\\\\\'\\\\n m=re.search(r\\\\\\'(\\\\\\\\d+)% tests passed, (\\\\\\\\d+) tests\
-        \ failed out of (\\\\\\\\d+)\\\\\\',t);assert m and m[1]==\\\\\\'100\\\\\\' and m[2]==\\\\\\'0\\\\\\' and int(m[3])>0\\\
-        \\n assert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation fault|Subprocess aborted|\\\\\\\\*\\\\\\\\*\\\\\\\\*Exception\\\
-        \\\\',t)\\\\n counts[n]={\\\\\\'original_ctest_total\\\\\\':int(m[3]),\\\\\\'failed\\\\\\':0,\\\\\\'skip_lines\\\\\
-        \\':[x for x in t.splitlines()if re.search(r\\\\\\'(?i)skip|not run|disabled\\\\\\',x)]}\\\\nrows=[json.loads(l)for\
-        \ l in (p/\\\\\\'cms\\\\\\'/\\\\\\'testlog.json\\\\\\').read_text().splitlines()if l.strip()];assert rows and all(r[\\\
-        \\\\'result\\\\\\']==\\\\\\'OK\\\\\\'for r in rows)\\\\ncounts[\\\\\\'lcms2\\\\\\']={\\\\\\'meson_total\\\\\\':len(rows),\\\
-        \\\\'results\\\\\\':[{\\\\\\'name\\\\\\':r[\\\\\\'name\\\\\\'],\\\\\\'result\\\\\\':r[\\\\\\'result\\\\\\'],\\\\\\\
-        'stdout\\\\\\':r[\\\\\\'stdout\\\\\\']}for r in rows]}\\\\nfor r in rows:assert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation\
-        \ fault\\\\\\',r[\\\\\\'stdout\\\\\\'])\\\\n(p/\\\\\\'cms\\\\\\'/\\\\\\'CMS-TESTS-OPEN.json\\\\\\').write_text(json.dumps({\\\
-        \\\\'counts\\\\\\':counts,\\\\\\'classification\\\\\\':\\\\\\'Original configured suites passed, not full OS acceptance.\
-        \ All inherited Rust/portal/image/VM/Valgrind gaps remain OPEN. Every skipped, disabled or unsupported case remains\
-        \ OPEN.\\\\\\',\\\\\\'rust_inherited_audit\\\\\\':\\\\\\'/nav-build-metadata/rust/RUST-TRANSITIONAL-OPEN.json\\\\\\\
-        ',\\\\\\'remaining\\\\\\':\\\\\\'JPEG XL,HEIF,SVG,Glycin/GTK image chain unfinished\\\\\\'},indent=2))\\\\nprint(\\\
+        \\np=Path(\\\\\\'/nav-build-metadata\\\\\\');counts={}\\\\nfor n in [\\\\\\'brotli\\\\\\',\\\\\\'googletest\\\\\\\
+        ',\\\\\\'highway\\\\\\']:\\\\n t=(p/\\\\\\'tests\\\\\\'/f\\\\\\'{n}.log\\\\\\').read_text();assert (p/\\\\\\'cms\\\
+        \\\\'/f\\\\\\'{n}.exit\\\\\\').read_text().strip()==\\\\\\'0\\\\\\'\\\\n m=re.search(r\\\\\\'(\\\\\\\\d+)% tests passed,\
+        \ (\\\\\\\\d+) tests failed out of (\\\\\\\\d+)\\\\\\',t);assert m and m[1]==\\\\\\'100\\\\\\' and m[2]==\\\\\\'0\\\
+        \\\\' and int(m[3])>0\\\\n assert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation fault|Subprocess aborted|\\\\\\\\\
+        *\\\\\\\\*\\\\\\\\*Exception\\\\\\',t)\\\\n counts[n]={\\\\\\'original_ctest_total\\\\\\':int(m[3]),\\\\\\'failed\\\
+        \\\\':0,\\\\\\'skip_lines\\\\\\':[x for x in t.splitlines()if re.search(r\\\\\\'(?i)skip|not run|disabled\\\\\\',x)]}\\\
+        \\nrows=[json.loads(l)for l in (p/\\\\\\'cms\\\\\\'/\\\\\\'testlog.json\\\\\\').read_text().splitlines()if l.strip()];assert\
+        \ rows and all(r[\\\\\\'result\\\\\\']==\\\\\\'OK\\\\\\'for r in rows)\\\\ncounts[\\\\\\'lcms2\\\\\\']={\\\\\\'meson_total\\\
+        \\\\':len(rows),\\\\\\'results\\\\\\':[{\\\\\\'name\\\\\\':r[\\\\\\'name\\\\\\'],\\\\\\'result\\\\\\':r[\\\\\\'result\\\
+        \\\\'],\\\\\\'stdout\\\\\\':r[\\\\\\'stdout\\\\\\']}for r in rows]}\\\\nfor r in rows:assert not re.search(r\\\\\\\
+        '(?i)SIGSEGV|segmentation fault\\\\\\',r[\\\\\\'stdout\\\\\\'])\\\\n(p/\\\\\\'cms\\\\\\'/\\\\\\'CMS-TESTS-OPEN.json\\\
+        \\\\').write_text(json.dumps({\\\\\\'counts\\\\\\':counts,\\\\\\'classification\\\\\\':\\\\\\'Original configured\
+        \ suites passed, not full OS acceptance. All inherited Rust/portal/image/VM/Valgrind gaps remain OPEN. Every skipped,\
+        \ disabled or unsupported case remains OPEN.\\\\\\',\\\\\\'rust_inherited_audit\\\\\\':\\\\\\'/nav-build-metadata/rust/RUST-TRANSITIONAL-OPEN.json\\\
+        \\\\',\\\\\\'remaining\\\\\\':\\\\\\'JPEG XL,HEIF,SVG,Glycin/GTK image chain unfinished\\\\\\'},indent=2))\\\\nprint(\\\
         \\\\'NAV_CMS_AUDIT\\\\\\',json.dumps(counts),flush=True)\\\\nAUDIT\\\\nprintf \\\\\\'NAV_CMS_ORIGINAL_SUITES_COMPLETE\\\
         \\\\\\n\\\\\\'\\\\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\\
         nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\\
@@ -131,11 +141,12 @@ jobs:
         \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
         \ 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON',\
         \ 'NAV_TESTER', 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
-        \ 'NAV_PORTAL'])))))\n    import base64\n    for name in ['googletest', 'lcms2', 'highway']:\n        f = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/tests/'\
-        \ + name + '.log')\n        if f.exists():\n            data = f.read_bytes()\n            for i in range(0, len(data),\
-        \ 3000):\n                print('NAV_CMS_' + name.upper() + '_B64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n\
-        \    f = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/cms/CMS-TESTS-OPEN.json')\n    if f.exists():\n        print('NAV_CMS_AUDIT_JSON_B64',\
-        \ base64.b64encode(f.read_bytes()).decode(), flush=True)\nNAV_GUARD\n"
+        \ 'NAV_PORTAL'])))))\n    import base64\n    for name in ['brotli', 'googletest', 'lcms2', 'highway']:\n        f\
+        \ = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/tests/' + name + '.log')\n        if f.exists():\n            data\
+        \ = f.read_bytes()\n            for i in range(0, len(data), 3000):\n                print('NAV_CMS_' + name.upper()\
+        \ + '_B64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n    f = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/cms/CMS-TESTS-OPEN.json')\n\
+        \    if f.exists():\n        print('NAV_CMS_AUDIT_JSON_B64', base64.b64encode(f.read_bytes()).decode(), flush=True)\n\
+        NAV_GUARD\n"
     - name: Fail closed on free-cache worst-case capacity before save
       shell: bash
       env:
