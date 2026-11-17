@@ -1,4 +1,4 @@
-name: NAV Highway Clang22 bounded no-save diagnostic
+name: NAV Highway GCC GC bounded no-save diagnostic
 'on':
   workflow_dispatch: {}
 permissions:
@@ -33,7 +33,7 @@ jobs:
         path: /mnt/nav-lfs
         key: nav-blfs13.1-x86_64-cms-open-v1
         fail-on-cache-miss: true
-    - name: No-save Highway Clang22 original full-suite diagnostic
+    - name: No-save Highway GCC GC original full-suite diagnostic
       shell: bash
       run: "python3 - <<'NAV_GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
         \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\nassert os.cpu_count()\
@@ -46,39 +46,41 @@ jobs:
         \\\"}]\")\\nfor x in lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\'filename\\']\\n with urllib.request.urlopen(x[\\\
         'url\\'],timeout=120)as r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\n assert hashlib.file_digest(p.open(\\\
         'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\',x[\\'filename\\'],flush=True)\\\
-        nDOWNLOADS\\npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/highway-clang.sh\\\
-        ').write_text(\\'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport MAKEFLAGS=-j2 PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
-        \ LANG=C.UTF-8\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir -p /nav-build-metadata/highway-clang\\\
-        \\ncd /sources\\\\n{ command -v clang clang++\\\\nclang --version\\\\nclang++ --version\\\\nclang++ --version | grep\
-        \ -E \\\\\\'clang version 22\\\\\\\\.\\\\\\'\\\\npkg-config --modversion gtest\\\\nulimit -a\\\\nlscpu; } > /nav-build-metadata/highway-clang/preflight.log\
-        \ 2>&1\\\\ncat /nav-build-metadata/highway-clang/preflight.log\\\\n# Fresh unchanged upstream source, default Release\
-        \ optimization, all upstream target selection unchanged.\\\\ntar -xf highway-1.4.0.tar.gz\\\\ncd highway-1.4.0\\\\\
-        nset +e\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang\
-        \ -DCMAKE_CXX_COMPILER=clang++ -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON -DHWY_ENABLE_TESTS=ON -DHWY_ENABLE_CONTRIB=ON\
-        \ -DHWY_ENABLE_EXAMPLES=ON -DHWY_SYSTEM_GTEST=ON -DCMAKE_CXX_STANDARD=17 > /nav-build-metadata/highway-clang/config.log\
-        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/highway-clang/config.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\
-        \\' \"$rc\" > /nav-build-metadata/highway-clang/config.exit\\\\ntest \"$rc\" = 0\\\\ncp build/CMakeCache.txt /nav-build-metadata/highway-clang/CMakeCache.txt\\\
-        \\nset +e\\\\ncmake --build build --parallel 2 > /nav-build-metadata/highway-clang/build.log 2>&1\\\\nrc=$?\\\\nset\
-        \ -e\\\\ntail -100 /nav-build-metadata/highway-clang/build.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/highway-clang/build.exit\\\
-        \\ntest \"$rc\" = 0\\\\nchown -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin;\
-        \ cd /sources/highway-1.4.0/build; ctest --no-tests=error --output-on-failure -j2\\\\\\' > /nav-build-metadata/highway-clang/tests.log\
-        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/highway-clang/tests.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\\
-        ' \"$rc\" > /nav-build-metadata/highway-clang/tests.exit\\\\ncp build/Testing/Temporary/LastTest.log /nav-build-metadata/highway-clang/original.log\\\
-        \\ntest \"$rc\" = 0\\\\nprintf \\\\\\'NAV_HIGHWAY_CLANG_FULL_SUITE_COMPLETE_NO_SAVE_NO_INSTALL\\\\\\\\n\\\\\\'\\\\\
-        ncd /sources\\\\nrm -rf highway-1.4.0\\\\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101\
-        \ \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\\
-        '\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev\
-        \ \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount\
-        \ -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\"\
-        \ ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\
-        \\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash\
-        \ --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke;\
-        \ printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin\
-        \ MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/highway-clang.sh\\nchroot --userspec=101:101\
-        \ \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\\
-        'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\
-        \\n\"\\'\\nNAV_MOUNT_BUILD\\nsudo rm -f \"$LFS/sources/highway-clang.sh\" \"$LFS/sources/highway-1.4.0.tar.gz\"\\\
-        nprintf \\'NAV_HIGHWAY_DIAGNOSTIC_NO_SAVE_NO_INSTALL\\n\\'\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log',\
+        nDOWNLOADS\\npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/highway-gc.sh\\').write_text(\\\
+        'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport MAKEFLAGS=-j2 PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
+        \ LANG=C.UTF-8\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir -p /nav-build-metadata/highway-gc\\\
+        \\ncd /sources\\\\n{ command -v gcc g++\\\\ngcc --version\\\\ng++ --version\\\\ng++ -Q --help=params | grep -E \\\\\
+        \\'ggc-min-(expand|heapsize)\\\\\\'\\\\ng++ -Q --param=ggc-min-expand=10 --param=ggc-min-heapsize=4096 --help=params\
+        \ | grep -E \\\\\\'ggc-min-(expand|heapsize)\\\\\\'\\\\npkg-config --modversion gtest\\\\nulimit -a\\\\nlscpu; } >\
+        \ /nav-build-metadata/highway-gc/preflight.log 2>&1\\\\ncat /nav-build-metadata/highway-gc/preflight.log\\\\n# Fresh\
+        \ unchanged upstream source, default Release optimization, all upstream target selection unchanged.\\\\ntar -xf highway-1.4.0.tar.gz\\\
+        \\ncd highway-1.4.0\\\\nset +e\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release\
+        \ -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_CXX_FLAGS=\"--param=ggc-min-expand=10 --param=ggc-min-heapsize=4096\"\
+        \ -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON -DHWY_ENABLE_TESTS=ON -DHWY_ENABLE_CONTRIB=ON -DHWY_ENABLE_EXAMPLES=ON\
+        \ -DHWY_SYSTEM_GTEST=ON -DCMAKE_CXX_STANDARD=17 > /nav-build-metadata/highway-gc/config.log 2>&1\\\\nrc=$?\\\\nset\
+        \ -e\\\\ncat /nav-build-metadata/highway-gc/config.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/highway-gc/config.exit\\\
+        \\ntest \"$rc\" = 0\\\\ncp build/CMakeCache.txt /nav-build-metadata/highway-gc/CMakeCache.txt\\\\nset +e\\\\ncmake\
+        \ --build build --parallel 2 > /nav-build-metadata/highway-gc/build.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ntail -100 /nav-build-metadata/highway-gc/build.log\\\
+        \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/highway-gc/build.exit\\\\ntest \"$rc\" = 0\\\\nchown\
+        \ -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/highway-1.4.0/build;\
+        \ ctest --no-tests=error --output-on-failure -j2\\\\\\' > /nav-build-metadata/highway-gc/tests.log 2>&1\\\\nrc=$?\\\
+        \\nset -e\\\\ncat /nav-build-metadata/highway-gc/tests.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/highway-gc/tests.exit\\\
+        \\ncp build/Testing/Temporary/LastTest.log /nav-build-metadata/highway-gc/original.log\\\\ntest \"$rc\" = 0\\\\nprintf\
+        \ \\\\\\'NAV_HIGHWAY_GC_FULL_SUITE_COMPLETE_NO_SAVE_NO_INSTALL\\\\\\\\n\\\\\\'\\\\ncd /sources\\\\nrm -rf highway-1.4.0\\\
+        \\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"\
+        $LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\nmount --bind\
+        \ \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts\
+        \ -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\
+        \\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ]; then\\n install -d -m 1777 \"$LFS$(realpath\
+        \ /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot --userspec=101:101 \"\
+        $LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set\
+        \ -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\
+        \\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2\
+        \ LC_ALL=POSIX /bin/bash --noprofile --norc /sources/highway-gc.sh\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env\
+        \ -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test\
+        \ \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\
+        \\'\\nNAV_MOUNT_BUILD\\nsudo rm -f \"$LFS/sources/highway-gc.sh\" \"$LFS/sources/highway-1.4.0.tar.gz\"\\nprintf \\\
+        'NAV_HIGHWAY_DIAGNOSTIC_NO_SAVE_NO_INSTALL\\n\\'\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log',\
         \ 'w')\nproc = subprocess.Popen(['bash', str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda\
         \ : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free\
         \ = shutil.disk_usage('/mnt').free\n        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 *\
@@ -93,6 +95,6 @@ jobs:
         \ 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON', 'NAV_TESTER', 'NAV_KF6', 'Totals:',\
         \ 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE', 'NAV_PORTAL'])))))\n    import base64\n\
         \    f = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/cms/CMS-TESTS-OPEN.json')\n    import base64\n    for f in\
-        \ sorted(pathlib.Path('/mnt/nav-lfs/nav-build-metadata/highway-clang').glob('*')):\n        if f.is_file():\n    \
-        \        data = f.read_bytes()\n            for i in range(0, len(data), 3000):\n                print('NAV_HIGHWAY_CLANG_'\
+        \ sorted(pathlib.Path('/mnt/nav-lfs/nav-build-metadata/highway-gc').glob('*')):\n        if f.is_file():\n       \
+        \     data = f.read_bytes()\n            for i in range(0, len(data), 3000):\n                print('NAV_HIGHWAY_GC_'\
         \ + f.name.replace('.', '_').upper() + '_B64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\nNAV_GUARD\n"
