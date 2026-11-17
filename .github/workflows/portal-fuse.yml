@@ -143,8 +143,8 @@ jobs:
         \\n[rust]\\\\nchannel = \"stable\"\\\\nlto = \"thin\"\\\\ncodegen-units = 1\\\\nllvm-bitcode-linker = false\\\\ndownload-rustc\
         \ = false\\\\n[target.x86_64-unknown-linux-gnu]\\\\nllvm-config = \"/usr/bin/llvm-config\"\\\\ncc = \"/usr/bin/gcc\"\
         \\\\ncxx = \"/usr/bin/g++\"\\\\nlinker = \"/usr/bin/gcc\"\\\\n\\')\\nINNER_SCRIPT\\n# Dedicated capped scratch, never\
-        \ a root/cache size-limit increase.\\ntest ! -e /mnt/nav-rust-scratch.ext4\\ntruncate -s 24G /mnt/nav-rust-scratch.ext4\\\
-        nmkfs.ext4 -q -F /mnt/nav-rust-scratch.ext4\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\
+        \ a root/cache size-limit increase.\\ntest ! -e /mnt/nav-rust-scratch.ext4\\nsudo truncate -s 24G /mnt/nav-rust-scratch.ext4\\\
+        nsudo mkfs.ext4 -q -F /mnt/nav-rust-scratch.ext4\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\
         \\nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\\
         nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS/sources/rust-work\"\\npython3 -c \\'import shutil; assert shutil.disk_usage(\"\
         /mnt\").free>30*1024**3\\'\\nmount -o loop /mnt/nav-rust-scratch.ext4 \"$LFS/sources/rust-work\"\\ncleanup_rust_scratch()\
