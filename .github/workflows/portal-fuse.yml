@@ -1,4 +1,4 @@
-name: NAV Rust debug-source A B diagnostic no save
+name: NAV source Rust conditional transitional checkpoint gaps OPEN
 'on':
   workflow_dispatch: {}
 permissions:
@@ -95,27 +95,95 @@ jobs:
         \ LIBSQLITE3_SYS_USE_PKG_CONFIG=1; ./x.py build --jobs 2\\\\\\' > /nav-build-metadata/tests/rust-build.log 2>&1\\\\\
         nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/rust/build.exit\\\\ntail -80\
         \ /nav-build-metadata/tests/rust-build.log\\\\ntest \"$rc\" = 0\\\\nprintf \\\\\\'NAV_RUST_SOURCE_BUILD_COMPLETE\\\
-        \\\\\\n\\\\\\'\\\\n# Unchanged original test, targeted diagnostic only. Failure is retained.\\\\nset +e\\\\nsu tester\
-        \ -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2 LIBSSH2_SYS_USE_PKG_CONFIG=1\
-        \ LIBSQLITE3_SYS_USE_PKG_CONFIG=1; ./x.py test --jobs 2 tests/run-make/embed-source-dwarf --test-args=--nocapture\\\
-        \\\\' > /nav-build-metadata/tests/rust-tests.log 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"\
-        $rc\" > /nav-build-metadata/rust/tests.exit\\\\ntail -100 /nav-build-metadata/tests/rust-tests.log\\\\n# Independent\
-        \ A/B probes, not replacements for the original test.\\\\nmkdir -p /sources/rust-work/probes\\\\nprintf \\\\\\'//\
-        \ hello\\\\\\\\nfn main() {}\\\\\\\\n\\\\\\' > /sources/rust-work/probes/main.rs\\\\nchown -R tester /sources/rust-work/probes\\\
-        \\nset +e\\\\nfor variant in default off thin dynamic; do\\\\n case \"$variant\" in\\\\n  default) flags=;;\\\\n \
-        \ off) flags=\\\\\\'-Clto=off\\\\\\';;\\\\n  thin) flags=\\\\\\'-Clto=thin\\\\\\';;\\\\n  dynamic) flags=\\\\\\'-Clto=off\
-        \ -Cprefer-dynamic\\\\\\';;\\\\n esac\\\\n su tester -c \"export PATH=/usr/bin:/usr/sbin:/bin:/sbin RUSTC_BOOTSTRAP=1;\
-        \ cd /sources/rust-work/probes; /sources/rust-work/rustc-1.97.1-src/build/x86_64-unknown-linux-gnu/stage2/bin/rustc\
-        \ main.rs -o probe-$variant -g -Zembed-source=yes -Cdwarf-version=5 $flags\" >> /nav-build-metadata/tests/rust-probes.log\
-        \ 2>&1\\\\n probe_rc=$?\\\\n printf \\\\\\'NAV_DEBUG_PROBE_COMPILE %s %s\\\\\\\\n\\\\\\' \"$variant\" \"$probe_rc\"\
-        \ >> /nav-build-metadata/tests/rust-probes.log\\\\n if [ \"$probe_rc\" = 0 ]; then\\\\n  llvm-dwarfdump --debug-line\
-        \ \"/sources/rust-work/probes/probe-$variant\" > \"/nav-build-metadata/rust/probe-$variant-dwarf.txt\" 2>&1\\\\n \
-        \ printf \\\\\\'NAV_DEBUG_PROBE_DWARF %s %s\\\\\\\\n\\\\\\' \"$variant\" \"$?\" >> /nav-build-metadata/tests/rust-probes.log\\\
-        \\n fi\\\\ndone\\\\nset -e\\\\ncat /nav-build-metadata/tests/rust-probes.log\\\\npython3 - <<\\\\\\'PROBE_EVIDENCE\\\
-        \\\\'\\\\nfrom pathlib import Path\\\\nimport base64\\\\nfor f in Path(\\\\\\'/nav-build-metadata/rust\\\\\\').glob(\\\
-        \\\\'probe-*-dwarf.txt\\\\\\'):\\\\n b=f.read_bytes()\\\\n for i in range(0,len(b),3000):print(\\\\\\'NAV_DEBUG_DWARF_\\\
-        \\\\'+f.stem.replace(\\\\\\'-\\\\\\',\\\\\\'_\\\\\\').upper()+\\\\\\'_B64\\\\\\',base64.b64encode(b[i:i+3000]).decode(),flush=True)\\\
-        \\nPROBE_EVIDENCE\\\\nprintf \\\\\\'NAV_RUST_DEBUG_DIAGNOSTIC_ONLY_NO_SAVE\\\\\\\\n\\\\\\'\\\\n\\')\\nPath(\\'/mnt/nav-lfs/sources/rust-bootstrap-reviewed.toml\\\
+        \\\\\\n\\\\\\'\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2\
+        \ LIBSSH2_SYS_USE_PKG_CONFIG=1 LIBSQLITE3_SYS_USE_PKG_CONFIG=1; ./x.py test --no-fail-fast --jobs 2\\\\\\' > /nav-build-metadata/tests/rust-tests.log\
+        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/rust/tests.exit\\\\\
+        ntail -100 /nav-build-metadata/tests/rust-tests.log\\\\n# Full original suites completed. Separate unchanged embed\
+        \ test, detailed output.\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin CARGO_BUILD_JOBS=2\
+        \ RUST_TEST_THREADS=2 LIBSSH2_SYS_USE_PKG_CONFIG=1 LIBSQLITE3_SYS_USE_PKG_CONFIG=1; ./x.py test --jobs 2 tests/run-make/embed-source-dwarf\
+        \ --test-args=--no-capture\\\\\\' > /nav-build-metadata/tests/rust-embed-detail.log 2>&1\\\\ndetail_rc=$?\\\\nset\
+        \ -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$detail_rc\" > /nav-build-metadata/rust/embed-detail.exit\\\\ntail -70\
+        \ /nav-build-metadata/tests/rust-embed-detail.log\\\\npython3 - <<\\\\\\'RUST_AUDIT\\\\\\'\\\\nfrom pathlib import\
+        \ Path\\\\nimport re,json,collections\\\\np=Path(\\\\\\'/nav-build-metadata\\\\\\');logs={n:(p/\\\\\\'tests\\\\\\\
+        '/f\\\\\\'{n}.log\\\\\\').read_text(errors=\\\\\\'replace\\\\\\')for n in [\\\\\\'libssh2\\\\\\',\\\\\\'rust-build\\\
+        \\\\',\\\\\\'rust-tests\\\\\\',\\\\\\'rust-embed-detail\\\\\\']}\\\\nassert all((p/\\\\\\'rust\\\\\\'/f\\\\\\'{n}.exit\\\
+        \\\\').read_text().strip()==\\\\\\'0\\\\\\'for n in [\\\\\\'libssh2\\\\\\',\\\\\\'build\\\\\\'])\\\\nassert (p/\\\\\
+        \\'rust\\\\\\'/\\\\\\'tests.exit\\\\\\').read_text().strip()==\\\\\\'1\\\\\\'\\\\nt=logs[\\\\\\'rust-tests\\\\\\'];matches=list(re.finditer(r\\\
+        \\\\'(?m)^test result: (ok|FAILED)\\\\\\\\. (\\\\\\\\d+) passed; (\\\\\\\\d+) failed; (\\\\\\\\d+) ignored; (\\\\\\\
+        \\d+) measured; (\\\\\\\\d+) filtered out\\\\\\',t));assert len(matches)==342,\\\\\\'Suite record count changed\\\\\
+        \\'\\\\nrows=[{\\\\\\'status\\\\\\':m[1],**dict(zip([\\\\\\'passed\\\\\\',\\\\\\'failed\\\\\\',\\\\\\'ignored\\\\\\\
+        ',\\\\\\'measured\\\\\\',\\\\\\'filtered_out\\\\\\'],map(int,m.groups()[1:]))),\\\\\\'original\\\\\\':m[0]}for m in\
+        \ matches]\\\\nexpected={\\\\\\'[ui] tests/ui/codegen/huge-stacks.rs#optimized\\\\\\',\\\\\\'[ui] tests/ui/codegen/huge-stacks.rs#unoptimized\\\
+        \\\\',\\\\\\'[ui] tests/rustdoc-ui/ice-bug-report-url.rs\\\\\\',\\\\\\'[run-make] tests/run-make/embed-source-dwarf\\\
+        \\\\',\\\\\\'[run-make] tests/run-make/remap-path-prefix-std\\\\\\',\\\\\\'[run-make] tests/run-make/rustdoc-target-modifiers\\\
+        \\\\',\\\\\\'[run-make] tests/run-make/short-ice\\\\\\'}\\\\nfailures=re.findall(r\\\\\\'^---- (.+) stdout ----$\\\
+        \\\\',t,re.M)\\\\nassert len(failures)==7 and set(failures)==expected,\\\\\\'Failure set changed\\\\\\'\\\\nassert\
+        \ sum(r[\\\\\\'failed\\\\\\']for r in rows)==7\\\\nassert len(re.findall(r\\\\\\'process didn.t exit successfully:.*rustc_data_structures[^\\\
+        \\\\\\n]*\\\\\\\\(signal: 6, SIGABRT: process abort signal\\\\\\\\)\\\\\\',t))==1,\\\\\\'Expected aborted harness\
+        \ missing/changed\\\\\\'\\\\nassert len(re.findall(r\\\\\\'\\\\\\\\(signal: \\\\\\\\d+,\\\\\\',t))==1,\\\\\\'New signal\
+        \ failure\\\\\\'\\\\nassert t.count(\\\\\\'memory allocation of 2147483648 bytes failed\\\\\\')==1\\\\nassert re.search(r\\\
+        \\\\'Build completed unsuccessfully in [\\\\\\\\d:]+\\\\\\\\s*$\\\\\\',t),\\\\\\'Full no-fail-fast footer missing\\\
+        \\\\'\\\\nfor n in [\\\\\\'rust-tests\\\\\\',\\\\\\'rust-embed-detail\\\\\\']:\\\\n x=logs[n];a=x.index(\\\\\\'&sources\
+        \ = {\\\\\\');b=x.index(\"thread \\\\\\'main\\\\\\'\",a);sources=re.findall(r\\\\\\'^    \"([^\"\\\\\\\\n]+)\":\\\\\
+        \\',x[a:b],re.M)\\\\n assert len(sources)==7 and set(sources)=={\\\\\\'main.rs\\\\\\',\\\\\\'process.rs\\\\\\',\\\\\
+        \\'function.rs\\\\\\',\\\\\\'rt.rs\\\\\\',\\\\\\'backtrace.rs\\\\\\',\\\\\\'hint.rs\\\\\\',\\\\\\'common.rs\\\\\\\
+        '},\\\\\\'Embed source set changed\\\\\\'\\\\n assert re.search(r\\\\\\'left: 7\\\\\\\\s+right: 1\\\\\\',x[b:]),\\\
+        \\\\'Embed mismatch changed\\\\\\'\\\\n assert \\\\\\'\"main.rs\": \"// hello\\\\\\\\\\\\\\\\nfn main() {}\\\\\\\\\
+        \\\\\\\\n\"\\\\\\' in x[a:b]\\\\nassert (p/\\\\\\'rust\\\\\\'/\\\\\\'embed-detail.exit\\\\\\').read_text().strip()==\\\
+        \\\\'1\\\\\\'\\\\nassert re.search(r\\\\\\'test result: FAILED\\\\\\\\. 0 passed; 1 failed;\\\\\\',logs[\\\\\\'rust-embed-detail\\\
+        \\\\'])\\\\nassert not re.search(r\\\\\\'(?i)SIGSEGV|signal:?\\\\\\\\s*11\\\\\\\\b|segmentation fault\\\\\\',\\\\\\\
+        '\\\\\\\\n\\\\\\'.join(logs.values())),\\\\\\'SIGSEGV blocks save\\\\\\'\\\\nignored=[l for l in t.splitlines()if\
+        \ re.search(r\\\\\\'\\\\\\\\bignored\\\\\\\\b|\\\\\\\\bSKIP\\\\\\\\b\\\\\\',l)]\\\\ncounts={k:sum(r[k]for r in rows)for\
+        \ k in [\\\\\\'passed\\\\\\',\\\\\\'failed\\\\\\',\\\\\\'ignored\\\\\\',\\\\\\'measured\\\\\\',\\\\\\'filtered_out\\\
+        \\\\']}\\\\nlibssh=collections.Counter()\\\\nfor k,v in re.findall(r\\\\\\'(?m)^# (TOTAL|PASS|SKIP|XFAIL|FAIL|XPASS|ERROR):\\\
+        \\\\\\s+(\\\\\\\\d+)\\\\\\',logs[\\\\\\'libssh2\\\\\\']):libssh[k]+=int(v)\\\\nassert libssh[\\\\\\'PASS\\\\\\']==1\
+        \ and libssh[\\\\\\'FAIL\\\\\\']==0 and libssh[\\\\\\'ERROR\\\\\\']==0\\\\nembed={\\\\\\'classification\\\\\\':\\\\\
+        \\'OPEN: environment-dependent embed accounting, expectation mismatch\\\\\\',\\\\\\'explanation\\\\\\':\\\\\\'Rust\
+        \ deliberately embeds dependency source when available: metadata.rs 611-617 loads external source when local source\
+        \ is absent; source_map.rs 1058-1081 reads dependency path with source-hash verification. All seven records sit in\
+        \ main.rs compilation unit, naming real existing library paths. main.rs content matches expected source. Four manual\
+        \ probes (default, LTO-off, ThinLTO, dynamic std) all compiled and produced the same seven-source set. Not attributed\
+        \ to ThinLTO.\\\\\\',\\\\\\'sources\\\\\\':[\\\\\\'https://raw.githubusercontent.com/rust-lang/rust/1.97.1/compiler/rustc_codegen_llvm/src/debuginfo/metadata.rs\\\
+        \\\\',\\\\\\'https://raw.githubusercontent.com/rust-lang/rust/1.97.1/compiler/rustc_span/src/source_map.rs\\\\\\',\\\
+        \\\\'https://raw.githubusercontent.com/rust-lang/rust/1.97.1/tests/run-make/embed-source-dwarf/rmake.rs\\\\\\'],\\\
+        \\\\'diagnostic_job\\\\\\':\\\\\\'https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44084789694/job/134044282666\\\
+        \\\\',\\\\\\'targeted_original_test\\\\\\':\\\\\\'Re-executed unchanged with --no-capture; same seven-source set and\
+        \ original 7-versus-1 assertion failure, remains OPEN\\\\\\'}\\\\nout={\\\\\\'classification\\\\\\':\\\\\\'TRANSITIONAL\
+        \ ONLY. Not tested-Rust. Every failure, ignore, skip, filtered case and unavailable integration OPEN; no waivers.\\\
+        \\\\',\\\\\\'rust_suite_records\\\\\\':rows,\\\\\\'totals\\\\\\':counts,\\\\\\'named_failures_OPEN\\\\\\':failures,\\\
+        \\\\'aborted_harness_OPEN\\\\\\':{\\\\\\'name\\\\\\':\\\\\\'rustc_data_structures\\\\\\',\\\\\\'announced_tests\\\\\
+        \\':118,\\\\\\'completed_case_count\\\\\\':\\\\\\'unknown, no summary; not included in passes\\\\\\',\\\\\\'signal\\\
+        \\\\':\\\\\\'SIGABRT\\\\\\',\\\\\\'allocation_bytes\\\\\\':2147483648,\\\\\\'cause\\\\\\':\\\\\\'4GiB cap pressure\
+        \ suspected from VecCache virtual reservations; exact subtest unproven\\\\\\'},\\\\\\'embed_source_OPEN\\\\\\':embed,\\\
+        \\\\'original_ignore_skip_lines\\\\\\':ignored,\\\\\\'libssh2_original_harness_counts\\\\\\':dict(libssh),\\\\\\'open\\\
+        \\\\':[\\\\\\'Every original failed/ignored/skipped/filtered Rust case in full retained log stays OPEN\\\\\\',\\\\\
+        \\'huge-stacks requests5GiB stack under4GiB cap; no cap change\\\\\\',\\\\\\'Four BLFS-documented rustdoc/run-make\
+        \ failures remain OPEN\\\\\\',\\\\\\'libssh2 Docker and unprovided sshd integrations OPEN\\\\\\',\\\\\\'Native x86_64\
+        \ and shared system LLVM X86 only\\\\\\',\\\\\\'All inherited portal/image/Valgrind/booted-VM gates OPEN; desktop/installer/ISO\
+        \ unfinished\\\\\\'],\\\\\\'configuration\\\\\\':(p/\\\\\\'rust\\\\\\'/\\\\\\'bootstrap.toml\\\\\\').read_text()}\\\
+        \\n(p/\\\\\\'rust\\\\\\'/\\\\\\'RUST-TRANSITIONAL-OPEN.json\\\\\\').write_text(json.dumps(out,indent=2));(p/\\\\\\\
+        'stage.txt\\\\\\').write_text(out[\\\\\\'classification\\\\\\']+\\\\\\'\\\\\\\\n\\\\\\'+\\\\\\'\\\\\\\\n\\\\\\'.join(out[\\\
+        \\\\'open\\\\\\'])+\\\\\\'\\\\\\\\n\\\\\\')\\\\nprint(\\\\\\'NAV_RUST_TRANSITIONAL_AUDIT\\\\\\',json.dumps({\\\\\\\
+        'totals\\\\\\':counts,\\\\\\'suite_records\\\\\\':len(rows),\\\\\\'named_failures_OPEN\\\\\\':failures,\\\\\\'additional_aborted_harness_OPEN\\\
+        \\\\':1,\\\\\\'separate_targeted_embed_test\\\\\\':\\\\\\'0pass1fail OPEN\\\\\\',\\\\\\'libssh2\\\\\\':dict(libssh),\\\
+        \\\\'open_ignore_lines\\\\\\':len(ignored)}),flush=True)\\\\nRUST_AUDIT\\\\n\\\\nmkdir -p /opt/rustc-1.97.1\\\\nln\
+        \ -sfn rustc-1.97.1 /opt/rustc\\\\n./x.py install --jobs 2 > /nav-build-metadata/tests/rust-install.log 2>&1\\\\nexport\
+        \ PATH=/opt/rustc/bin:$PATH\\\\nrustc --version\\\\ncargo --version\\\\nrustc --version | grep -F \\\\\\'rustc 1.97.1\\\
+        \\\\'\\\\nmkdir -p /home/tester/rust-smoke/src\\\\nprintf \\\\\\'fn main() { assert_eq!(6 * 7, 42); println!(\"NAV_RUST_SOURCE_STAGE2_SMOKE_OK\"\
+        ); }\\\\\\\\n\\\\\\' > /home/tester/rust-smoke/src/main.rs\\\\nprintf \\\\\\'[package]\\\\\\\\nname = \"nav-source-smoke\"\
+        \\\\\\\\nversion = \"0.1.0\"\\\\\\\\nedition = \"2024\"\\\\\\\\n\\\\\\' > /home/tester/rust-smoke/Cargo.toml\\\\nchown\
+        \ -R tester /home/tester/rust-smoke\\\\nsu tester -c \\\\\\'export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin;\
+        \ cd /home/tester/rust-smoke; cargo run --offline --jobs 2\\\\\\' > /nav-build-metadata/tests/rust-smoke.log 2>&1\\\
+        \\ncat /nav-build-metadata/tests/rust-smoke.log\\\\ngrep -F NAV_RUST_SOURCE_STAGE2_SMOKE_OK /nav-build-metadata/tests/rust-smoke.log\\\
+        \\nldd /opt/rustc/bin/cargo > /nav-build-metadata/rust/cargo-linkage.txt\\\\ncat /nav-build-metadata/rust/cargo-linkage.txt\\\
+        \\ngrep -F libssh2.so /nav-build-metadata/rust/cargo-linkage.txt\\\\ngrep -F libsqlite3.so /nav-build-metadata/rust/cargo-linkage.txt\\\
+        \\nmkdir -p /etc/profile.d\\\\nprintf \\\\\\'export PATH=/opt/rustc/bin:$PATH\\\\\\\\n\\\\\\' > /etc/profile.d/rustc.sh\\\
+        \\ncp /sources/rust-source-lock.json /nav-build-metadata/rust/\\\\nrm -rf /home/tester/rust-smoke\\\\ncd /sources\\\
+        \\nrm -rf libssh2-1.11.1\\\\npython3 - <<\\\\\\'FINAL_RUNTIME_AUDIT\\\\\\'\\\\nfrom pathlib import Path\\\\nimport\
+        \ re\\\\nfor n in [\\\\\\'rust-build\\\\\\',\\\\\\'rust-tests\\\\\\',\\\\\\'rust-install\\\\\\',\\\\\\'rust-smoke\\\
+        \\\\']:\\\\n t=Path(\\\\\\'/nav-build-metadata/tests/\\\\\\'+n+\\\\\\'.log\\\\\\').read_text(errors=\\\\\\'replace\\\
+        \\\\')\\\\n assert not re.search(r\\\\\\'(?i)SIGSEGV|signal:?\\\\\\\\s*11\\\\\\\\b|segmentation fault\\\\\\',t),n\\\
+        \\nFINAL_RUNTIME_AUDIT\\\\nprintf \\\\\\'NAV_RUST_INSTALL_AND_SMOKE_COMPLETE\\\\\\\\n\\\\\\' \\\\n\\')\\nPath(\\'/mnt/nav-lfs/sources/rust-bootstrap-reviewed.toml\\\
         ').write_text(\\'change-id = 154587\\\\n[llvm]\\\\nlink-shared = true\\\\ntargets = \"X86\"\\\\ndownload-ci-llvm =\
         \ false\\\\nlink-jobs = 1\\\\n[build]\\\\ndescription = \"NAV source build based on BLFS 13.1\"\\\\ndocs = false\\\
         \\njobs = 2\\\\nbuild-stage = 2\\\\ntest-stage = 2\\\\nextended = true\\\\ntools = [\"cargo\", \"clippy\", \"rustdoc\"\
@@ -158,11 +226,56 @@ jobs:
         \    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK', 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE',\
         \ 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON', 'NAV_TESTER', 'NAV_KF6', 'Totals:',\
         \ 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE', 'NAV_PORTAL'])))))\n    import base64\n\
-        \    for name in ['libssh2', 'rust-build', 'rust-tests', 'rust-probes']:\n        f = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/tests/'\
-        \ + name + '.log')\n        if f.exists():\n            data = f.read_bytes()\n            for i in range(0, len(data),\
-        \ 3000):\n                print('NAV_RUST_' + name.upper().replace('-', '_') + '_B64', base64.b64encode(data[i:i +\
-        \ 3000]).decode(), flush=True)\n    for f in pathlib.Path('/mnt/nav-lfs/nav-build-metadata/rust').glob('probe-*-dwarf.txt'):\n\
-        \        data = f.read_bytes()\n        for i in range(0, len(data), 3000):\n            print('NAV_DEBUG_DWARF_'\
-        \ + f.stem.replace('-', '_').upper() + '_B64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n    for f\
-        \ in pathlib.Path('/mnt/nav-lfs/nav-build-metadata/rust').glob('*.exit'):\n        print('NAV_RUST_EXIT', f.name,\
-        \ f.read_text().strip(), flush=True)\nNAV_GUARD\n"
+        \    for name in ['libssh2', 'rust-build', 'rust-tests', 'rust-embed-detail', 'rust-install', 'rust-smoke']:\n   \
+        \     f = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/tests/' + name + '.log')\n        if f.exists():\n       \
+        \     data = f.read_bytes()\n            for i in range(0, len(data), 3000):\n                print('NAV_RUST_' +\
+        \ name.upper().replace('-', '_') + '_B64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n    for f in\
+        \ pathlib.Path('/mnt/nav-lfs/nav-build-metadata/rust').glob('*.exit'):\n        print('NAV_RUST_EXIT', f.name, f.read_text().strip(),\
+        \ flush=True)\nNAV_GUARD\n"
+    - name: Fail closed on free-cache worst-case capacity before save
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: 'set -euo pipefail
+
+        python3 - <<''BUDGET''
+
+        import urllib.request,json,os,subprocess
+
+        root=int(subprocess.check_output([''du'',''-sb'',''/mnt/nav-lfs'']).split()[0])
+
+        assert root<5120*1024**2,root
+
+        request=urllib.request.Request(''https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/actions/caches?per_page=100'',headers={''Authorization'':''Bearer
+        ''+os.environ[''GITHUB_TOKEN''],''Accept'':''application/vnd.github+json'',''X-GitHub-Api-Version'':''2022-11-28''})
+
+        with urllib.request.urlopen(request,timeout=60)as r:data=json.load(r)
+
+        assert data[''total_count'']==len(data[''actions_caches'']) and data[''total_count'']<=100
+
+        keys={x[''key'']for x in data[''actions_caches'']}
+
+        assert ''nav-blfs13.1-x86_64-portal-authgeo-open-v1'' in keys
+
+        assert ''nav-blfs13.1-x86_64-rust-open-v1'' not in keys
+
+        required=[''final-gcc'',''gcc-test-runtime'',''gcc-test-cxx'',''gcc-test-c'',''access-tools'',''final-math'']
+
+        assert all(''nav-lfs13.1-x86_64-''+x+''-v1'' in keys for x in required)
+
+        total=sum(x[''size_in_bytes'']for x in data[''actions_caches''])
+
+        worst=5184*1024**2
+
+        print(''NAV_CACHE_BUDGET'',{''existing'':total,''root_apparent_bytes'':root,''new_cache_maximum'':worst,''worst_total'':total+worst,''limit'':10*1024**3},flush=True)
+
+        assert total+worst<10*1024**3
+
+        BUDGET
+
+        '
+    - name: Preserve transitional checkpoint with all gaps OPEN
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-lfs
+        key: nav-blfs13.1-x86_64-rust-open-v1
