@@ -33,7 +33,7 @@ jobs:
         path: /mnt/nav-lfs
         key: nav-blfs13.1-x86_64-rust-open-v1
         fail-on-cache-miss: true
-    - name: Build Little CMS GoogleTest Highway with full original configured suites
+    - name: Build Brotli GoogleTest LittleCMS original suites Highway unbuilt OPEN
       shell: bash
       run: "python3 - <<'NAV_GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
         \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\nassert os.cpu_count()\
@@ -43,14 +43,11 @@ jobs:
         'DOWNLOADS\\'\\nfrom pathlib import Path\\nimport urllib.request,hashlib,json\\nlock=json.loads(\"[{\\\\\"filename\\\
         \\\": \\\\\"lcms2-2.19.1.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://github.com/mm2/Little-CMS/releases/download/lcms2.19.1/lcms2-2.19.1.tar.gz\\\
         \\\", \\\\\"sha256\\\\\": \\\\\"bfc54f7bab59fbc921012014a8032e4cba4abd46db47d46b76416a8c0b2815c8\\\\\", \\\\\"md5\\\
-        \\\": \\\\\"541978f73749499e9e0277bfe5a3c868\\\\\"}, {\\\\\"filename\\\\\": \\\\\"highway-1.4.0.tar.gz\\\\\", \\\\\
-        \"url\\\\\": \\\\\"https://github.com/google/highway/archive/1.4.0/highway-1.4.0.tar.gz\\\\\", \\\\\"sha256\\\\\"\
-        : \\\\\"e72241ac9524bb653ae52ced768b508045d4438726a303f10181a38f764a453c\\\\\", \\\\\"md5\\\\\": \\\\\"9d335797777e17f827c7980b8313a34b\\\
-        \\\"}, {\\\\\"filename\\\\\": \\\\\"googletest-1.18.0.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://github.com/google/googletest/archive/refs/tags/v1.18.0.tar.gz\\\
-        \\\", \\\\\"sha256\\\\\": \\\\\"6e3191c1455468b3fc35a417fb565c1c5071aee1b7e7f85e30cf48a98d37d8b5\\\\\", \\\\\"md5\\\
-        \\\": \\\\\"ae87634285dbe148a7abc6d19c4c05bd\\\\\"}, {\\\\\"filename\\\\\": \\\\\"brotli-1.2.0.tar.gz\\\\\", \\\\\"\
-        url\\\\\": \\\\\"https://github.com/google/brotli/archive/v1.2.0/brotli-1.2.0.tar.gz\\\\\", \\\\\"md5\\\\\": \\\\\"\
-        8fbfae9a5ecbc278ae7f761ecb6d1285\\\\\", \\\\\"sha256\\\\\": \\\\\"816c96e8e8f193b40151dad7e8ff37b1221d019dbcb9c35cd3fadbfe6477dfec\\\
+        \\\": \\\\\"541978f73749499e9e0277bfe5a3c868\\\\\"}, {\\\\\"filename\\\\\": \\\\\"googletest-1.18.0.tar.gz\\\\\",\
+        \ \\\\\"url\\\\\": \\\\\"https://github.com/google/googletest/archive/refs/tags/v1.18.0.tar.gz\\\\\", \\\\\"sha256\\\
+        \\\": \\\\\"6e3191c1455468b3fc35a417fb565c1c5071aee1b7e7f85e30cf48a98d37d8b5\\\\\", \\\\\"md5\\\\\": \\\\\"ae87634285dbe148a7abc6d19c4c05bd\\\
+        \\\"}, {\\\\\"filename\\\\\": \\\\\"brotli-1.2.0.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://github.com/google/brotli/archive/v1.2.0/brotli-1.2.0.tar.gz\\\
+        \\\", \\\\\"md5\\\\\": \\\\\"8fbfae9a5ecbc278ae7f761ecb6d1285\\\\\", \\\\\"sha256\\\\\": \\\\\"816c96e8e8f193b40151dad7e8ff37b1221d019dbcb9c35cd3fadbfe6477dfec\\\
         \\\"}]\")\\nfor x in lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\'filename\\']\\n with urllib.request.urlopen(x[\\\
         'url\\'],timeout=120)as r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\n assert hashlib.file_digest(p.open(\\\
         'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\',x[\\'filename\\'],flush=True)\\\
@@ -83,60 +80,54 @@ jobs:
         \ 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/tests/lcms2.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\"\
         \ > /nav-build-metadata/cms/lcms2.exit\\\\ncp build/meson-logs/testlog.* /nav-build-metadata/cms/\\\\ncp build/meson-info/intro-tests.json\
         \ /nav-build-metadata/cms/lcms2-tests.json\\\\ntest \"$rc\" = 0\\\\nninja -C build install\\\\nldconfig\\\\ncd /sources\\\
-        \\nrm -rf lcms2-2.19.1\\\\n# Highway builds full upstream tests with installed real GoogleTest.\\\\ntar -xf highway-1.4.0.tar.gz\\\
-        \\ncd highway-1.4.0\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON\
-        \ -DBUILD_TESTING=ON -DHWY_ENABLE_TESTS=ON -DHWY_SYSTEM_GTEST=ON -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_FLAGS_RELEASE=\"\
-        -O1 -DNDEBUG\"\\\\ncmake --build build --parallel 2\\\\nchown -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export\
-        \ PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/highway-1.4.0/build; ctest --output-on-failure -j2\\\\\\' > /nav-build-metadata/tests/highway.log\
-        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/tests/highway.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"\
-        $rc\" > /nav-build-metadata/cms/highway.exit\\\\ncp build/Testing/Temporary/LastTest.log /nav-build-metadata/cms/highway-original.log\\\
-        \\ncp build/CMakeCache.txt /nav-build-metadata/cms/highway-config.txt\\\\ntest \"$rc\" = 0\\\\ncmake --install build\\\
-        \\nldconfig\\\\ncd /sources\\\\nrm -rf highway-1.4.0\\\\npkg-config --modversion lcms2 libhwy gtest\\\\npython3 -\
-        \ <<\\\\\\'AUDIT\\\\\\'\\\\nfrom pathlib import Path\\\\nimport json,re\\\\np=Path(\\\\\\'/nav-build-metadata\\\\\\\
-        ');counts={}\\\\nfor n in [\\\\\\'brotli\\\\\\',\\\\\\'googletest\\\\\\',\\\\\\'highway\\\\\\']:\\\\n t=(p/\\\\\\\
-        'tests\\\\\\'/f\\\\\\'{n}.log\\\\\\').read_text();assert (p/\\\\\\'cms\\\\\\'/f\\\\\\'{n}.exit\\\\\\').read_text().strip()==\\\
-        \\\\'0\\\\\\'\\\\n m=re.search(r\\\\\\'100% tests passed(?:, 0 tests failed)? out of (\\\\\\\\d+)\\\\\\',t);assert\
-        \ m and int(m[1])>0;assert not re.search(r\\\\\\'(?m)^\\\\\\\\s*\\\\\\\\d+/\\\\\\\\d+.*(?:Failed|Timeout|Not Run)\\\
-        \\\\',t)\\\\n assert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation fault|Subprocess aborted|\\\\\\\\*\\\\\\\\*\\\\\
-        \\\\*Exception\\\\\\',t)\\\\n counts[n]={\\\\\\'original_ctest_total\\\\\\':int(m[1]),\\\\\\'failed\\\\\\':0,\\\\\\\
-        'skip_lines\\\\\\':[x for x in t.splitlines()if re.search(r\\\\\\'(?i)skip|not run|disabled\\\\\\',x)]}\\\\nrows=[json.loads(l)for\
-        \ l in (p/\\\\\\'cms\\\\\\'/\\\\\\'testlog.json\\\\\\').read_text().splitlines()if l.strip()];assert rows and all(r[\\\
-        \\\\'result\\\\\\']==\\\\\\'OK\\\\\\'for r in rows)\\\\ncounts[\\\\\\'lcms2\\\\\\']={\\\\\\'meson_total\\\\\\':len(rows),\\\
-        \\\\'results\\\\\\':[{\\\\\\'name\\\\\\':r[\\\\\\'name\\\\\\'],\\\\\\'result\\\\\\':r[\\\\\\'result\\\\\\'],\\\\\\\
-        'stdout\\\\\\':r[\\\\\\'stdout\\\\\\']}for r in rows]}\\\\nfor r in rows:assert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation\
-        \ fault\\\\\\',r[\\\\\\'stdout\\\\\\'])\\\\n(p/\\\\\\'cms\\\\\\'/\\\\\\'CMS-TESTS-OPEN.json\\\\\\').write_text(json.dumps({\\\
-        \\\\'counts\\\\\\':counts,\\\\\\'classification\\\\\\':\\\\\\'Original configured suites passed, not full OS acceptance.\
-        \ All inherited Rust/portal/image/VM/Valgrind gaps remain OPEN. Every skipped, disabled or unsupported case remains\
-        \ OPEN.\\\\\\',\\\\\\'rust_inherited_audit\\\\\\':\\\\\\'/nav-build-metadata/rust/RUST-TRANSITIONAL-OPEN.json\\\\\\\
-        ',\\\\\\'remaining\\\\\\':\\\\\\'JPEG XL,HEIF,SVG,Glycin/GTK image chain unfinished\\\\\\'},indent=2))\\\\nprint(\\\
-        \\\\'NAV_CMS_AUDIT\\\\\\',json.dumps(counts),flush=True)\\\\nAUDIT\\\\nprintf \\\\\\'NAV_CMS_ORIGINAL_SUITES_COMPLETE\\\
-        \\\\\\n\\\\\\'\\\\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\\
-        nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\\
-        nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t\
-        \ devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs\
-        \ \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ]; then\\n install -d\
-        \ -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot\
-        \ --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile\
-        \ --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke;\
-        \ printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin\
-        \ MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/cms-stage.sh\\nchroot --userspec=101:101\
-        \ \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\\
-        'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\
-        \\n\"\\'\\nNAV_MOUNT_BUILD\\n# Namespace exit unmounts virtual filesystems before checkpoint. Restore builder\\n#\
-        \ ownership only for readable cache packaging; next native build resets root ownership.\\nsudo rm -f \"$LFS/sources/\"\
-        *.whl \"$LFS/sources/\"*.zip \"$LFS/sources/\"*.ttf \"$LFS/sources/\"*.tar.* \"$LFS/sources/cms-stage.sh\"\\nsudo\
-        \ chown -hR \"$(id -u):$(id -g)\" \"$LFS\"\\ndu -sh \"$LFS\"\\ntest \"$(du -sm \"$LFS\" | cut -f1)\" -lt 5120\\nsudo\
-        \ rm -f \"$LFS/sources/cms-stage.sh\" \"$LFS/sources/image-cms-jxl-source-lock.json\"\\n# Recursive packaging ownership\
-        \ resets setuid. Restore upstream fusermount3 mode.\\nsudo chown root:root \"$LFS/usr/bin/fusermount3\"\\nsudo chmod\
-        \ 4755 \"$LFS/usr/bin/fusermount3\"\\ntest \"$(du -sb \"$LFS\" | cut -f1)\" -lt 5368709120\\n')\nstart = time.monotonic()\n\
-        log = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash', str(p)], stdout=log, stderr=subprocess.STDOUT,\
-        \ start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\ntry:\n\
-        \    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n        available = mem()\n      \
-        \  if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start > 315 * 60:\n            raise\
-        \ RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds': round(time.monotonic()\
-        \ - start), 'free_disk_bytes': free, 'available_memory_kib': available}), flush=True)\n        time.sleep(20)\n  \
-        \  if proc.returncode:\n        raise RuntimeError('source-build failed with status ' + str(proc.returncode))\nfinally:\n\
-        \    if proc.poll() is None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n\
+        \\nrm -rf lcms2-2.19.1\\\\npkg-config --modversion lcms2 libbrotlidec gtest\\\\npython3 - <<\\\\\\'AUDIT\\\\\\'\\\\\
+        nfrom pathlib import Path\\\\nimport json,re\\\\np=Path(\\\\\\'/nav-build-metadata\\\\\\');counts={}\\\\nfor n in\
+        \ [\\\\\\'brotli\\\\\\',\\\\\\'googletest\\\\\\']:\\\\n t=(p/\\\\\\'tests\\\\\\'/f\\\\\\'{n}.log\\\\\\').read_text();assert\
+        \ (p/\\\\\\'cms\\\\\\'/f\\\\\\'{n}.exit\\\\\\').read_text().strip()==\\\\\\'0\\\\\\'\\\\n m=re.search(r\\\\\\'100%\
+        \ tests passed(?:, 0 tests failed)? out of (\\\\\\\\d+)\\\\\\',t);assert m and int(m[1])>0;assert not re.search(r\\\
+        \\\\'(?m)^\\\\\\\\s*\\\\\\\\d+/\\\\\\\\d+.*(?:Failed|Timeout|Not Run)\\\\\\',t)\\\\n assert not re.search(r\\\\\\\
+        '(?i)SIGSEGV|segmentation fault|Subprocess aborted|\\\\\\\\*\\\\\\\\*\\\\\\\\*Exception\\\\\\',t)\\\\n counts[n]={\\\
+        \\\\'original_ctest_total\\\\\\':int(m[1]),\\\\\\'failed\\\\\\':0,\\\\\\'skip_lines\\\\\\':[x for x in t.splitlines()if\
+        \ re.search(r\\\\\\'(?i)skip|not run|disabled\\\\\\',x)]}\\\\nrows=[json.loads(l)for l in (p/\\\\\\'cms\\\\\\'/\\\\\
+        \\'testlog.json\\\\\\').read_text().splitlines()if l.strip()];assert rows and all(r[\\\\\\'result\\\\\\']==\\\\\\\
+        'OK\\\\\\'for r in rows)\\\\ncounts[\\\\\\'lcms2\\\\\\']={\\\\\\'meson_total\\\\\\':len(rows),\\\\\\'results\\\\\\\
+        ':[{\\\\\\'name\\\\\\':r[\\\\\\'name\\\\\\'],\\\\\\'result\\\\\\':r[\\\\\\'result\\\\\\'],\\\\\\'stdout\\\\\\':r[\\\
+        \\\\'stdout\\\\\\']}for r in rows]}\\\\nfor r in rows:assert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation fault\\\
+        \\\\',r[\\\\\\'stdout\\\\\\'])\\\\n(p/\\\\\\'cms\\\\\\'/\\\\\\'CMS-TESTS-OPEN.json\\\\\\').write_text(json.dumps({\\\
+        \\\\'counts\\\\\\':counts,\\\\\\'classification\\\\\\':\\\\\\'TRANSITIONAL. Brotli/GoogleTest/LittleCMS original configured\
+        \ suites passed, Highway unbuilt/unrun OPEN, not full OS acceptance. All inherited Rust/portal/image/VM/Valgrind gaps\
+        \ remain OPEN. Every skipped, disabled or unsupported case remains OPEN.\\\\\\',\\\\\\'rust_inherited_audit\\\\\\\
+        ':\\\\\\'/nav-build-metadata/rust/RUST-TRANSITIONAL-OPEN.json\\\\\\',\\\\\\'highway_OPEN\\\\\\':\\\\\\'UNBUILT/UNRUN:\
+        \ GCC bit_pack_test.cc exhausted 4GiB process cap under both -O3 and -O1. No tests skipped; Clang diagnostic pending.\
+        \ Evidence runs44130774687 and44138643384.\\\\\\',\\\\\\'remaining\\\\\\':\\\\\\'Highway,JPEG XL,HEIF,SVG,Glycin/GTK\
+        \ image chain unfinished\\\\\\'},indent=2))\\\\nprint(\\\\\\'NAV_CMS_AUDIT\\\\\\',json.dumps(counts),flush=True)\\\
+        \\nAUDIT\\\\nprintf \\\\\\'NAV_CMS_ORIGINAL_SUITES_COMPLETE\\\\\\\\n\\\\\\'\\\\n\\')\\nINNER\\nsudo chown -hR root:root\
+        \ \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\" unshare --mount --propagation private\
+        \ /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\\
+        nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc\
+        \ \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif\
+        \ [ -h \"$LFS/dev/shm\" ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev\
+        \ tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin\
+        \ /bin/bash --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm\
+        \ /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb\
+        \ PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/cms-stage.sh\\\
+        nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash\
+        \ --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke;\
+        \ printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nNAV_MOUNT_BUILD\\n# Namespace exit unmounts virtual filesystems before\
+        \ checkpoint. Restore builder\\n# ownership only for readable cache packaging; next native build resets root ownership.\\\
+        nsudo rm -f \"$LFS/sources/\"*.whl \"$LFS/sources/\"*.zip \"$LFS/sources/\"*.ttf \"$LFS/sources/\"*.tar.* \"$LFS/sources/cms-stage.sh\"\
+        \\nsudo chown -hR \"$(id -u):$(id -g)\" \"$LFS\"\\ndu -sh \"$LFS\"\\ntest \"$(du -sm \"$LFS\" | cut -f1)\" -lt 5120\\\
+        nsudo rm -f \"$LFS/sources/cms-stage.sh\" \"$LFS/sources/image-cms-jxl-source-lock.json\"\\n# Recursive packaging\
+        \ ownership resets setuid. Restore upstream fusermount3 mode.\\nsudo chown root:root \"$LFS/usr/bin/fusermount3\"\\\
+        nsudo chmod 4755 \"$LFS/usr/bin/fusermount3\"\\ntest \"$(du -sb \"$LFS\" | cut -f1)\" -lt 5368709120\\n')\nstart =\
+        \ time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash', str(p)], stdout=log,\
+        \ stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\n\
+        try:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n        available = mem()\n \
+        \       if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start > 315 * 60:\n           \
+        \ raise RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds':\
+        \ round(time.monotonic() - start), 'free_disk_bytes': free, 'available_memory_kib': available}), flush=True)\n   \
+        \     time.sleep(20)\n    if proc.returncode:\n        raise RuntimeError('source-build failed with status ' + str(proc.returncode))\n\
+        finally:\n    if proc.poll() is None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n\
         \        except subprocess.TimeoutExpired:\n            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n\
         \    log.close()\n    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n\
         \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
