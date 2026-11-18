@@ -1,0 +1,126 @@
+name: NAV Cython ONE evidence recovery original full suite no-save
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-cython-no-save-diagnostic
+  cancel-in-progress: false
+jobs:
+  portal-gstreamer:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: Prepare owned isolated target directory
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo mkdir -p /mnt/nav-lfs
+
+        sudo chown "$(id -u):$(id -g)" /mnt/nav-lfs
+
+        sudo modprobe uinput || true
+
+        ls -ld /dev/input /dev/uinput || true
+
+        '
+    - name: Restore tested build infrastructure checkpoint
+      id: cross
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-lfs
+        key: nav-blfs13.1-x86_64-git-open-v1
+        fail-on-cache-miss: true
+    - name: Cython ONE evidence recovery original full suite no install no save
+      shell: bash
+      run: "python3 - <<'NAV_GUARD'\nfrom pathlib import Path\nimport subprocess, json, gzip, base64, hashlib, os\nexporter\
+        \ = Path('/tmp/cython-export-evidence.py')\nexporter.write_text(\"from pathlib import Path\\nimport subprocess,tarfile,io,gzip,base64,hashlib,json,sys,traceback,os\\\
+        nroot=Path(sys.argv[1]);out=Path(sys.argv[2]);out.mkdir(parents=True,exist_ok=True)\\nprobe=out/'runner-write-probe';probe.write_text('ok');probe.unlink()\\\
+        nmanifest={'source':str(root),'runner_uid':os.getuid(),'files':{},'errors':[]}\\ndef emit(name,data):\\n manifest['files'][name]={'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}\\\
+        n compressed=gzip.compress(data,mtime=0);dest=out/(name+'.gz');dest.write_bytes(compressed)\\n for i in range(0,len(compressed),3000):print('NAV_CYTHON_EXPORT_'+name.upper().replace('.','_').replace('-','_')+'_B64',base64.b64encode(compressed[i:i+3000]).decode(),flush=True)\\\
+        nfor area in ['nav-build-metadata/cython','home/tester/cython-results']:\\n try:\\n  listing=subprocess.check_output(['sudo','find',str(root/area),'-type','f','-print0']).split(b'\\\
+        \\0')\\n except Exception as ex:manifest['errors'].append({'area':area,'error':repr(ex)});continue\\n files=[os.fsdecode(x)for\
+        \ x in listing if x]\\n # Every metadata log emits independently. XML files use separate independent members too.\\\
+        n for idx,file in enumerate(sorted(files)):\\n  try:\\n   rel=str(Path(file).relative_to(root));name=('META_'if area.startswith('nav')else\
+        \ 'XML_')+str(idx)+'_'+Path(file).name\\n   data=subprocess.check_output(['sudo','cat',file]);emit(name,data);manifest['files'][name]['source']=rel\\\
+        n  except Exception as ex:manifest['errors'].append({'file':file,'error':repr(ex)});print('NAV_CYTHON_EXPORT_INDEPENDENT_ERROR',repr(ex),flush=True)\\\
+        nemit('EXPORT_MANIFEST_JSON',json.dumps(manifest,indent=2).encode())\\nif manifest['errors']:sys.exit(2)\\n\")\nprobe\
+        \ = Path('/tmp/cython-evidence-real')\nprobe.mkdir(exist_ok=True)\nf = probe / 'uid-preflight'\nf.write_text(str(os.getuid()))\n\
+        assert f.read_text() == str(os.getuid())\nf.unlink()\nroot = Path('/tmp/cython-export-selftest-root')\nout = Path('/tmp/cython-export-selftest-out')\n\
+        fixture = \"from pathlib import Path\\nimport unittest,io,xml.etree.ElementTree as E\\np=Path('/tmp/cython-export-selftest-root');p.mkdir(exist_ok=True,mode=0o700)\\\
+        nm=p/'nav-build-metadata/cython';m.mkdir(parents=True,exist_ok=True)\\nx=p/'home/tester/cython-results';x.mkdir(parents=True,exist_ok=True)\\\
+        nclass ExportFailureProbe(unittest.TestCase):\\n def test_expected_failure(self):self.fail('synthetic failure for\
+        \ export validation only')\\ns=io.StringIO();r=unittest.TextTestRunner(stream=s,verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(ExportFailureProbe));assert\
+        \ len(r.failures)==1 and not r.errors\\n(m/'tests.log').write_text(s.getvalue());(m/'tests.exit').write_text(str(1)+chr(10))\\\
+        ne=E.Element('testsuite',tests='1',failures='1',errors='0');tc=E.SubElement(e,'testcase',name='test_expected_failure');E.SubElement(tc,'failure').text=r.failures[0][1];E.ElementTree(e).write(x/'probe.xml')\\\
+        n\"\nsubprocess.run(['sudo', 'python3', '-c', fixture], check=True)\nwith Path('/tmp/cython-export-selftest-output.log').open('w')\
+        \ as f:\n    subprocess.run(['python3', str(exporter), str(root), str(out)], stdout=f, check=True)\nassert b'synthetic\
+        \ failure for export validation only' in gzip.decompress((out / 'META_1_tests.log.gz').read_bytes())\nxml = gzip.decompress((out\
+        \ / 'XML_0_probe.xml.gz').read_bytes())\nassert b'failures=\"1\"' in xml and b'test_expected_failure' in xml\nmanifest\
+        \ = json.loads(gzip.decompress((out / 'EXPORT_MANIFEST_JSON.gz').read_bytes()))\nassert not manifest['errors'] and\
+        \ manifest['runner_uid'] == os.getuid()\nsubprocess.run(['sudo', 'mv', str(root / 'home/tester/cython-results'), str(root\
+        \ / 'home/tester/moved-results')], check=True)\nwith Path('/tmp/cython-export-selftest-negative.log').open('w') as\
+        \ f:\n    r = subprocess.run(['python3', str(exporter), str(root), '/tmp/cython-export-selftest-negative'], stdout=f)\n\
+        assert r.returncode == 2 and b'synthetic failure for export validation only' in gzip.decompress(Path('/tmp/cython-export-selftest-negative/META_1_tests.log.gz').read_bytes())\n\
+        print('NAV_CYTHON_SYNTHETIC_FAILURE_EXPORT_SELFTEST_PASS original log+XML survive; missing-source errors independent;\
+        \ not package tests', flush=True)\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
+        \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\nassert os.cpu_count()\
+        \ >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024 ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\n\
+        p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\ntest -f \"\
+        $LFS/nav-build-metadata/git/GIT-TRANSITIONAL-OPEN.json\"\\npython3 - <<\\'DOWNLOADS\\'\\nfrom pathlib import Path\\\
+        nimport urllib.request,hashlib,json\\nlock=json.loads(\"[{\\\\\"name\\\\\": \\\\\"Cython\\\\\", \\\\\"version\\\\\"\
+        : \\\\\"3.2.9\\\\\", \\\\\"filename\\\\\": \\\\\"cython-3.2.9.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/f6/de/db48b8870e766cfea809986cc50c1e986c663a9ab7bafd0ac1a2512c4a26/cython-3.2.9.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"d249c9022ab13286b17bd66f30609e800c5f95efeecb06168990c7a66cecde6c\\\\\", \\\\\"md5\\\
+        \\\": \\\\\"775ad752cdb021193f3ef323228388d5\\\\\"}]\")\\nfor x in lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\\
+        'filename\\']\\n with urllib.request.urlopen(x[\\'url\\'],timeout=120)as r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\\
+        n assert hashlib.file_digest(p.open(\\'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\\
+        ',x[\\'filename\\'],flush=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/cython\\').mkdir(exist_ok=True)\\nPath(\\\
+        '/mnt/nav-lfs/nav-build-metadata/cython/source-lock.json\\').write_text(json.dumps(lock,indent=2))\\nDOWNLOADS\\npython3\
+        \ - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/cython-stage.sh\\').write_text(\\'set\
+        \ -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport MAKEFLAGS=-j2 PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
+        \ LANG=C.UTF-8 PYTHONUNBUFFERED=1\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir -p /nav-build-metadata/cython\
+        \ /sources/cython-built\\\\ncd /sources\\\\ntar -xf cython-3.2.9.tar.gz\\\\ncd cython-3.2.9\\\\n{ gcc --version; g++\
+        \ --version; python3 --version; pip3 list; ulimit -a; } > /nav-build-metadata/cython/preflight.log 2>&1\\\\nset +e\\\
+        \\npython3 setup.py build_ext -j2 bdist_wheel > /nav-build-metadata/cython/build.log 2>&1\\\\nrc=$?\\\\nset -e\\\\\
+        nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/cython/build.exit\\\\ntail -60 /nav-build-metadata/cython/build.log\\\
+        \\ntest \"$rc\" = 0\\\\npython3 - <<\\\\\\'UNPACK\\\\\\'\\\\nfrom pathlib import Path\\\\nimport zipfile,hashlib,json\\\
+        \\nw=list(Path(\\\\\\'dist\\\\\\').glob(\\\\\\'*.whl\\\\\\'));assert len(w)==1\\\\nwith zipfile.ZipFile(w[0])as z:z.extractall(\\\
+        \\\\'/sources/cython-built\\\\\\')\\\\nPath(\\\\\\'/nav-build-metadata/cython/built-wheel.json\\\\\\').write_text(json.dumps({\\\
+        \\\\'file\\\\\\':w[0].name,\\\\\\'sha256\\\\\\':hashlib.sha256(w[0].read_bytes()).hexdigest(),\\\\\\'install\\\\\\\
+        ':\\\\\\'not installed; own source-built wheel unpacked for tests\\\\\\'},indent=2))\\\\nUNPACK\\\\nmkdir -p /home/tester/cython-results\\\
+        \\nchown -R tester /sources/cython-3.2.9 /sources/cython-built /home/tester/cython-results\\\\nset +e\\\\nsu tester\
+        \ -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin PYTHONUNBUFFERED=1; cd /sources/cython-3.2.9; python3 runtests.py\
+        \ -j2 -vv --cython-dir /sources/cython-built --xml-output /home/tester/cython-results\\\\\\' > /nav-build-metadata/cython/tests.log\
+        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/cython/tests.exit\\\
+        \\ntail -120 /nav-build-metadata/cython/tests.log\\\\nprintf \\\\\\'NAV_CYTHON_ORIGINAL_FULL_SUITE_ATTEMPT_NO_INSTALL_NO_SAVE\\\
+        \\\\\\n\\\\\\'\\\\ntest \"$rc\" = 0\\\\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"\
+        $LFS/home/tester\"\\nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\\
+        '\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev\
+        \ \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount\
+        \ -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\"\
+        \ ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\
+        \\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash\
+        \ --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke;\
+        \ printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin\
+        \ MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/cython-stage.sh\\nchroot --userspec=101:101\
+        \ \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\\
+        'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\
+        \\n\"\\'\\nNAV_MOUNT_BUILD\\nsudo rm -f \"$LFS/sources/cython-stage.sh\" \"$LFS/sources/\"*.tar.*\\nprintf \\'NAV_CYTHON_DIAGNOSTIC_NO_SAVE_NO_INSTALL\\\
+        \\n\\'\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash',\
+        \ str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0,\
+        \ sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n\
+        \        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start\
+        \ > 315 * 60:\n            raise RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds':\
+        \ round(time.monotonic() - start), 'free_disk_bytes': free, 'available_memory_kib': available}), flush=True)\n   \
+        \     time.sleep(20)\n    if proc.returncode:\n        raise RuntimeError('source-build failed with status ' + str(proc.returncode))\n\
+        finally:\n    if proc.poll() is None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n\
+        \        except subprocess.TimeoutExpired:\n            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n\
+        \    log.close()\n    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n\
+        \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
+        \ 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON',\
+        \ 'NAV_TESTER', 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
+        \ 'NAV_PORTAL'])))))\n    export_rc = subprocess.run(['python3', '/tmp/cython-export-evidence.py', '/mnt/nav-lfs',\
+        \ '/tmp/cython-evidence-real']).returncode\n    print('NAV_CYTHON_EXPORT_RETURN', export_rc, flush=True)\n    if export_rc:\n\
+        \        raise RuntimeError('independent evidence export had errors, inspect all emitted originals')\nNAV_GUARD\n"
