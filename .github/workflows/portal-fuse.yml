@@ -151,34 +151,35 @@ jobs:
         \ tester /sources/libjxl-0.12.0 /sources/numpy-tooling-prefix\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/sources/numpy-tooling-prefix/bin:/usr/bin:/usr/sbin:/bin:/sbin\
         \ PYTHONPATH=/sources/numpy-tooling-prefix/lib/python3.14/site-packages; cd /sources/libjxl-0.12.0/build; ctest --no-tests=error\
         \ --output-on-failure -j1 -R \"^conformance_tooling_test$\"\\\\\\' > /nav-build-metadata/numpy/conformance.log 2>&1\\\
-        \\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/numpy/conformance.exit\\\\ncp build/Testing/Temporary/LastTest.log\
-        \ /nav-build-metadata/numpy/conformance-original.log\\\\nmkdir -p /home/tester/numpy-test-work\\\\nchown tester /home/tester/numpy-test-work\\\
-        \\nset +e\\\\nsu tester -c \\\\\\'export PATH=/sources/numpy-tooling-prefix/bin:/usr/bin:/usr/sbin:/bin:/sbin PYTHONPATH=/sources/numpy-tooling-prefix/lib/python3.14/site-packages\
-        \ PYTHONUNBUFFERED=1 OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2; cd /home/tester/numpy-test-work; python3 /sources/numpy-run-tests.py\\\
-        \\\\' > /nav-build-metadata/numpy/tests.log 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/numpy/tests.exit\\\
-        \\nif test -f /home/tester/numpy-test-work/original-pytest.xml;then cp /home/tester/numpy-test-work/original-pytest.xml\
-        \ /nav-build-metadata/numpy/;fi\\\\nprintf \\\\\\'NAV_NUMPY_CONFORMANCE_NO_SYSTEM_INSTALL_NO_SAVE\\\\n\\\\\\'\\\\\
-        n\\')\\nPath(\\'/mnt/nav-lfs/sources/numpy-build-prefix.py\\').write_text(\\'from pathlib import Path\\\\nimport json,os,subprocess,tarfile,hashlib\\\
-        \\nroot=Path(\\\\\\'/sources\\\\\\');prefix=root/\\\\\\'numpy-tooling-prefix\\\\\\';prefix.mkdir(exist_ok=True);audit=Path(\\\
-        \\\\'/nav-build-metadata/numpy\\\\\\');audit.mkdir(exist_ok=True)\\\\nlock=json.loads((audit/\\\\\\'source-lock.json\\\
-        \\\\').read_text());by={x[\\\\\\'name\\\\\\']:x for x in lock if \\\\\\'name\\\\\\' in x}\\\\norder=[\\\\\\'flit-core\\\
-        \\\\',\\\\\\'poetry-core\\\\\\',\\\\\\'tomlkit\\\\\\',\\\\\\'calver\\\\\\',\\\\\\'pathspec\\\\\\',\\\\\\'trove-classifiers\\\
-        \\\\',\\\\\\'hatchling\\\\\\',\\\\\\'hatch-vcs\\\\\\',\\\\\\'hatch-fancy-pypi-readme\\\\\\',\\\\\\'attrs\\\\\\',\\\
-        \\\\'sortedcontainers\\\\\\',\\\\\\'hypothesis\\\\\\',\\\\\\'pytest\\\\\\',\\\\\\'pytz\\\\\\',\\\\\\'coverage\\\\\\\
-        ',\\\\\\'execnet\\\\\\',\\\\\\'pytest-xdist\\\\\\',\\\\\\'pytest-timeout\\\\\\',\\\\\\'charset-normalizer\\\\\\',\\\
-        \\\\'tzdata\\\\\\',\\\\\\'pytest-cov\\\\\\',\\\\\\'pyproject-metadata\\\\\\',\\\\\\'meson-python\\\\\\',\\\\\\'Cython\\\
-        \\\\',\\\\\\'numpy\\\\\\']\\\\nenv=os.environ.copy();env.update(PYTHONPATH=str(prefix/\\\\\\'lib/python3.14/site-packages\\\
-        \\\\'),PATH=str(prefix/\\\\\\'bin\\\\\\')+\\\\\\':\\\\\\'+env[\\\\\\'PATH\\\\\\'],PYTHONUNBUFFERED=\\\\\\'1\\\\\\\
-        ',NPY_NUM_BUILD_JOBS=\\\\\\'2\\\\\\',CMAKE_BUILD_PARALLEL_LEVEL=\\\\\\'2\\\\\\',OMP_NUM_THREADS=\\\\\\'2\\\\\\',OPENBLAS_NUM_THREADS=\\\
-        \\\\'2\\\\\\',PIP_NO_INDEX=\\\\\\'1\\\\\\')\\\\nrecords=[]\\\\nfor name in order:\\\\n x=by[name];src=root/x[\\\\\\\
-        'filename\\\\\\'];assert hashlib.sha256(src.read_bytes()).hexdigest()==x[\\\\\\'sha256\\\\\\']\\\\n with tarfile.open(src)as\
-        \ t:\\\\n  top=t.getnames()[0].split(\\\\\\'/\\\\\\')[0];t.extractall(root,filter=\\\\\\'data\\\\\\')\\\\n cwd=root/top;dest=cwd/\\\
-        \\\\'dist\\\\\\';cmd=[\\\\\\'python3\\\\\\',\\\\\\'-m\\\\\\',\\\\\\'pip\\\\\\',\\\\\\'wheel\\\\\\',\\\\\\'-w\\\\\\\
-        ',str(dest),\\\\\\'--no-build-isolation\\\\\\',\\\\\\'--no-deps\\\\\\',\\\\\\'--no-cache-dir\\\\\\',str(cwd)]\\\\\
-        n if name==\\\\\\'numpy\\\\\\':cmd+=[\\\\\\'-Csetup-args=-Dallow-noblas=true\\\\\\',\\\\\\'-Ccompile-args=-j2\\\\\\\
-        ']\\\\n if name==\\\\\\'Cython\\\\\\':cmd=[\\\\\\'python3\\\\\\',\\\\\\'setup.py\\\\\\',\\\\\\'build_ext\\\\\\',\\\
-        \\\\'-j2\\\\\\',\\\\\\'bdist_wheel\\\\\\']\\\\n print(\\\\\\'NAV_SOURCE_TOOLING_BUILD_BEGIN\\\\\\',name,flush=True)\\\
-        \\n with (audit/(name+\\\\\\'-build.log\\\\\\')).open(\\\\\\'w\\\\\\')as f:rc=subprocess.run(cmd,cwd=cwd,env=env,stdout=f,stderr=subprocess.STDOUT).returncode\\\
+        \\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/numpy/conformance.exit\\\\nconformance_rc=$rc\\\
+        \\ncp build/Testing/Temporary/LastTest.log /nav-build-metadata/numpy/conformance-original.log\\\\nmkdir -p /home/tester/numpy-test-work\\\
+        \\nchown tester /home/tester/numpy-test-work\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/sources/numpy-tooling-prefix/bin:/usr/bin:/usr/sbin:/bin:/sbin\
+        \ PYTHONPATH=/sources/numpy-tooling-prefix/lib/python3.14/site-packages PYTHONUNBUFFERED=1 OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2;\
+        \ cd /home/tester/numpy-test-work; python3 /sources/numpy-run-tests.py\\\\\\' > /nav-build-metadata/numpy/tests.log\
+        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/numpy/tests.exit\\\\nif\
+        \ test -f /home/tester/numpy-test-work/original-pytest.xml;then cp /home/tester/numpy-test-work/original-pytest.xml\
+        \ /nav-build-metadata/numpy/;fi\\\\ntest \"$conformance_rc\" = 0\\\\ntest \"$rc\" = 0\\\\nprintf \\\\\\'NAV_NUMPY_CONFORMANCE_NO_SYSTEM_INSTALL_NO_SAVE\\\
+        \\n\\\\\\'\\\\n\\')\\nPath(\\'/mnt/nav-lfs/sources/numpy-build-prefix.py\\').write_text(\\'from pathlib import Path\\\
+        \\nimport json,os,subprocess,tarfile,hashlib\\\\nroot=Path(\\\\\\'/sources\\\\\\');prefix=root/\\\\\\'numpy-tooling-prefix\\\
+        \\\\';prefix.mkdir(exist_ok=True);audit=Path(\\\\\\'/nav-build-metadata/numpy\\\\\\');audit.mkdir(exist_ok=True)\\\
+        \\nlock=json.loads((audit/\\\\\\'source-lock.json\\\\\\').read_text());by={x[\\\\\\'name\\\\\\']:x for x in lock if\
+        \ \\\\\\'name\\\\\\' in x}\\\\norder=[\\\\\\'flit-core\\\\\\',\\\\\\'poetry-core\\\\\\',\\\\\\'tomlkit\\\\\\',\\\\\
+        \\'calver\\\\\\',\\\\\\'pathspec\\\\\\',\\\\\\'trove-classifiers\\\\\\',\\\\\\'hatchling\\\\\\',\\\\\\'hatch-vcs\\\
+        \\\\',\\\\\\'hatch-fancy-pypi-readme\\\\\\',\\\\\\'attrs\\\\\\',\\\\\\'sortedcontainers\\\\\\',\\\\\\'hypothesis\\\
+        \\\\',\\\\\\'pytest\\\\\\',\\\\\\'pytz\\\\\\',\\\\\\'coverage\\\\\\',\\\\\\'execnet\\\\\\',\\\\\\'pytest-xdist\\\\\
+        \\',\\\\\\'pytest-timeout\\\\\\',\\\\\\'charset-normalizer\\\\\\',\\\\\\'tzdata\\\\\\',\\\\\\'pytest-cov\\\\\\',\\\
+        \\\\'pyproject-metadata\\\\\\',\\\\\\'meson-python\\\\\\',\\\\\\'Cython\\\\\\',\\\\\\'numpy\\\\\\']\\\\nenv=os.environ.copy();env.update(PYTHONPATH=str(prefix/\\\
+        \\\\'lib/python3.14/site-packages\\\\\\'),PATH=str(prefix/\\\\\\'bin\\\\\\')+\\\\\\':\\\\\\'+env[\\\\\\'PATH\\\\\\\
+        '],PYTHONUNBUFFERED=\\\\\\'1\\\\\\',NPY_NUM_BUILD_JOBS=\\\\\\'2\\\\\\',CMAKE_BUILD_PARALLEL_LEVEL=\\\\\\'2\\\\\\',OMP_NUM_THREADS=\\\
+        \\\\'2\\\\\\',OPENBLAS_NUM_THREADS=\\\\\\'2\\\\\\',PIP_NO_INDEX=\\\\\\'1\\\\\\')\\\\nrecords=[]\\\\nfor name in order:\\\
+        \\n x=by[name];src=root/x[\\\\\\'filename\\\\\\'];assert hashlib.sha256(src.read_bytes()).hexdigest()==x[\\\\\\'sha256\\\
+        \\\\']\\\\n with tarfile.open(src)as t:\\\\n  top=t.getnames()[0].split(\\\\\\'/\\\\\\')[0];t.extractall(root,filter=\\\
+        \\\\'data\\\\\\')\\\\n cwd=root/top;dest=cwd/\\\\\\'dist\\\\\\';cmd=[\\\\\\'python3\\\\\\',\\\\\\'-m\\\\\\',\\\\\\\
+        'pip\\\\\\',\\\\\\'wheel\\\\\\',\\\\\\'-w\\\\\\',str(dest),\\\\\\'--no-build-isolation\\\\\\',\\\\\\'--no-deps\\\\\
+        \\',\\\\\\'--no-cache-dir\\\\\\',str(cwd)]\\\\n if name==\\\\\\'numpy\\\\\\':cmd+=[\\\\\\'-Csetup-args=-Dallow-noblas=true\\\
+        \\\\',\\\\\\'-Ccompile-args=-j2\\\\\\']\\\\n if name==\\\\\\'Cython\\\\\\':cmd=[\\\\\\'python3\\\\\\',\\\\\\'setup.py\\\
+        \\\\',\\\\\\'build_ext\\\\\\',\\\\\\'-j2\\\\\\',\\\\\\'bdist_wheel\\\\\\']\\\\n print(\\\\\\'NAV_SOURCE_TOOLING_BUILD_BEGIN\\\
+        \\\\',name,flush=True)\\\\n with (audit/(name+\\\\\\'-build.log\\\\\\')).open(\\\\\\'w\\\\\\')as f:rc=subprocess.run(cmd,cwd=cwd,env=env,stdout=f,stderr=subprocess.STDOUT).returncode\\\
         \\n (audit/(name+\\\\\\'-build.exit\\\\\\')).write_text(str(rc)+\\\\\\'\\\\\\\\n\\\\\\');assert rc==0,(name,rc)\\\\\
         n wheels=list(dest.glob(\\\\\\'*.whl\\\\\\'));assert len(wheels)==1,(name,wheels)\\\\n # Only our own source-built\
         \ wheel enters the disposable diagnostic prefix, never /usr.\\\\n cmd=[\\\\\\'python3\\\\\\',\\\\\\'-m\\\\\\',\\\\\
@@ -191,20 +192,21 @@ jobs:
         \\\\'backend_test_coverage\\\\\\':\\\\\\'OPEN; build-only dependency in disposable prefix\\\\\\'})\\\\n (audit/\\\\\
         \\'built-from-source.json\\\\\\').write_text(json.dumps(records,indent=2));print(\\\\\\'NAV_SOURCE_TOOLING_BUILD_COMPLETE\\\
         \\\\',name,flush=True)\\\\n\\\\nPath(\\\\\\'/sources/numpy-run-tests.py\\\\\\').write_text(\"import numpy,sys; sys.exit(numpy.test(label=\\\
-        \\\\'full\\\\\\',verbose=2,extra_argv=[\\\\\\'-n\\\\\\',\\\\\\'2\\\\\\',\\\\\\'--junitxml=/home/tester/numpy-test-work/original-pytest.xml\\\
-        \\\\']) is False)\")\\\\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\
-        \\nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\\
-        nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t\
-        \ devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs\
-        \ \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ]; then\\n install -d\
-        \ -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot\
-        \ --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile\
-        \ --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke;\
-        \ printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin\
-        \ MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/jxl-stage.sh\\nchroot --userspec=101:101\
-        \ \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\\
-        'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\
-        \\n\"\\'\\nNAV_MOUNT_BUILD\\nsudo rm -f \"$LFS/sources/jxl-stage.sh\" \"$LFS/sources/\"*.tar.*\\nprintf \\'NAV_JXL_DIAGNOSTIC_NO_SAVE_NO_INSTALL\\\
+        \\\\'full\\\\\\',verbose=2,extra_argv=[\\\\\\'-n\\\\\\',\\\\\\'2\\\\\\',\\\\\\'--basetemp=/home/tester/numpy-test-work/pytest-temp\\\
+        \\\\',\\\\\\'--junitxml=/home/tester/numpy-test-work/original-pytest.xml\\\\\\']) is False)\")\\\\n\\')\\nINNER\\\
+        nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\" unshare --mount\
+        \ --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\nmkdir\
+        \ -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\
+        \\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs\
+        \ \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount\
+        \ -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester\
+        \ TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101;\
+        \ touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\"\
+        \ /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash\
+        \ --noprofile --norc /sources/jxl-stage.sh\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester\
+        \ TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101;\
+        \ touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nNAV_MOUNT_BUILD\\\
+        nsudo rm -f \"$LFS/sources/jxl-stage.sh\" \"$LFS/sources/\"*.tar.*\\nprintf \\'NAV_JXL_DIAGNOSTIC_NO_SAVE_NO_INSTALL\\\
         \\n\\'\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash',\
         \ str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0,\
         \ sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n\
