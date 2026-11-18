@@ -58,10 +58,12 @@ jobs:
         \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/git/config.exit\\\\ntest \"$rc\" = 0\\\\ncp config.mak.autogen\
         \ /nav-build-metadata/git/\\\\nset +e\\\\nmake -j2 > /nav-build-metadata/git/build.log 2>&1\\\\nrc=$?\\\\nset -e\\\
         \\ntail -100 /nav-build-metadata/git/build.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/git/build.exit\\\
-        \\ntest \"$rc\" = 0\\\\nchown -R tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
-        \ CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2; cd /sources/git-2.55.0; GIT_UNZIP=nonexist make -j2 -k test\\\\\\' > /nav-build-metadata/git/tests.log\
-        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\ntail -100 /nav-build-metadata/git/tests.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"\
-        $rc\" > /nav-build-metadata/git/tests.exit\\\\nmake -C t aggregate-results > /nav-build-metadata/git/aggregate.log\
+        \\ntest \"$rc\" = 0\\\\nchown -R tester .\\\\nset +e\\\\nsu -s /bin/bash tester -c \\\\\\'export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
+        \ CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2; cd /sources/git-2.55.0/t; scripts=(t[0-9][0-9][0-9][0-9]-*.sh); test \"\
+        ${#scripts[@]}\" = 1046; printf \"NAV_GIT_ORIGINAL_SCRIPT_TARGETS %s\\\\\\\\n\" \"${#scripts[@]}\"; GIT_UNZIP=nonexist\
+        \ GIT_TEST_EXT_CHAIN_LINT=0 make -j2 -k test-lint check-chainlint check-meson unit-tests \"${scripts[@]}\"\\\\\\'\
+        \ > /nav-build-metadata/git/tests.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ntail -100 /nav-build-metadata/git/tests.log\\\\\
+        nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/git/tests.exit\\\\nmake -C t aggregate-results > /nav-build-metadata/git/aggregate.log\
         \ 2>&1 || true\\\\ncat /nav-build-metadata/git/aggregate.log\\\\npython3 - <<\\\\\\'LOGS\\\\\\'\\\\nfrom pathlib import\
         \ Path\\\\nimport json\\\\np=Path(\\\\\\'t/test-results\\\\\\');rows={}\\\\nfor f in sorted(p.glob(\\\\\\'*.counts\\\
         \\\\')):rows[f.name]=f.read_text(errors=\\\\\\'replace\\\\\\')\\\\nPath(\\\\\\'/nav-build-metadata/git/original-counts.json\\\
