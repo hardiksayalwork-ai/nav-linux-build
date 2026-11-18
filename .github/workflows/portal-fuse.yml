@@ -1,4 +1,4 @@
-name: NAV JPEG XL one-time cap measurement no-save
+name: NAV giflib full original tests no-save
 'on':
   workflow_dispatch: {}
 permissions:
@@ -33,79 +33,59 @@ jobs:
         path: /mnt/nav-lfs
         key: nav-blfs13.1-x86_64-git-open-v1
         fail-on-cache-miss: true
-    - name: JPEG XL unchanged one-test 4GiB versus one-time6GiB cap diagnostic
+    - name: Giflib source original tests no-save required JPEG XL dependency
       shell: bash
       run: "python3 - <<'NAV_GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
         \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\nassert os.cpu_count()\
         \ >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024 ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\n\
-        p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -S -v 4194304\\numask 022\\ntest -f\
-        \ \"$LFS/nav-build-metadata/git/GIT-TRANSITIONAL-OPEN.json\"\\ntest -f \"$LFS/nav-build-metadata/highway-gc/HIGHWAY-TRANSITIONAL-OPEN.json\"\
-        \\npython3 - <<\\'DOWNLOADS\\'\\nfrom pathlib import Path\\nimport urllib.request,hashlib,json\\nlock=json.loads(\"\
-        [{\\\\\"filename\\\\\": \\\\\"libjxl-0.12.0.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://github.com/libjxl/libjxl/archive/v0.12.0/libjxl-0.12.0.tar.gz\\\
-        \\\", \\\\\"sha256\\\\\": \\\\\"03e9be69a30be4011f559da75328b6d7cea8ad921fabfbd551ce10bf45cdc992\\\\\", \\\\\"md5\\\
-        \\\": \\\\\"a0fd3ac7b474525dadb99bbcb5d814f9\\\\\"}, {\\\\\"filename\\\\\": \\\\\"libjxl-testdata-73695d303670c90e4d506ea89d9901b081385089.tar.gz\\\
-        \\\", \\\\\"url\\\\\": \\\\\"https://github.com/libjxl/testdata/archive/73695d303670c90e4d506ea89d9901b081385089.tar.gz\\\
-        \\\", \\\\\"sha256\\\\\": \\\\\"380a58890e11513d34f1ed1e686e3c2cee97931cc9faaa80b33fd6c8d2640301\\\\\", \\\\\"upstream_tag_submodule_url\\\
-        \\\": \\\\\"https://github.com/libjxl/testdata/tree/73695d303670c90e4d506ea89d9901b081385089\\\\\"}]\")\\nfor x in\
-        \ lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\'filename\\']\\n with urllib.request.urlopen(x[\\'url\\'],timeout=120)as\
-        \ r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\n assert hashlib.file_digest(p.open(\\'rb\\'),\\\
-        'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\',x[\\'filename\\'],flush=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/jxl\\\
-        ').mkdir(exist_ok=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/jxl/source-lock.json\\').write_text(json.dumps(lock,indent=2))\\\
-        nDOWNLOADS\\ncd \"$LFS/sources\"\\ntar -xf libjxl-0.12.0.tar.gz\\ncd libjxl-0.12.0\\n# Recover authentic tag metadata\
-        \ only, leaving hash-checked archive sources untouched.\\ngit init\\ngit remote add origin https://github.com/libjxl/libjxl.git\\\
-        ngit fetch --depth 1 origin tag v0.12.0\\ngit reset --mixed FETCH_HEAD\\ngit diff --exit-code --ignore-submodules=all\\\
-        ntest \"$(git ls-tree HEAD testdata | awk \\'{print $3}\\')\" = 73695d303670c90e4d506ea89d9901b081385089\\nmkdir -p\
-        \ testdata\\ntar -xf ../libjxl-testdata-73695d303670c90e4d506ea89d9901b081385089.tar.gz -C testdata --strip-components=1\\\
-        ncd /\\npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/jxl-stage.sh\\').write_text(\\\
-        'set -euo pipefail\\\\numask 022\\\\nulimit -S -v 4194304\\\\nexport MAKEFLAGS=-j2 PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
-        \ LANG=C.UTF-8\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir -p /nav-build-metadata/jxl\\\\ncd\
-        \ /sources/libjxl-0.12.0\\\\n{ gcc --version; pkg-config --modversion libhwy lcms2 libbrotlidec libpng libjpeg gtest;\
-        \ git --version; ulimit -a; lscpu; git rev-parse HEAD; git ls-tree HEAD testdata; git diff --exit-code --ignore-submodules=all;\
-        \ test \"$(git ls-files | wc -l)\" -gt 500; } > /nav-build-metadata/jxl/preflight.log 2>&1\\\\ncat /nav-build-metadata/jxl/preflight.log\\\
-        \\nset +e\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON\
-        \ -DBUILD_TESTING=ON -DJPEGXL_TEST_TOOLS=ON -DJPEGXL_ENABLE_DEVTOOLS=ON -DJPEGXL_ENABLE_SKCMS=OFF -DJPEGXL_ENABLE_SJPEG=OFF\
-        \ -DJPEGXL_ENABLE_PLUGINS=OFF -DJPEGXL_INSTALL_JARDIR=/usr/share/java -DJPEGXL_FORCE_SYSTEM_BROTLI=ON -DJPEGXL_FORCE_SYSTEM_HWY=ON\
-        \ -DJPEGXL_FORCE_SYSTEM_LCMS2=ON -DJPEGXL_FORCE_SYSTEM_GTEST=ON > /nav-build-metadata/jxl/config.log 2>&1\\\\nrc=$?\\\
-        \\nset -e\\\\ncat /nav-build-metadata/jxl/config.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/jxl/config.exit\\\
-        \\ntest \"$rc\" = 0\\\\ncp build/CMakeCache.txt /nav-build-metadata/jxl/CMakeCache.txt\\\\nset +e\\\\ncmake --build\
-        \ build --parallel 2 > /nav-build-metadata/jxl/build.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ntail -100 /nav-build-metadata/jxl/build.log\\\
-        \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/jxl/build.exit\\\\ntest \"$rc\" = 0\\\\nchown -R\
-        \ tester .\\\\nprintf \\\\\\'NAV_JXL_CAP_DIAGNOSTIC_BUILD_COMPLETE_NO_INSTALL_NO_SAVE\\\\n\\\\\\'\\\\n\\')\\nINNER\\\
-        nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\" unshare --mount\
-        \ --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\nmkdir\
-        \ -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\
-        \\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs\
-        \ \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount\
-        \ -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester\
-        \ TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101;\
-        \ touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\"\
-        \ /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash\
-        \ --noprofile --norc /sources/jxl-stage.sh\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester\
-        \ TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101;\
-        \ touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\n# Keep build\
-        \ and every normal operation at4GiB soft limit. Only the authorized6GiB test child raises its soft limit.\\nfor cap\
-        \ in 4194304 6291456; do\\n set +e\\n sudo /usr/bin/time -v -o \"$LFS/nav-build-metadata/jxl/cap-${cap}-time.log\"\
-        \ chroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin:/bin:/sbin\
-        \ LANG=C.UTF-8 /bin/bash --noprofile --norc -c \\'set -euo pipefail; ulimit -S -v \"$1\"; ulimit -a; cd /sources/libjxl-0.12.0/build;\
-        \ ctest --no-tests=error --output-on-failure -j1 -R \"^JxlTest.RoundtripLargeEmptyModular$\"\\' cap-test \"$cap\"\
-        \ > \"$LFS/nav-build-metadata/jxl/cap-${cap}.log\" 2>&1\\n rc=$?\\n set -e\\n printf \\'%s\\n\\' \"$rc\" > \"$LFS/nav-build-metadata/jxl/cap-${cap}.exit\"\
-        \\n sudo cp \"$LFS/sources/libjxl-0.12.0/build/Testing/Temporary/LastTest.log\" \"$LFS/nav-build-metadata/jxl/cap-${cap}-original.log\"\
-        \\n cat \"$LFS/nav-build-metadata/jxl/cap-${cap}.log\" \"$LFS/nav-build-metadata/jxl/cap-${cap}-time.log\"\\ndone\\\
-        n\\nNAV_MOUNT_BUILD\\nsudo rm -f \"$LFS/sources/jxl-stage.sh\" \"$LFS/sources/\"*.tar.*\\nprintf \\'NAV_JXL_DIAGNOSTIC_NO_SAVE_NO_INSTALL\\\
-        \\n\\'\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash',\
-        \ str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0,\
-        \ sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n\
-        \        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start\
-        \ > 315 * 60:\n            raise RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds':\
-        \ round(time.monotonic() - start), 'free_disk_bytes': free, 'available_memory_kib': available}), flush=True)\n   \
-        \     time.sleep(20)\n    if proc.returncode:\n        raise RuntimeError('source-build failed with status ' + str(proc.returncode))\n\
-        finally:\n    if proc.poll() is None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n\
-        \        except subprocess.TimeoutExpired:\n            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n\
-        \    log.close()\n    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n\
-        \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
-        \ 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON',\
-        \ 'NAV_TESTER', 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
-        \ 'NAV_PORTAL'])))))\n    import base64\n    for f in sorted(pathlib.Path('/mnt/nav-lfs/nav-build-metadata/jxl').glob('*')):\n\
-        \        if f.is_file():\n            data = f.read_bytes()\n            for i in range(0, len(data), 3000):\n   \
-        \             print('NAV_JXL_' + f.name.replace('.', '_').upper() + '_B64', base64.b64encode(data[i:i + 3000]).decode(),\
-        \ flush=True)\nNAV_GUARD\n"
+        p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\ntest -f \"\
+        $LFS/nav-build-metadata/git/GIT-TRANSITIONAL-OPEN.json\"\\npython3 - <<\\'DOWNLOADS\\'\\nfrom pathlib import Path\\\
+        nimport urllib.request,hashlib,json\\nlock=json.loads(\"[{\\\\\"filename\\\\\": \\\\\"giflib-6.1.3.tar.gz\\\\\", \\\
+        \\\"url\\\\\": \\\\\"https://sourceforge.net/projects/giflib/files/giflib-6.1.3.tar.gz\\\\\", \\\\\"sha256\\\\\":\
+        \ \\\\\"b65b66b99f0424b93525f987386f22fc5efb9da2bfc92ad4a532249aaffbab0e\\\\\", \\\\\"md5\\\\\": \\\\\"a70e90ff780e9ebee9cb84b82bbd46a7\\\
+        \\\"}]\")\\nfor x in lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\'filename\\']\\n with urllib.request.urlopen(x[\\\
+        'url\\'],timeout=120)as r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\n assert hashlib.file_digest(p.open(\\\
+        'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\',x[\\'filename\\'],flush=True)\\\
+        nPath(\\'/mnt/nav-lfs/nav-build-metadata/giflib\\').mkdir(exist_ok=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/giflib/source-lock.json\\\
+        ').write_text(json.dumps(lock,indent=2))\\nDOWNLOADS\\npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\\
+        '/mnt/nav-lfs/sources/gif-stage.sh\\').write_text(\\'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport\
+        \ MAKEFLAGS=-j2 PATH=/usr/bin:/usr/sbin:/bin:/sbin LANG=C.UTF-8\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\
+        \\nmkdir -p /nav-build-metadata/giflib\\\\ncd /sources\\\\ntar -xf giflib-6.1.3.tar.gz\\\\ncd giflib-6.1.3\\\\n{ gcc\
+        \ --version; ulimit -a; } > /nav-build-metadata/giflib/preflight.log 2>&1\\\\nset +e\\\\nmake -j2 > /nav-build-metadata/giflib/build.log\
+        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/giflib/build.exit\\\
+        \\ntail -70 /nav-build-metadata/giflib/build.log\\\\ntest \"$rc\" = 0\\\\nchown -R tester .\\\\nset +e\\\\nsu tester\
+        \ -c \\\\\\'cd /sources/giflib-6.1.3; make -j2 check\\\\\\' > /nav-build-metadata/giflib/tests.log 2>&1\\\\nrc=$?\\\
+        \\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/giflib/tests.exit\\\\ncat /nav-build-metadata/giflib/tests.log\\\
+        \\nset +e\\\\nsu tester -c \\\\\\'cd /sources/giflib-6.1.3; make -C tests -j2 tap\\\\\\' > /nav-build-metadata/giflib/original-tap.log\
+        \ 2>&1\\\\ntrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$trc\" > /nav-build-metadata/giflib/original-tap.exit\\\
+        \\ncat /nav-build-metadata/giflib/original-tap.log\\\\ntest \"$rc\" = 0\\\\ntest \"$trc\" = 0\\\\nprintf \\\\\\'NAV_GIFLIB_ORIGINAL_TESTS_NO_INSTALL_NO_SAVE\\\
+        \\\\\\n\\\\\\'\\\\ncd /sources\\\\nrm -rf giflib-6.1.3\\\\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo\
+        \ chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\\
+        'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\\
+        nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc\
+        \ \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif\
+        \ [ -h \"$LFS/dev/shm\" ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev\
+        \ tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin\
+        \ /bin/bash --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm\
+        \ /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb\
+        \ PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/gif-stage.sh\\\
+        nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash\
+        \ --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke;\
+        \ printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nNAV_MOUNT_BUILD\\nsudo rm -f \"$LFS/sources/gif-stage.sh\" \"$LFS/sources/\"\
+        *.tar.*\\nprintf \\'NAV_GIFLIB_DIAGNOSTIC_NO_SAVE_NO_INSTALL\\\\n\\'\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log',\
+        \ 'w')\nproc = subprocess.Popen(['bash', str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda\
+        \ : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free\
+        \ = shutil.disk_usage('/mnt').free\n        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 *\
+        \ 1024 ** 2 or time.monotonic() - start > 315 * 60:\n            raise RuntimeError('resource or stage-time safety\
+        \ floor reached')\n        print(json.dumps({'elapsed_seconds': round(time.monotonic() - start), 'free_disk_bytes':\
+        \ free, 'available_memory_kib': available}), flush=True)\n        time.sleep(20)\n    if proc.returncode:\n      \
+        \  raise RuntimeError('source-build failed with status ' + str(proc.returncode))\nfinally:\n    if proc.poll() is\
+        \ None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n        except\
+        \ subprocess.TimeoutExpired:\n            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n    log.close()\n\
+        \    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n    print('\\n'.join(lines[-80:]))\n\
+        \    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK', 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE',\
+        \ 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON', 'NAV_TESTER', 'NAV_KF6', 'Totals:',\
+        \ 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE', 'NAV_PORTAL'])))))\n    import base64\n\
+        \    for f in sorted(pathlib.Path('/mnt/nav-lfs/nav-build-metadata/giflib').glob('*')):\n        if f.is_file():\n\
+        \            data = f.read_bytes()\n            for i in range(0, len(data), 3000):\n                print('NAV_GIFLIB_'\
+        \ + f.name.replace('.', '_').upper() + '_B64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\nNAV_GUARD\n"
