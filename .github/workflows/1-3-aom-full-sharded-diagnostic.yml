@@ -1,0 +1,422 @@
+name: NAV libaom3.15.3 full original32 sequential shards disposable only
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-aom-complete-no-install
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - &id001
+      name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle in /mnt/nav-jxl-root.tar.zst\
+        \ /mnt/nav-aom-tooling.tar.zst; do\n test ! -e \"$bundle\"\n sudo install -o \"$(id -u)\" -g \"$(id -g)\" -m 0600\
+        \ /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\
+        \n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\n' > \"$probe/proof\"\
+        \n tar --zstd -cf \"$bundle\" -C \"$probe\" proof\n zstd -t \"$bundle\"\n tar --zstd -xOf \"$bundle\" proof > \"$probe/recovered\"\
+        \n cmp \"$probe/proof\" \"$probe/recovered\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\\
+        n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic failure\
+        \ evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"><failure message=\"\
+        synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n f=p/name;f.write_bytes(data)\n\
+        \ subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\n   \
+        \ data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_AOM_' + name\
+        \ + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing = []\\n    manifest['errors'].append({'area':\
+        \ str(p), 'error': repr(ex)})\\nfor item in sorted((x for x in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\\
+        n    rel = str(f.relative_to(p))\\n    wanted = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/')))\
+        \ or (mode == 'shard' and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode ==\
+        \ 'examples' and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name, data)\\\
+        n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error': repr(ex)})\\nemit('EXPORT-MANIFEST_JSON',\
+        \ json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\n    raise RuntimeError('independent evidence\
+        \ export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"'/mnt/nav-lfs/nav-build-metadata/aom-tooling'\"\
+        ,repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\nassert r.returncode==0,r.stderr\n\
+        parts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_AOM_'):\n  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\n\
+        m=json.loads(gzip.decompress(b''.join(parts['NAV_AOM_EXPORT-MANIFEST_JSON_GZB64'])))\nassert not m['errors'] and len(m['files'])==len(expected)\n\
+        for name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_AOM_'+name+'_GZB64']))\n assert b==expected[v['source']]\
+        \ and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\nmissing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\n\
+        r=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\nassert r.returncode!=0 and 'NAV_AOM_EXPORT-MANIFEST_JSON_GZB64\
+        \ 'in r.stdout\nprint('NAV_AOM_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\nEXPORT_SELFTEST\n"
+    - &id002
+      name: Restore verified JXL bundled root
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-jxl-root.tar.zst
+        key: nav-blfs13.1-x86_64-jxl-open-v1
+        fail-on-cache-miss: true
+    - &id003
+      name: Verify and extract JXL bundle
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf "2fc2706d6b41ebcecc9897dfc6684bb56b283297092d6806835c86015d1552b7  /mnt/nav-jxl-root.tar.zst\n" | sha256sum
+        -c -
+
+        zstd -t /mnt/nav-jxl-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-jxl-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/jxl/JXL-TRANSITIONAL-OPEN.json
+
+        '
+    - name: Source build fixtures and full XML shard partition; no installation
+      shell: bash
+      run: "python3 - <<'NAV_GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
+        \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\nassert os.cpu_count()\
+        \ >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024 ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\n\
+        p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\npython3 -\
+        \ <<\\'SOURCE\\'\\nfrom pathlib import Path\\nimport json,urllib.request,hashlib\\nx={\\'filename\\': \\'libaom-3.15.3.tar.gz\\\
+        ', \\'url\\': \\'https://storage.googleapis.com/aom-releases/libaom-3.15.3.tar.gz\\', \\'sha256\\': \\'12c01dc731ed7b5a999e28120b45bf58a002ba3435a4ba2cfbc1e084a27c9c04\\\
+        ', \\'md5\\': \\'6d159812c2ca1f7c9f5dc5c6d9a12e89\\', \\'top\\': \\'libaom-3.15.3\\'}\\np=Path(\\'/mnt/nav-lfs/sources\\\
+        ')/x[\\'filename\\']\\nwith urllib.request.urlopen(x[\\'url\\'],timeout=120)as r,p.open(\\'wb\\')as f:\\n while q:=r.read(1024*1024):f.write(q)\\\
+        nassert hashlib.file_digest(p.open(\\'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\']\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/aom-tooling\\\
+        ').mkdir(exist_ok=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/aom-tooling/source-lock.json\\').write_text(json.dumps(x,indent=2))\\\
+        nSOURCE\\npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/aom-stage.sh\\').write_text(\\\
+        'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport PATH=/usr/bin:/usr/sbin:/bin:/sbin LANG=C.UTF-8\
+        \ MAKEFLAGS=-j2 LIBAOM_TEST_DATA_PATH=/sources/aom-testdata\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\
+        \\nP=/nav-build-metadata/aom-tooling\\\\ncd /sources\\\\ntar -xf libaom-3.15.3.tar.gz\\\\ncd libaom-3.15.3\\\\n{ gcc\
+        \ --version; cmake --version; nasm -v; ulimit -a; lscpu; } > \"$P/preflight.log\" 2>&1\\\\ncmake -S . -B aom-build\
+        \ -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=1 -DENABLE_DOCS=no > \"$P/config.log\"\
+        \ 2>&1\\\\ncp aom-build/CMakeCache.txt \"$P/CMakeCache.txt\"\\\\ncmake --build aom-build --parallel 2 > \"$P/build.log\"\
+        \ 2>&1\\\\ncmake --build aom-build --target testdata --parallel 2 > \"$P/testdata.log\" 2>&1\\\\nmkdir -p \"$P/discovery\"\
+        \\\\nchown -R tester /sources/libaom-3.15.3 /sources/aom-testdata \"$P\"\\\\nsu tester -c \\\\\\'cd /sources/libaom-3.15.3/aom-build;\
+        \ env -u GTEST_FILTER -u GTEST_TOTAL_SHARDS -u GTEST_SHARD_INDEX GTEST_OUTPUT=xml:/nav-build-metadata/aom-tooling/discovery/all.xml\
+        \ ./test_libaom --gtest_list_tests\\\\\\' > \"$P/discovery/all-list.log\" 2>&1\\\\nfor i in $(seq 0 31); do\\\\n n=$(printf\
+        \ \\\\\\'%02d\\\\\\' \"$i\")\\\\n su tester -c \"cd /sources/libaom-3.15.3/aom-build; env -u GTEST_FILTER GTEST_TOTAL_SHARDS=32\
+        \ GTEST_SHARD_INDEX=$i GTEST_SHARD_STATUS_FILE=/nav-build-metadata/aom-tooling/discovery/status-$n GTEST_OUTPUT=xml:/nav-build-metadata/aom-tooling/discovery/shard-$n.xml\
+        \ ./test_libaom --gtest_list_tests\" > \"$P/discovery/current-list.log\" 2>&1\\\\n test -f \"$P/discovery/status-$n\"\
+        \\\\ndone\\\\npython3 - <<\\\\\\'VERIFY\\\\\\'\\\\nfrom pathlib import Path\\\\nimport json,xml.etree.ElementTree\
+        \ as ET,hashlib,collections,sys\\\\n# Operates only on original GTest XML. Never edits source, filters or expectations.\\\
+        \\np=Path(\\\\\\'/nav-build-metadata/aom-tooling\\\\\\');count=32;discovery=p/\\\\\\'discovery\\\\\\';discovery.mkdir(exist_ok=True)\\\
+        \\ndef ids(path):\\\\n root=ET.parse(path).getroot();out=[]\\\\n for suite in root.findall(\\\\\\'testsuite\\\\\\\
+        '):\\\\n  for case in suite.findall(\\\\\\'testcase\\\\\\'):out.append(suite.attrib[\\\\\\'name\\\\\\']+\\\\\\'.\\\
+        \\\\'+case.attrib[\\\\\\'name\\\\\\'])\\\\n assert len(out)==len(set(out)),str(path)\\\\n return out\\\\nwhole=ids(discovery/\\\
+        \\\\'all.xml\\\\\\');assert whole\\\\nparts={str(i):ids(discovery/f\\\\\\'shard-{i:02}.xml\\\\\\')for i in range(count)}\\\
+        \\nunion=[x for a in parts.values()for x in a]\\\\nassert len(union)==len(set(union))==len(whole)\\\\nassert set(union)==set(whole)\\\
+        \\naudit={\\\\\\'classification\\\\\\':\\\\\\'discovery only, not test execution\\\\\\',\\\\\\'total_shards\\\\\\\
+        ':count,\\\\\\'all_cases\\\\\\':len(whole),\\\\\\'all_xml_sha256\\\\\\':hashlib.sha256((discovery/\\\\\\'all.xml\\\
+        \\\\').read_bytes()).hexdigest(),\\\\\\'partition\\\\\\':{i:{\\\\\\'cases\\\\\\':len(v),\\\\\\'xml_sha256\\\\\\':hashlib.sha256((discovery/f\\\
+        \\\\'shard-{int(i):02}.xml\\\\\\').read_bytes()).hexdigest(),\\\\\\'names\\\\\\':v}for i,v in parts.items()}}\\\\\
+        n(p/\\\\\\'partition-audit.json\\\\\\').write_text(json.dumps(audit,indent=2)+\\\\\\'\\\\\\\\n\\\\\\')\\\\nprint(\\\
+        \\\\'NAV_AOM_XML_PARTITION_EXACT\\\\\\',len(whole),count,{i:len(v)for i,v in parts.items()})\\\\n\\\\nVERIFY\\\\npython3\
+        \ - <<\\\\\\'FILES\\\\\\'\\\\nfrom pathlib import Path\\\\nimport json,hashlib\\\\np=Path(\\\\\\'/nav-build-metadata/aom-tooling\\\
+        \\\\');files=[]\\\\nfor root in [Path(\\\\\\'/sources/aom-testdata\\\\\\'),Path(\\\\\\'/sources/libaom-3.15.3\\\\\\\
+        ')]:\\\\n for f in sorted(root.rglob(\\\\\\'*\\\\\\')):\\\\n  if f.is_file():files.append({\\\\\\'path\\\\\\':str(f),\\\
+        \\\\'bytes\\\\\\':f.stat().st_size,\\\\\\'sha256\\\\\\':hashlib.file_digest(f.open(\\\\\\'rb\\\\\\'),\\\\\\'sha256\\\
+        \\\\').hexdigest()})\\\\n(p/\\\\\\'tooling-files-sha256.json\\\\\\').write_text(json.dumps(files,indent=2))\\\\n(p/\\\
+        \\\\'scope.json\\\\\\').write_text(json.dumps({\\\\\\'classification\\\\\\':\\\\\\'disposable compiled source and\
+        \ test data only; no /usr install and no root checkpoint\\\\\\',\\\\\\'shards\\\\\\':32,\\\\\\'source_version\\\\\\\
+        ':\\\\\\'3.15.3\\\\\\',\\\\\\'book_baseline\\\\\\':\\\\\\'3.14.1\\\\\\',\\\\\\'security_reason\\\\\\':\\\\\\'upstream3.15.0\
+        \ security fixes\\\\\\',\\\\\\'advisory\\\\\\':\\\\\\'https://aomedia.googlesource.com/aom/+/refs/tags/v3.15.0\\\\\
+        \\',\\\\\\'tests\\\\\\':\\\\\\'full original GTest sharding, zero filter or harness edits; XML partition verified\
+        \ before execution; original examples phase afterward\\\\\\',\\\\\\'4GiB_KiB\\\\\\':4194304,\\\\\\'jobs\\\\\\':2},indent=2))\\\
+        \\nprint(\\\\\\'NAV_AOM_BUILD_AND_XML_PARTITION_VERIFIED_NO_INSTALL\\\\\\')\\\\nFILES\\\\n\\')\\nINNER\\nsudo chown\
+        \ -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\" unshare --mount --propagation\
+        \ private /bin/bash <<\\'NAV_MOUNT\\'\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\\
+        nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc\
+        \ \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif\
+        \ [ -h \"$LFS/dev/shm\" ];then install -d -m1777 \"$LFS$(realpath /dev/shm)\";else mount -t tmpfs -o nosuid,nodev\
+        \ tmpfs \"$LFS/dev/shm\";fi\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2\
+        \ LC_ALL=POSIX /bin/bash --noprofile --norc /sources/aom-stage.sh\\nNAV_MOUNT\\nsudo chown -hR \"$(id -u):$(id -g)\"\
+        \ \"$LFS\"\\ntar --zstd -cf /mnt/nav-aom-tooling.tar.zst -C \"$LFS\" sources/libaom-3.15.3 sources/aom-testdata nav-build-metadata/aom-tooling\\\
+        nzstd -t /mnt/nav-aom-tooling.tar.zst\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\n\
+        proc = subprocess.Popen(['bash', str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda\
+        \ : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free\
+        \ = shutil.disk_usage('/mnt').free\n        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 *\
+        \ 1024 ** 2 or time.monotonic() - start > 315 * 60:\n            raise RuntimeError('resource or stage-time safety\
+        \ floor reached')\n        print(json.dumps({'elapsed_seconds': round(time.monotonic() - start), 'free_disk_bytes':\
+        \ free, 'available_memory_kib': available}), flush=True)\n        time.sleep(20)\n    if proc.returncode:\n      \
+        \  raise RuntimeError('source-build failed with status ' + str(proc.returncode))\nfinally:\n    if proc.poll() is\
+        \ None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n        except\
+        \ subprocess.TimeoutExpired:\n            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n    log.close()\n\
+        \    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n    print('\\n'.join(lines[-80:]))\n\
+        \    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK', 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE',\
+        \ 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON', 'NAV_TESTER', 'NAV_KF6', 'Totals:',\
+        \ 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE', 'NAV_PORTAL'])))))\n    import base64,\
+        \ gzip, subprocess, os, hashlib, json\n    mode = 'build'\n    p = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\n\
+        \    manifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\n\n    def emit(name, data):\n\
+        \        data = gzip.compress(data, mtime=0)\n        for i in range(0, len(data), 3000):\n            print('NAV_AOM_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n    try:\n        listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\x00')\n    except Exception as ex:\n        listing = []\n \
+        \       manifest['errors'].append({'area': str(p), 'error': repr(ex)})\n    for item in sorted((x for x in listing\
+        \ if x)):\n        f = pathlib.Path(os.fsdecode(item))\n        rel = str(f.relative_to(p))\n        wanted = mode\
+        \ == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard' and '/' not in\
+        \ rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples' and rel.startswith('original-examples'))\n\
+        \        if wanted:\n            try:\n                data = subprocess.check_output(['sudo', 'cat', str(f)])\n \
+        \               name = rel.replace('/', '-').replace('.', '_').upper()\n                manifest['files'][name] =\
+        \ {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\n                emit(name, data)\n\
+        \            except Exception as ex:\n                manifest['errors'].append({'file': rel, 'error': repr(ex)})\n\
+        \    emit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\n    if manifest['errors']:\n        raise\
+        \ RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\nNAV_GUARD\n"
+    - name: Live measured disposable cache budget
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: 'set -euo pipefail
+
+        python3 - <<''BUDGET''
+
+        from pathlib import Path
+
+        import ctypes,ctypes.util,json,urllib.request,hashlib,os
+
+        p=Path(''/mnt/nav-aom-tooling.tar.zst'');size=p.stat().st_size
+
+        z=ctypes.CDLL(ctypes.util.find_library(''zstd''));z.ZSTD_compressBound.argtypes=[ctypes.c_size_t];z.ZSTD_compressBound.restype=ctypes.c_size_t
+
+        worst=z.ZSTD_compressBound(size+1024**2)+64*1024**2
+
+        req=urllib.request.Request(''https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/actions/caches?per_page=100'',headers={''Authorization'':''Bearer
+        ''+os.environ[''GITHUB_TOKEN''],''Accept'':''application/vnd.github+json''})
+
+        with urllib.request.urlopen(req,timeout=60)as r:data=json.load(r)
+
+        assert data[''total_count'']==len(data[''actions_caches''])<=100
+
+        keys={x[''key'']for x in data[''actions_caches'']}
+
+        assert ''nav-aom-3.15.3-disposable-source-tests-v1''not in keys
+
+        for key in [''nav-blfs13.1-x86_64-jxl-open-v1'',''nav-blfs13.1-x86_64-git-open-v1'',''nav-blfs13.1-x86_64-giflib-open-v1'']+[''nav-lfs13.1-x86_64-''+x+''-v1''for
+        x in [''final-gcc'',''gcc-test-runtime'',''gcc-test-cxx'',''gcc-test-c'',''access-tools'',''final-math'']]:assert
+        key in keys,key
+
+        existing=sum(x[''size_in_bytes'']for x in data[''actions_caches'']);print(''NAV_AOM_DISPOSABLE_CACHE_BOUND'',json.dumps({''existing'':existing,''bundle_bytes'':size,''bundle_sha256'':hashlib.file_digest(p.open(''rb''),''sha256'').hexdigest(),''new_cache_upper'':worst,''worst_total'':existing+worst,''limit'':10*1024**3}),flush=True)
+
+        assert existing+worst<10*1024**3
+
+        BUDGET
+
+        '
+    - name: Preserve disposable tooling bundle only
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-aom-tooling.tar.zst
+        key: nav-aom-3.15.3-disposable-source-tests-v1
+  shard:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    needs: build
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        shard:
+        - 0
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+        - 7
+        - 8
+        - 9
+        - 10
+        - 11
+        - 12
+        - 13
+        - 14
+        - 15
+        - 16
+        - 17
+        - 18
+        - 19
+        - 20
+        - 21
+        - 22
+        - 23
+        - 24
+        - 25
+        - 26
+        - 27
+        - 28
+        - 29
+        - 30
+        - 31
+    steps:
+    - *id001
+    - *id002
+    - *id003
+    - &id004
+      name: Restore disposable compiled source and fixtures
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-aom-tooling.tar.zst
+        key: nav-aom-3.15.3-disposable-source-tests-v1
+        fail-on-cache-miss: true
+    - &id005
+      name: Verify and extract disposable tooling bundle
+      shell: bash
+      run: 'set -euo pipefail
+
+        zstd -t /mnt/nav-aom-tooling.tar.zst
+
+        tar --zstd -xf /mnt/nav-aom-tooling.tar.zst -C /mnt/nav-lfs
+
+        '
+    - name: Original upstream GTest shard exact XML preflight and full execution
+      shell: bash
+      run: "python3 - <<'NAV_GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
+        \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\nassert os.cpu_count()\
+        \ >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024 ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\n\
+        p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\npython3 -\
+        \ <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/aom-stage.sh\\').write_text(\\'set -euo\
+        \ pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport PATH=/usr/bin:/usr/sbin:/bin:/sbin LANG=C.UTF-8 MAKEFLAGS=-j2\
+        \ LIBAOM_TEST_DATA_PATH=/sources/aom-testdata\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nP=/nav-build-metadata/aom-tooling\\\
+        \\npython3 - <<\\\\\\'HASHES\\\\\\'\\\\nfrom pathlib import Path\\\\nimport json,hashlib\\\\np=Path(\\\\\\'/nav-build-metadata/aom-tooling\\\
+        \\\\')\\\\nfor x in json.loads((p/\\\\\\'tooling-files-sha256.json\\\\\\').read_text()):\\\\n f=Path(x[\\\\\\'path\\\
+        \\\\']);assert f.stat().st_size==x[\\\\\\'bytes\\\\\\'] and hashlib.file_digest(f.open(\\\\\\'rb\\\\\\'),\\\\\\'sha256\\\
+        \\\\').hexdigest()==x[\\\\\\'sha256\\\\\\'],x[\\\\\\'path\\\\\\']\\\\nprint(\\\\\\'NAV_AOM_RESTORED_TOOLING_SHA256_ALL_OK\\\
+        \\\\')\\\\nHASHES\\\\nindex=${{ matrix.shard }}\\\\nn=$(printf \\\\\\'%02d\\\\\\' \"$index\")\\\\nchown -R tester\
+        \ \"$P\" /sources/libaom-3.15.3 /sources/aom-testdata\\\\nsu tester -c \"cd /sources/libaom-3.15.3/aom-build; env\
+        \ -u GTEST_FILTER GTEST_TOTAL_SHARDS=32 GTEST_SHARD_INDEX=$index GTEST_OUTPUT=xml:/nav-build-metadata/aom-tooling/current-list.xml\
+        \ ./test_libaom --gtest_list_tests\" > \"$P/current-list.log\" 2>&1\\\\n# Exact parsed case names, not timestamps\
+        \ or XML formatting.\\\\npython3 - \"$index\" <<\\\\\\'COMPARE\\\\\\'\\\\nfrom pathlib import Path\\\\nimport json,sys,xml.etree.ElementTree\
+        \ as E\\\\np=Path(\\\\\\'/nav-build-metadata/aom-tooling\\\\\\');i=int(sys.argv[1]);expected=set(json.loads((p/\\\\\
+        \\'partition-audit.json\\\\\\').read_text())[\\\\\\'partition\\\\\\'][str(i)][\\\\\\'names\\\\\\']);r=E.parse(p/\\\
+        \\\\'current-list.xml\\\\\\').getroot();actual=[s.attrib[\\\\\\'name\\\\\\']+\\\\\\'.\\\\\\'+c.attrib[\\\\\\'name\\\
+        \\\\']for s in r.findall(\\\\\\'testsuite\\\\\\')for c in s.findall(\\\\\\'testcase\\\\\\')];assert len(actual)==len(set(actual))==len(expected)\
+        \ and set(actual)==expected\\\\nprint(\\\\\\'NAV_AOM_CURRENT_SHARD_XML_PARTITION_EXACT\\\\\\',i,len(actual))\\\\nCOMPARE\\\
+        \\nset +e\\\\nsu tester -c \"cd /sources/libaom-3.15.3/aom-build; env -u GTEST_FILTER GTEST_TOTAL_SHARDS=32 GTEST_SHARD_INDEX=$index\
+        \ GTEST_SHARD_STATUS_FILE=/nav-build-metadata/aom-tooling/run-status-$n GTEST_OUTPUT=xml:/nav-build-metadata/aom-tooling/shard-$n.xml\
+        \ ./test_libaom\" > \"$P/shard-$n.log\" 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > \"\
+        $P/shard-$n.exit\"\\\\ntest -f \"$P/run-status-$n\"\\\\npython3 - \"$index\" <<\\\\\\'RECOUNT\\\\\\'\\\\nfrom pathlib\
+        \ import Path\\\\nimport json,xml.etree.ElementTree as ET,hashlib,sys,gzip\\\\np=Path(\\\\\\'/nav-build-metadata/aom-tooling\\\
+        \\\\');index=int(sys.argv[1]);audit=json.loads((p/\\\\\\'partition-audit.json\\\\\\').read_text());expected=set(audit[\\\
+        \\\\'partition\\\\\\'][str(index)][\\\\\\'names\\\\\\'])\\\\nx=p/f\\\\\\'shard-{index:02}.xml\\\\\\';root=ET.parse(x).getroot();assert\
+        \ not root.findall(\\\\\\'.//error\\\\\\');names=[];counts={\\\\\\'pass\\\\\\':0,\\\\\\'failure\\\\\\':0,\\\\\\'skip\\\
+        \\\\':0,\\\\\\'disabled\\\\\\':0};problems=[]\\\\nfor suite in root.findall(\\\\\\'testsuite\\\\\\'):\\\\n for c in\
+        \ suite.findall(\\\\\\'testcase\\\\\\'):\\\\n  name=suite.attrib[\\\\\\'name\\\\\\']+\\\\\\'.\\\\\\'+c.attrib[\\\\\
+        \\'name\\\\\\'];names.append(name)\\\\n  if c.find(\\\\\\'failure\\\\\\')is not None:kind=\\\\\\'failure\\\\\\'\\\\\
+        n  elif c.attrib.get(\\\\\\'status\\\\\\')==\\\\\\'notrun\\\\\\':\\\\n   assert any(part.startswith(\\\\\\'DISABLED_\\\
+        \\\\')for part in name.replace(\\\\\\'/\\\\\\',\\\\\\'.\\\\\\').split(\\\\\\'.\\\\\\')),(name,c.attrib)\\\\n   kind=\\\
+        \\\\'disabled\\\\\\'\\\\n  elif c.find(\\\\\\'skipped\\\\\\')is not None or c.attrib.get(\\\\\\'result\\\\\\')==\\\
+        \\\\'skipped\\\\\\':kind=\\\\\\'skip\\\\\\'\\\\n  else:\\\\n   assert c.attrib.get(\\\\\\'status\\\\\\')==\\\\\\'run\\\
+        \\\\' and c.attrib.get(\\\\\\'result\\\\\\')==\\\\\\'completed\\\\\\',(name,c.attrib)\\\\n   kind=\\\\\\'pass\\\\\\\
+        '\\\\n  counts[kind]+=1\\\\n  if kind!=\\\\\\'pass\\\\\\':problems.append({\\\\\\'name\\\\\\':name,\\\\\\'kind\\\\\
+        \\':kind,\\\\\\'attrs\\\\\\':c.attrib,\\\\\\'body\\\\\\':ET.tostring(c,encoding=\\\\\\'unicode\\\\\\')})\\\\nassert\
+        \ len(names)==len(set(names))==len(expected),(index,len(names),len(expected))\\\\nassert set(names)==expected,(index,sorted(expected-set(names))[:20],sorted(set(names)-expected)[:20])\\\
+        \\na={\\\\\\'index\\\\\\':index,\\\\\\'total_shards\\\\\\':audit[\\\\\\'total_shards\\\\\\'],\\\\\\'exact_partition_match\\\
+        \\\\':True,\\\\\\'expected\\\\\\':len(expected),\\\\\\'counts\\\\\\':counts,\\\\\\'problems\\\\\\':problems,\\\\\\\
+        'partition_manifest_sha256\\\\\\':hashlib.sha256((p/\\\\\\'partition-audit.json\\\\\\').read_bytes()).hexdigest(),\\\
+        \\\\'xml_sha256\\\\\\':hashlib.sha256(x.read_bytes()).hexdigest()}\\\\n(p/f\\\\\\'shard-{index:02}-audit.json\\\\\\\
+        ').write_text(json.dumps(a,indent=2)+\\\\\\'\\\\\\\\n\\\\\\');print(\\\\\\'NAV_AOM_SHARD_EXACT_RECOUNT\\\\\\',json.dumps({k:v\
+        \ for k,v in a.items()if k!=\\\\\\'problems\\\\\\'}))\\\\nassert counts[\\\\\\'failure\\\\\\']==0,counts\\\\n\\\\\
+        nRECOUNT\\\\ntest \"$rc\" = 0\\\\nprintf \\\\\\'NAV_AOM_SHARD_COMPLETE_NO_INSTALL_NO_SAVE\\\\\\\\n\\\\\\'\\\\n\\')\\\
+        nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\" unshare\
+        \ --mount --propagation private /bin/bash <<\\'NAV_MOUNT\\'\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\\
+        nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620\
+        \ \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o\
+        \ nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ];then install -d -m1777 \"$LFS$(realpath /dev/shm)\"\
+        ;else mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\";fi\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb\
+        \ PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/aom-stage.sh\\nNAV_MOUNT\\\
+        n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash', str(p)],\
+        \ stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\n\
+        try:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n        available = mem()\n \
+        \       if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start > 315 * 60:\n           \
+        \ raise RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds':\
+        \ round(time.monotonic() - start), 'free_disk_bytes': free, 'available_memory_kib': available}), flush=True)\n   \
+        \     time.sleep(20)\n    if proc.returncode:\n        raise RuntimeError('source-build failed with status ' + str(proc.returncode))\n\
+        finally:\n    if proc.poll() is None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n\
+        \        except subprocess.TimeoutExpired:\n            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n\
+        \    log.close()\n    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n\
+        \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
+        \ 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON',\
+        \ 'NAV_TESTER', 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
+        \ 'NAV_PORTAL'])))))\n    import base64, gzip, subprocess, os, hashlib, json\n    mode = 'shard'\n    p = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\n\
+        \    manifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\n\n    def emit(name, data):\n\
+        \        data = gzip.compress(data, mtime=0)\n        for i in range(0, len(data), 3000):\n            print('NAV_AOM_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n    try:\n        listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\x00')\n    except Exception as ex:\n        listing = []\n \
+        \       manifest['errors'].append({'area': str(p), 'error': repr(ex)})\n    for item in sorted((x for x in listing\
+        \ if x)):\n        f = pathlib.Path(os.fsdecode(item))\n        rel = str(f.relative_to(p))\n        wanted = mode\
+        \ == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard' and '/' not in\
+        \ rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples' and rel.startswith('original-examples'))\n\
+        \        if wanted:\n            try:\n                data = subprocess.check_output(['sudo', 'cat', str(f)])\n \
+        \               name = rel.replace('/', '-').replace('.', '_').upper()\n                manifest['files'][name] =\
+        \ {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\n                emit(name, data)\n\
+        \            except Exception as ex:\n                manifest['errors'].append({'file': rel, 'error': repr(ex)})\n\
+        \    emit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\n    if manifest['errors']:\n        raise\
+        \ RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\nNAV_GUARD\n"
+  examples:
+    if: always() && needs.build.result == 'success' && github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private
+      == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    needs:
+    - build
+    - shard
+    steps:
+    - *id001
+    - *id002
+    - *id003
+    - *id004
+    - *id005
+    - name: Original example integration scripts no edits
+      shell: bash
+      run: "python3 - <<'NAV_GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
+        \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\nassert os.cpu_count()\
+        \ >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024 ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\n\
+        p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\npython3 -\
+        \ <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/aom-stage.sh\\').write_text(\\'set -euo\
+        \ pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport PATH=/usr/bin:/usr/sbin:/bin:/sbin LANG=C.UTF-8 MAKEFLAGS=-j2\
+        \ LIBAOM_TEST_DATA_PATH=/sources/aom-testdata\\\\nunset LC_ALL LANGUAGE\\\\nP=/nav-build-metadata/aom-tooling\\\\\
+        npython3 - <<\\\\\\'HASHES\\\\\\'\\\\nfrom pathlib import Path\\\\nimport json,hashlib\\\\np=Path(\\\\\\'/nav-build-metadata/aom-tooling\\\
+        \\\\')\\\\nfor x in json.loads((p/\\\\\\'tooling-files-sha256.json\\\\\\').read_text()):\\\\n f=Path(x[\\\\\\'path\\\
+        \\\\']);assert f.stat().st_size==x[\\\\\\'bytes\\\\\\'] and hashlib.file_digest(f.open(\\\\\\'rb\\\\\\'),\\\\\\'sha256\\\
+        \\\\').hexdigest()==x[\\\\\\'sha256\\\\\\'],x[\\\\\\'path\\\\\\']\\\\nprint(\\\\\\'NAV_AOM_RESTORED_TOOLING_SHA256_ALL_OK\\\
+        \\\\')\\\\nHASHES\\\\nchown -R tester \"$P\" /sources/libaom-3.15.3 /sources/aom-testdata\\\\nset +e\\\\nsu tester\
+        \ -c \\\\\\'cd /sources/libaom-3.15.3/aom-build; ../test/examples.sh --bin-path .\\\\\\' > \"$P/original-examples.log\"\
+        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > \"$P/original-examples.exit\"\\\\ntest\
+        \ \"$rc\" = 0\\\\nprintf \\\\\\'NAV_AOM_ORIGINAL_EXAMPLES_COMPLETE_NO_INSTALL_NO_SAVE\\\\\\\\n\\\\\\'\\\\n\\')\\nINNER\\\
+        nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\" unshare --mount\
+        \ --propagation private /bin/bash <<\\'NAV_MOUNT\\'\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p\
+        \ \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\
+        \\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs\
+        \ \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ];then install -d -m1777 \"$LFS$(realpath /dev/shm)\";else mount -t tmpfs\
+        \ -o nosuid,nodev tmpfs \"$LFS/dev/shm\";fi\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin\
+        \ MAKEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/aom-stage.sh\\nNAV_MOUNT\\n')\nstart = time.monotonic()\n\
+        log = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash', str(p)], stdout=log, stderr=subprocess.STDOUT,\
+        \ start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\ntry:\n\
+        \    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n        available = mem()\n      \
+        \  if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start > 315 * 60:\n            raise\
+        \ RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds': round(time.monotonic()\
+        \ - start), 'free_disk_bytes': free, 'available_memory_kib': available}), flush=True)\n        time.sleep(20)\n  \
+        \  if proc.returncode:\n        raise RuntimeError('source-build failed with status ' + str(proc.returncode))\nfinally:\n\
+        \    if proc.poll() is None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n\
+        \        except subprocess.TimeoutExpired:\n            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n\
+        \    log.close()\n    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n\
+        \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
+        \ 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON',\
+        \ 'NAV_TESTER', 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
+        \ 'NAV_PORTAL'])))))\n    import base64, gzip, subprocess, os, hashlib, json\n    mode = 'examples'\n    p = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\n\
+        \    manifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\n\n    def emit(name, data):\n\
+        \        data = gzip.compress(data, mtime=0)\n        for i in range(0, len(data), 3000):\n            print('NAV_AOM_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n    try:\n        listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\x00')\n    except Exception as ex:\n        listing = []\n \
+        \       manifest['errors'].append({'area': str(p), 'error': repr(ex)})\n    for item in sorted((x for x in listing\
+        \ if x)):\n        f = pathlib.Path(os.fsdecode(item))\n        rel = str(f.relative_to(p))\n        wanted = mode\
+        \ == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard' and '/' not in\
+        \ rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples' and rel.startswith('original-examples'))\n\
+        \        if wanted:\n            try:\n                data = subprocess.check_output(['sudo', 'cat', str(f)])\n \
+        \               name = rel.replace('/', '-').replace('.', '_').upper()\n                manifest['files'][name] =\
+        \ {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\n                emit(name, data)\n\
+        \            except Exception as ex:\n                manifest['errors'].append({'file': rel, 'error': repr(ex)})\n\
+        \    emit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\n    if manifest['errors']:\n        raise\
+        \ RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\nNAV_GUARD\n"
