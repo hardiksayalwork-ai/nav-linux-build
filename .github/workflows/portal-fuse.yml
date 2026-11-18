@@ -1,4 +1,4 @@
-name: NAV Git strict original suites transitional checkpoint
+name: NAV JPEG XL original full tests no-save diagnostic
 'on':
   workflow_dispatch: {}
 permissions:
@@ -31,106 +31,70 @@ jobs:
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
       with:
         path: /mnt/nav-lfs
-        key: nav-blfs13.1-x86_64-highway-open-v1
+        key: nav-blfs13.1-x86_64-git-open-v1
         fail-on-cache-miss: true
-    - name: Git strict original1046 plus249 suites install transitional
+    - name: JPEG XL full original suites and roundtrip no-save diagnostic
       shell: bash
       run: "python3 - <<'NAV_GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
         \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\nassert os.cpu_count()\
         \ >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024 ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\n\
         p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\ntest -f \"\
-        $LFS/nav-build-metadata/highway-gc/HIGHWAY-TRANSITIONAL-OPEN.json\"\\npython3 - <<\\'DOWNLOADS\\'\\nfrom pathlib import\
-        \ Path\\nimport urllib.request,hashlib,json\\nlock=json.loads(\"[{\\\\\"filename\\\\\": \\\\\"git-2.55.0.tar.xz\\\\\
-        \", \\\\\"url\\\\\": \\\\\"https://www.kernel.org/pub/software/scm/git/git-2.55.0.tar.xz\\\\\", \\\\\"sha256\\\\\"\
-        : \\\\\"457fdb04dc8728e007d4688695e6912e6f680727920f2a40bf11eacc17505357\\\\\", \\\\\"md5\\\\\": \\\\\"758c02a1b621cc0868ee0a0d99573e6b\\\
-        \\\"}]\")\\nfor x in lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\'filename\\']\\n with urllib.request.urlopen(x[\\\
-        'url\\'],timeout=120)as r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\n assert hashlib.file_digest(p.open(\\\
-        'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\',x[\\'filename\\'],flush=True)\\\
-        nPath(\\'/mnt/nav-lfs/nav-build-metadata/git\\').mkdir(exist_ok=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/git/source-lock.json\\\
-        ').write_text(json.dumps(lock,indent=2))\\nDOWNLOADS\\npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\\
-        '/mnt/nav-lfs/sources/git-stage.sh\\').write_text(\\'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport\
-        \ MAKEFLAGS=-j2 PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin LANG=C.UTF-8 CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2\\\
-        \\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir -p /nav-build-metadata/git\\\\ncd /sources\\\\ntar\
-        \ -xf git-2.55.0.tar.xz\\\\ncd git-2.55.0\\\\n{ gcc --version; rustc --version; cargo --version; python3 --version;\
-        \ perl -v; pkg-config --modversion libcurl libpcre2-8 expat zlib; ulimit -a; } > /nav-build-metadata/git/preflight.log\
-        \ 2>&1\\\\ncat /nav-build-metadata/git/preflight.log\\\\nset +e\\\\n./configure --prefix=/usr --with-gitconfig=/etc/gitconfig\
-        \ --with-python=python3 --with-libpcre2 > /nav-build-metadata/git/config.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/git/config.log\\\
-        \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/git/config.exit\\\\ntest \"$rc\" = 0\\\\ncp config.mak.autogen\
-        \ /nav-build-metadata/git/\\\\nset +e\\\\nmake -j2 > /nav-build-metadata/git/build.log 2>&1\\\\nrc=$?\\\\nset -e\\\
-        \\ntail -100 /nav-build-metadata/git/build.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/git/build.exit\\\
-        \\ntest \"$rc\" = 0\\\\nchown -R tester .\\\\nset +e\\\\nsu -s /bin/bash tester -c \\\\\\'export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
-        \ CARGO_BUILD_JOBS=2 RUST_TEST_THREADS=2; cd /sources/git-2.55.0/t; scripts=(t[0-9][0-9][0-9][0-9]-*.sh); test \"\
-        ${#scripts[@]}\" = 1046; printf \"NAV_GIT_ORIGINAL_SCRIPT_TARGETS %s\\\\\\\\n\" \"${#scripts[@]}\"; GIT_UNZIP=nonexist\
-        \ GIT_TEST_EXT_CHAIN_LINT=0 make -j2 -k test-lint check-chainlint check-meson unit-tests \"${scripts[@]}\"\\\\\\'\
-        \ > /nav-build-metadata/git/tests.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ntail -100 /nav-build-metadata/git/tests.log\\\\\
-        nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/git/tests.exit\\\\nmake -C t aggregate-results > /nav-build-metadata/git/aggregate.log\
-        \ 2>&1 || true\\\\ncat /nav-build-metadata/git/aggregate.log\\\\npython3 - <<\\\\\\'LOGS\\\\\\'\\\\nfrom pathlib import\
-        \ Path\\\\nimport json\\\\np=Path(\\\\\\'t/test-results\\\\\\');rows={}\\\\nfor f in sorted(p.glob(\\\\\\'*.counts\\\
-        \\\\')):rows[f.name]=f.read_text(errors=\\\\\\'replace\\\\\\')\\\\nPath(\\\\\\'/nav-build-metadata/git/original-counts.json\\\
-        \\\\').write_text(json.dumps(rows,indent=2))\\\\nLOGS\\\\ntar -czf /nav-build-metadata/git/original-results.tar.gz\
-        \ -C t test-results\\\\ntest \"$rc\" = 0\\\\npython3 - <<\\\\\\'GIT_AUDIT\\\\\\'\\\\nfrom pathlib import Path\\\\\
-        nimport json,re,collections,hashlib,tarfile\\\\np=Path(\\\\\\'/nav-build-metadata/git\\\\\\');s=(p/\\\\\\'tests.log\\\
-        \\\\').read_text();c=json.loads((p/\\\\\\'original-counts.json\\\\\\').read_text());tot=collections.Counter()\\\\\
-        nfor x in [\\\\\\'config\\\\\\',\\\\\\'build\\\\\\',\\\\\\'tests\\\\\\']:assert (p/(x+\\\\\\'.exit\\\\\\')).read_text().strip()==\\\
-        \\\\'0\\\\\\'\\\\nassert len(c)==1046\\\\nassert len(re.findall(r\\\\\\'(?m)^\\\\\\\\*\\\\\\\\*\\\\\\\\* t\\\\\\\\\
-        d{4}-.*\\\\\\\\.sh \\\\\\\\*\\\\\\\\*\\\\\\\\*$\\\\\\',s))==1046\\\\nzero=0\\\\nfor name,txt in c.items():\\\\n d={k:int(v)for\
-        \ k,v in re.findall(r\\\\\\'(?m)^(total|success|fixed|broken|failed) (\\\\\\\\d+)$\\\\\\',txt)}\\\\n assert set(d)=={\\\
-        \\\\'total\\\\\\',\\\\\\'success\\\\\\',\\\\\\'fixed\\\\\\',\\\\\\'broken\\\\\\',\\\\\\'failed\\\\\\'}\\\\n assert\
-        \ d[\\\\\\'failed\\\\\\']==0 and d[\\\\\\'fixed\\\\\\']==0\\\\n tot.update(d);zero+=d[\\\\\\'total\\\\\\']==0\\\\\
-        nassert dict(tot)=={\\\\\\'total\\\\\\':33113,\\\\\\'success\\\\\\':31857,\\\\\\'fixed\\\\\\':0,\\\\\\'broken\\\\\\\
-        ':389,\\\\\\'failed\\\\\\':0},tot\\\\nassert zero==147\\\\nassert len(re.findall(r\\\\\\'(?mi)^ok \\\\\\\\d+ # skip\\\
-        \\\\',s))==867\\\\nassert len(re.findall(r\\\\\\'(?mi)^1\\\\\\\\.\\\\\\\\.0 # skip\\\\\\',s))==147\\\\nassert len(re.findall(r\\\
-        \\\\'(?m)^not ok\\\\\\',s))==389\\\\nassert all(\\\\\\'# TODO known breakage\\\\\\' in x for x in s.splitlines()if\
-        \ x.startswith(\\\\\\'not ok\\\\\\'))\\\\nu=s[s.index(\\\\\\'*** unit-tests/bin/unit-tests ***\\\\\\'):s.index(\\\\\
-        \\'*** t0000-\\\\\\')]\\\\nassert re.findall(r\\\\\\'(?m)^ok (\\\\\\\\d+) - \\\\\\',u)==[str(x)for x in range(1,250)]\\\
-        \\nassert \\\\\\'1..249\\\\\\\\n\\\\\\' in u and len(re.findall(r\\\\\\'(?m)^# start of suite \\\\\\',u))==27\\\\\
-        nassert not re.search(r\\\\\\'(?i)not ok|# skip|# TODO\\\\\\',u)\\\\nassert not re.search(r\\\\\\'(?i)SIGSEGV|segmentation\
-        \ fault|core dumped|Bail out!|AddressSanitizer|runtime error:|UndefinedBehaviorSanitizer\\\\\\',s)\\\\nassert not\
-        \ re.search(r\\\\\\'(?i)SIGSEGV|segmentation fault|core dumped|virtual memory exhausted|fatal error:\\\\\\',(p/\\\\\
-        \\'build.log\\\\\\').read_text())\\\\nassert re.search(r\\\\\\'virtual memory.*4194304\\\\\\',(p/\\\\\\'preflight.log\\\
-        \\\\').read_text())\\\\nwith tarfile.open(p/\\\\\\'original-results.tar.gz\\\\\\')as t:\\\\n assert all(t.extractfile(\\\
-        \\\\'test-results/\\\\\\'+n).read().decode()==txt for n,txt in c.items())\\\\na={\\\\\\'classification\\\\\\':\\\\\
-        \\'TRANSITIONAL, not OS acceptance; every inherited gap remains OPEN\\\\\\',\\\\\\'shell\\\\\\':dict(tot),\\\\\\'individual_prerequisite_skips_OPEN\\\
-        \\\\':867,\\\\\\'whole_script_skips_OPEN\\\\\\':147,\\\\\\'whole_script_skip_reasons_OPEN\\\\\\':dict(collections.Counter(re.findall(r\\\
-        \\\\'(?mi)^1\\\\\\\\.\\\\\\\\.0 # SKIP (.*)\\\\\\',s))),\\\\\\'unit_pass\\\\\\':249,\\\\\\'unit_fail\\\\\\':0,\\\\\
-        \\'unit_skip\\\\\\':0,\\\\\\'unit_groups\\\\\\':27,\\\\\\'contrib_Rust_wrapper_tests\\\\\\':\\\\\\'NOT RUN, OPEN\\\
-        \\\\',\\\\\\'optional_integration_ecosystems\\\\\\':\\\\\\'unselected, OPEN\\\\\\',\\\\\\'cap_KiB\\\\\\':4194304,\\\
-        \\\\'jobs\\\\\\':2,\\\\\\'configure\\\\\\':\\\\\\'--prefix=/usr --with-gitconfig=/etc/gitconfig --with-python=python3\
-        \ --with-libpcre2\\\\\\',\\\\\\'test_entry\\\\\\':\\\\\\'all1046 original t/Makefile shell targets plus test-lint\
-        \ check-chainlint check-meson unit-tests aggregate-results; wrapper final clean alone avoided for evidence preservation\\\
-        \\\\',\\\\\\'GIT_UNZIP\\\\\\':\\\\\\'nonexist (book setting)\\\\\\',\\\\\\'source_patches\\\\\\':[],\\\\\\'prior_attempts\\\
-        \\\\':[\\\\\\'44198653072 original shell suite passed but post-test archival failed after upstream cleanup; no install/save\\\
-        \\\\',\\\\\\'44206249247 successful exact1046 plus249 unit no-save run\\\\\\'],\\\\\\'inherited_audit\\\\\\':\\\\\\\
-        '/nav-build-metadata/highway-gc/HIGHWAY-TRANSITIONAL-OPEN.json\\\\\\',\\\\\\'logs_sha256\\\\\\':{f.name:hashlib.sha256(f.read_bytes()).hexdigest()for\
-        \ f in p.glob(\\\\\\'*\\\\\\')if f.is_file()}}\\\\n(p/\\\\\\'GIT-TRANSITIONAL-OPEN.json\\\\\\').write_text(json.dumps(a,indent=2));print(\\\
-        \\\\'NAV_GIT_STRICT_1046_249_ORIGINAL_GATE_OK\\\\\\')\\\\nGIT_AUDIT\\\\nmake -j2 install > /nav-build-metadata/git/install.log\
-        \ 2>&1\\\\nldconfig\\\\n/usr/bin/git --version | tee /nav-build-metadata/git/installed-version.log\\\\n/usr/bin/git\
-        \ --version | grep -x \\\\\\'git version 2.55.0\\\\\\'\\\\nldd /usr/bin/git | tee /nav-build-metadata/git/installed-linkage.log\\\
-        \\n! grep -q \\\\\\'not found\\\\\\' /nav-build-metadata/git/installed-linkage.log\\\\nsu -s /bin/bash tester -c \\\
-        \\\\'set -e; export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /home/tester; mkdir git-install-smoke; cd git-install-smoke;\
-        \ git init; git config user.name NAV-Test; git config user.email nav-test@localhost; printf \"NAV installed source\
-        \ Git smoke\\\\n\" > smoke; git add smoke; git commit -m smoke; git fsck --full; test \"$(git ls-files)\" = smoke;\
-        \ cd ..; rm -rf git-install-smoke\\\\\\' > /nav-build-metadata/git/installed-smoke.log 2>&1\\\\nprintf \\\\\\'NAV_GIT_ORIGINAL_SUITES_INSTALLED_TRANSITIONAL\\\
-        \\\\\\n\\\\\\'\\\\ncd /sources\\\\nrm -rf git-2.55.0\\\\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown\
-        \ -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\\
-        '\\nset -euo pipefail\\nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev\
-        \ \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount\
-        \ -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\"\
-        \ ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\
-        \\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash\
-        \ --noprofile --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke;\
-        \ printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin\
-        \ MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/git-stage.sh\\nchroot --userspec=101:101\
-        \ \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\\
-        'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\
-        \\n\"\\'\\nNAV_MOUNT_BUILD\\nsudo rm -f \"$LFS/sources/git-stage.sh\" \"$LFS/sources/\"*.tar.*\\nsudo chown -hR \"\
-        $(id -u):$(id -g)\" \"$LFS\"\\nsudo chown root:root \"$LFS/usr/bin/fusermount3\"\\nsudo chmod 4755 \"$LFS/usr/bin/fusermount3\"\
-        \\ntest \"$(du -sb \"$LFS\" | cut -f1)\" -lt 5368709120\\nprintf \\'NAV_GIT_TRANSITIONAL_INSTALL_COMPLETE\\\\n\\'\\\
-        n\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash', str(p)],\
-        \ stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\n\
-        try:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n        available = mem()\n \
-        \       if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start > 315 * 60:\n           \
-        \ raise RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds':\
+        $LFS/nav-build-metadata/git/GIT-TRANSITIONAL-OPEN.json\"\\ntest -f \"$LFS/nav-build-metadata/highway-gc/HIGHWAY-TRANSITIONAL-OPEN.json\"\
+        \\npython3 - <<\\'DOWNLOADS\\'\\nfrom pathlib import Path\\nimport urllib.request,hashlib,json\\nlock=json.loads(\"\
+        [{\\\\\"filename\\\\\": \\\\\"libjxl-0.12.0.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://github.com/libjxl/libjxl/archive/v0.12.0/libjxl-0.12.0.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"03e9be69a30be4011f559da75328b6d7cea8ad921fabfbd551ce10bf45cdc992\\\\\", \\\\\"md5\\\
+        \\\": \\\\\"a0fd3ac7b474525dadb99bbcb5d814f9\\\\\"}, {\\\\\"filename\\\\\": \\\\\"libjxl-testdata-73695d303670c90e4d506ea89d9901b081385089.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://github.com/libjxl/testdata/archive/73695d303670c90e4d506ea89d9901b081385089.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"380a58890e11513d34f1ed1e686e3c2cee97931cc9faaa80b33fd6c8d2640301\\\\\", \\\\\"upstream_tag_submodule_url\\\
+        \\\": \\\\\"https://github.com/libjxl/testdata/tree/73695d303670c90e4d506ea89d9901b081385089\\\\\"}]\")\\nfor x in\
+        \ lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\'filename\\']\\n with urllib.request.urlopen(x[\\'url\\'],timeout=120)as\
+        \ r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\n assert hashlib.file_digest(p.open(\\'rb\\'),\\\
+        'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\',x[\\'filename\\'],flush=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/jxl\\\
+        ').mkdir(exist_ok=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/jxl/source-lock.json\\').write_text(json.dumps(lock,indent=2))\\\
+        nDOWNLOADS\\ncd \"$LFS/sources\"\\ntar -xf libjxl-0.12.0.tar.gz\\ncd libjxl-0.12.0\\n# Recover authentic tag metadata\
+        \ only, leaving hash-checked archive sources untouched.\\ngit init\\ngit remote add origin https://github.com/libjxl/libjxl.git\\\
+        ngit fetch --depth 1 origin tag v0.12.0\\ngit reset --mixed FETCH_HEAD\\ngit diff --exit-code --ignore-submodules=all\\\
+        ntest \"$(git ls-tree HEAD testdata | awk \\'{print $3}\\')\" = 73695d303670c90e4d506ea89d9901b081385089\\nmkdir -p\
+        \ testdata\\ntar -xf ../libjxl-testdata-73695d303670c90e4d506ea89d9901b081385089.tar.gz -C testdata --strip-components=1\\\
+        ncd /\\npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/jxl-stage.sh\\').write_text(\\\
+        'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport MAKEFLAGS=-j2 PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
+        \ LANG=C.UTF-8\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir -p /nav-build-metadata/jxl\\\\ncd\
+        \ /sources/libjxl-0.12.0\\\\n{ gcc --version; pkg-config --modversion libhwy lcms2 libbrotlidec libpng libjpeg gtest;\
+        \ git --version; ulimit -a; lscpu; git rev-parse HEAD; git ls-tree HEAD testdata; git diff --exit-code --ignore-submodules=all;\
+        \ test \"$(git ls-files | wc -l)\" -gt 500; } > /nav-build-metadata/jxl/preflight.log 2>&1\\\\ncat /nav-build-metadata/jxl/preflight.log\\\
+        \\nset +e\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON\
+        \ -DBUILD_TESTING=ON -DJPEGXL_TEST_TOOLS=ON -DJPEGXL_ENABLE_DEVTOOLS=ON -DJPEGXL_ENABLE_SKCMS=OFF -DJPEGXL_ENABLE_SJPEG=OFF\
+        \ -DJPEGXL_ENABLE_PLUGINS=OFF -DJPEGXL_INSTALL_JARDIR=/usr/share/java -DJPEGXL_FORCE_SYSTEM_BROTLI=ON -DJPEGXL_FORCE_SYSTEM_HWY=ON\
+        \ -DJPEGXL_FORCE_SYSTEM_LCMS2=ON -DJPEGXL_FORCE_SYSTEM_GTEST=ON > /nav-build-metadata/jxl/config.log 2>&1\\\\nrc=$?\\\
+        \\nset -e\\\\ncat /nav-build-metadata/jxl/config.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/jxl/config.exit\\\
+        \\ntest \"$rc\" = 0\\\\ncp build/CMakeCache.txt /nav-build-metadata/jxl/CMakeCache.txt\\\\nset +e\\\\ncmake --build\
+        \ build --parallel 2 > /nav-build-metadata/jxl/build.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ntail -100 /nav-build-metadata/jxl/build.log\\\
+        \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/jxl/build.exit\\\\ntest \"$rc\" = 0\\\\nchown -R\
+        \ tester .\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/libjxl-0.12.0/build;\
+        \ ctest --show-only=json-v1\\\\\\' > /nav-build-metadata/jxl/tests-discovered.json 2>&1\\\\nrc=$?\\\\nset -e\\\\ntest\
+        \ \"$rc\" = 0\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/libjxl-0.12.0/build;\
+        \ ctest --no-tests=error --output-on-failure -j2\\\\\\' > /nav-build-metadata/jxl/tests.log 2>&1\\\\nrc=$?\\\\nset\
+        \ -e\\\\ncat /nav-build-metadata/jxl/tests.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/jxl/tests.exit\\\
+        \\ncp build/Testing/Temporary/LastTest.log /nav-build-metadata/jxl/original.log\\\\ntest \"$rc\" = 0\\\\nprintf \\\
+        \\\\'NAV_JXL_FULL_ORIGINAL_SUITES_NO_SAVE_NO_INSTALL\\\\\\\\n\\\\\\'\\\\ncd /sources\\\\nrm -rf libjxl-0.12.0\\\\\
+        n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\"\
+        \ unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\nmount --bind \"$LFS\"\
+        \ \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620\
+        \ \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o\
+        \ nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\
+        \\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env\
+        \ -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test\
+        \ \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\
+        \\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2\
+        \ LC_ALL=POSIX /bin/bash --noprofile --norc /sources/jxl-stage.sh\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env\
+        \ -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test\
+        \ \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\
+        \\'\\nNAV_MOUNT_BUILD\\nsudo rm -f \"$LFS/sources/jxl-stage.sh\" \"$LFS/sources/\"*.tar.*\\nprintf \\'NAV_JXL_DIAGNOSTIC_NO_SAVE_NO_INSTALL\\\
+        \\n\\'\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash',\
+        \ str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0,\
+        \ sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n\
+        \        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start\
+        \ > 315 * 60:\n            raise RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds':\
         \ round(time.monotonic() - start), 'free_disk_bytes': free, 'available_memory_kib': available}), flush=True)\n   \
         \     time.sleep(20)\n    if proc.returncode:\n        raise RuntimeError('source-build failed with status ' + str(proc.returncode))\n\
         finally:\n    if proc.poll() is None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n\
@@ -139,58 +103,7 @@ jobs:
         \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
         \ 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON',\
         \ 'NAV_TESTER', 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
-        \ 'NAV_PORTAL'])))))\n    import base64\n    for f in sorted(pathlib.Path('/mnt/nav-lfs/nav-build-metadata/git').glob('*')):\n\
+        \ 'NAV_PORTAL'])))))\n    import base64\n    for f in sorted(pathlib.Path('/mnt/nav-lfs/nav-build-metadata/jxl').glob('*')):\n\
         \        if f.is_file():\n            data = f.read_bytes()\n            for i in range(0, len(data), 3000):\n   \
-        \             print('NAV_GIT_' + f.name.replace('.', '_').upper() + '_B64', base64.b64encode(data[i:i + 3000]).decode(),\
+        \             print('NAV_JXL_' + f.name.replace('.', '_').upper() + '_B64', base64.b64encode(data[i:i + 3000]).decode(),\
         \ flush=True)\nNAV_GUARD\n"
-    - name: Fail closed on free-cache worst-case capacity before save
-      shell: bash
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-      run: 'set -euo pipefail
-
-        python3 - <<''BUDGET''
-
-        import urllib.request,json,os,subprocess
-
-        root=int(subprocess.check_output([''du'',''-sb'',''/mnt/nav-lfs'']).split()[0])
-
-        assert root<5120*1024**2,root
-
-        request=urllib.request.Request(''https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/actions/caches?per_page=100'',headers={''Authorization'':''Bearer
-        ''+os.environ[''GITHUB_TOKEN''],''Accept'':''application/vnd.github+json'',''X-GitHub-Api-Version'':''2022-11-28''})
-
-        with urllib.request.urlopen(request,timeout=60)as r:data=json.load(r)
-
-        assert data[''total_count'']==len(data[''actions_caches'']) and data[''total_count'']<=100
-
-        keys={x[''key'']for x in data[''actions_caches'']}
-
-        assert ''nav-blfs13.1-x86_64-cms-open-v1'' not in keys
-
-        assert ''nav-blfs13.1-x86_64-rust-open-v1'' not in keys
-
-        assert ''nav-blfs13.1-x86_64-highway-open-v1'' in keys
-
-        assert ''nav-blfs13.1-x86_64-git-open-v1'' not in keys
-
-        required=[''final-gcc'',''gcc-test-runtime'',''gcc-test-cxx'',''gcc-test-c'',''access-tools'',''final-math'']
-
-        assert all(''nav-lfs13.1-x86_64-''+x+''-v1'' in keys for x in required)
-
-        total=sum(x[''size_in_bytes'']for x in data[''actions_caches''])
-
-        worst=5184*1024**2
-
-        print(''NAV_CACHE_BUDGET'',{''existing'':total,''root_apparent_bytes'':root,''new_cache_maximum'':worst,''worst_total'':total+worst,''limit'':10*1024**3},flush=True)
-
-        assert total+worst<10*1024**3
-
-        BUDGET
-
-        '
-    - name: Preserve transitional checkpoint with all gaps OPEN
-      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
-      with:
-        path: /mnt/nav-lfs
-        key: nav-blfs13.1-x86_64-git-open-v1
