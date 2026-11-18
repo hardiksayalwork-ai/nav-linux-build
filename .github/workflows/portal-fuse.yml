@@ -1,11 +1,11 @@
-name: NAV JPEG XL giflib original3 animation diagnostic
+name: NAV NumPy full suite conformance source diagnostic
 'on':
   workflow_dispatch: {}
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: nav-source-build
+  group: nav-numpy-conformance-no-save
   cancel-in-progress: false
 jobs:
   portal-gstreamer:
@@ -33,7 +33,7 @@ jobs:
         path: /mnt/nav-lfs
         key: nav-blfs13.1-x86_64-giflib-open-v1
         fail-on-cache-miss: true
-    - name: JPEG XL original3 animation tests giflib-backed no-save
+    - name: Source NumPy full tests and original JXL conformance no-save
       shell: bash
       run: "python3 - <<'NAV_GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
         \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\nassert os.cpu_count()\
@@ -41,7 +41,80 @@ jobs:
         p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\ntest -f \"\
         $LFS/nav-build-metadata/giflib/GIFLIB-TRANSITIONAL-OPEN.json\"\\ntest -f \"$LFS/nav-build-metadata/highway-gc/HIGHWAY-TRANSITIONAL-OPEN.json\"\
         \\npython3 - <<\\'DOWNLOADS\\'\\nfrom pathlib import Path\\nimport urllib.request,hashlib,json\\nlock=json.loads(\"\
-        [{\\\\\"filename\\\\\": \\\\\"libjxl-0.12.0.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://github.com/libjxl/libjxl/archive/v0.12.0/libjxl-0.12.0.tar.gz\\\
+        [{\\\\\"name\\\\\": \\\\\"numpy\\\\\", \\\\\"version\\\\\": \\\\\"2.5.2\\\\\", \\\\\"filename\\\\\": \\\\\"numpy-2.5.2.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/9a/80/db0b4559e57ec36362bedbb05530a87fafbcb6067708c946967a41d449e7/numpy-2.5.2.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"d482d171c406ae88c5b19cad3b6a1c4c5209f886ab74bc44c2c865c23f52d860\\\\\", \\\\\"md5\\\
+        \\\": \\\\\"85f9db626b908f4d2211d98b4bf8a83d\\\\\"}, {\\\\\"name\\\\\": \\\\\"Cython\\\\\", \\\\\"version\\\\\": \\\
+        \\\"3.2.9\\\\\", \\\\\"filename\\\\\": \\\\\"cython-3.2.9.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/f6/de/db48b8870e766cfea809986cc50c1e986c663a9ab7bafd0ac1a2512c4a26/cython-3.2.9.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"d249c9022ab13286b17bd66f30609e800c5f95efeecb06168990c7a66cecde6c\\\\\", \\\\\"md5\\\
+        \\\": \\\\\"775ad752cdb021193f3ef323228388d5\\\\\"}, {\\\\\"name\\\\\": \\\\\"meson-python\\\\\", \\\\\"version\\\\\
+        \": \\\\\"0.20.0\\\\\", \\\\\"filename\\\\\": \\\\\"meson_python-0.20.0.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/8b/f0/d794d7ed8a843a8a8947768f3b329d1e8601222dc95d930f4a5f9706cd6c/meson_python-0.20.0.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"6d9726ae6cd37e22f210c74b364b30180a68c20442e97ff09f3c566a414af738\\\\\", \\\\\"md5\\\
+        \\\": \\\\\"032ed60b1d86c448331fc0a2ba81f499\\\\\"}, {\\\\\"name\\\\\": \\\\\"pyproject-metadata\\\\\", \\\\\"version\\\
+        \\\": \\\\\"0.12.1\\\\\", \\\\\"filename\\\\\": \\\\\"pyproject_metadata-0.12.1.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\
+        \"https://files.pythonhosted.org/packages/4f/76/1cae539918a7b1746d624c2f01560b793c22cd8c081157505bb9bbf0e34d/pyproject_metadata-0.12.1.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"8809a4df6fe08279b39a8890669506ed3158e0617855ac9aff098fcbe772ae4c\\\\\", \\\\\"md5\\\
+        \\\": \\\\\"d44c15fd176128acd9497af2512085a0\\\\\"}, {\\\\\"name\\\\\": \\\\\"pytest\\\\\", \\\\\"version\\\\\": \\\
+        \\\"9.1.1\\\\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa3c9d3fe98a76a1d14c74a9e266d397cf6eb64be5e01/pytest-9.1.1.tar.gz\\\
+        \\\", \\\\\"filename\\\\\": \\\\\"pytest-9.1.1.tar.gz\\\\\", \\\\\"sha256\\\\\": \\\\\"1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313\\\
+        \\\"}, {\\\\\"name\\\\\": \\\\\"pytz\\\\\", \\\\\"version\\\\\": \\\\\"2026.2\\\\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/ff/46/dd499ec9038423421951e4fad73051febaa13d2df82b4064f87af8b8c0c3/pytz-2026.2.tar.gz\\\
+        \\\", \\\\\"filename\\\\\": \\\\\"pytz-2026.2.tar.gz\\\\\", \\\\\"sha256\\\\\": \\\\\"0e60b47b29f21574376f218fe21abc009894a2321ea16c6754f3cad6eb7cdd6a\\\
+        \\\"}, {\\\\\"name\\\\\": \\\\\"attrs\\\\\", \\\\\"version\\\\\": \\\\\"26.1.0\\\\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/9a/8e/82a0fe20a541c03148528be8cac2408564a6c9a0cc7e9171802bc1d26985/attrs-26.1.0.tar.gz\\\
+        \\\", \\\\\"filename\\\\\": \\\\\"attrs-26.1.0.tar.gz\\\\\", \\\\\"sha256\\\\\": \\\\\"d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32\\\
+        \\\"}, {\\\\\"name\\\\\": \\\\\"sortedcontainers\\\\\", \\\\\"version\\\\\": \\\\\"2.4.0\\\\\", \\\\\"url\\\\\": \\\
+        \\\"https://files.pythonhosted.org/packages/e8/c4/ba2f8066cceb6f23394729afe52f3bf7adec04bf9ed2c820b39e19299111/sortedcontainers-2.4.0.tar.gz\\\
+        \\\", \\\\\"filename\\\\\": \\\\\"sortedcontainers-2.4.0.tar.gz\\\\\", \\\\\"sha256\\\\\": \\\\\"25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88\\\
+        \\\"}, {\\\\\"name\\\\\": \\\\\"hatchling\\\\\", \\\\\"version\\\\\": \\\\\"1.33.0\\\\\", \\\\\"filename\\\\\": \\\
+        \\\"hatchling-1.33.0.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/7a/f1/e47b937226ae3b093bbd0132eb0b7ee5bfad12c2b5324afd10ae49946b05/hatchling-1.33.0.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"4c422bd4d554fcff5de5b73e9596f85e41e9f97f7e553d8f7595ecb31a627bef\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"hatch-vcs\\\\\", \\\\\"version\\\\\": \\\\\"0.5.0\\\\\", \\\\\"filename\\\\\": \\\\\"hatch_vcs-0.5.0.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/6b/b0/4cc743d38adbee9d57d786fa496ed1daadb17e48589b6da8fa55717a0746/hatch_vcs-0.5.0.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"0395fa126940340215090c344a2bf4e2a77bcbe7daab16f41b37b98c95809ff9\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"hatch-fancy-pypi-readme\\\\\", \\\\\"version\\\\\": \\\\\"25.1.0\\\\\", \\\\\"filename\\\\\": \\\\\"hatch_fancy_pypi_readme-25.1.0.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/f3/0f/aed57c301f339936eb91cb4d8c1e5088a101081854bd3ec18a889df32365/hatch_fancy_pypi_readme-25.1.0.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"9c58ed3dff90d51f43414ce37009ad1d5b0f08ffc9fc216998a06380f01c0045\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"pathspec\\\\\", \\\\\"version\\\\\": \\\\\"1.1.1\\\\\", \\\\\"filename\\\\\": \\\\\"pathspec-1.1.1.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/5a/82/42f767fc1c1143d6fd36efb827202a2d997a375e160a71eb2888a925aac1/pathspec-1.1.1.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"17db5ecd524104a120e173814c90367a96a98d07c45b2e10c2f3919fff91bf5a\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"trove-classifiers\\\\\", \\\\\"version\\\\\": \\\\\"2026.9.21.13\\\\\", \\\\\"filename\\\\\": \\\\\"trove_classifiers-2026.9.21.13.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/bf/93/af436dfaa845cab5d96f0adbc1e4f3730532d37fa249e4eb796fb1d7fc82/trove_classifiers-2026.9.21.13.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"0a9ebc8d4e2f3e8a22848c5258033035bec17a3012ac3fea16dbaa764489eb71\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"tomlkit\\\\\", \\\\\"version\\\\\": \\\\\"0.15.2\\\\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/08/72/fc01563df95c189a9f65850096bdc205bc2fe37da6c740cd64afaf18d07e/tomlkit-0.15.2.tar.gz\\\
+        \\\", \\\\\"filename\\\\\": \\\\\"tomlkit-0.15.2.tar.gz\\\\\", \\\\\"sha256\\\\\": \\\\\"83e32755ba1d20d9340bd069ee97e9f6232ba2346b63ffcba425de01f7e327a6\\\
+        \\\"}, {\\\\\"name\\\\\": \\\\\"calver\\\\\", \\\\\"version\\\\\": \\\\\"2025.10.20\\\\\", \\\\\"url\\\\\": \\\\\"\
+        https://files.pythonhosted.org/packages/4a/96/0c57e3e228ffc54074867406b659b197678674f1f0bf600d114965289834/calver-2025.10.20.tar.gz\\\
+        \\\", \\\\\"filename\\\\\": \\\\\"calver-2025.10.20.tar.gz\\\\\", \\\\\"sha256\\\\\": \\\\\"c98b376c2424642224d456b2f70c51402343e008c63d204634665e1a2a2835f5\\\
+        \\\"}, {\\\\\"name\\\\\": \\\\\"poetry-core\\\\\", \\\\\"version\\\\\": \\\\\"2.5.0\\\\\", \\\\\"filename\\\\\": \\\
+        \\\"poetry_core-2.5.0.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/42/b5/50f1fda26c4fe5b1d6ce5cdf0391bdfa1ca12fdcb8ad68344d5cf678fc90/poetry_core-2.5.0.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"81d04c9253b19d0604718268d781867c8f7b2128e5b25bbf1e84141eec6b89c4\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"hypothesis\\\\\", \\\\\"version\\\\\": \\\\\"6.152.1\\\\\", \\\\\"filename\\\\\": \\\\\"hypothesis-6.152.1.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/64/b1/c32bcddb9aab9e3abc700f1f56faf14e7655c64a16ca47701a57362276ea/hypothesis-6.152.1.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"4f4ed934eee295dd84ee97592477d23e8dc03e9f12ae0ee30a4e7c9ef3fca3b0\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"pytest-cov\\\\\", \\\\\"version\\\\\": \\\\\"7.1.0\\\\\", \\\\\"filename\\\\\": \\\\\"pytest_cov-7.1.0.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/b1/51/a849f96e117386044471c8ec2bd6cfebacda285da9525c9106aeb28da671/pytest_cov-7.1.0.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"30674f2b5f6351aa09702a9c8c364f6a01c27aae0c1366ae8016160d1efc56b2\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"pytest-xdist\\\\\", \\\\\"version\\\\\": \\\\\"3.8.0\\\\\", \\\\\"filename\\\\\": \\\\\"pytest_xdist-3.8.0.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/78/b4/439b179d1ff526791eb921115fca8e44e596a13efeda518b9d845a619450/pytest_xdist-3.8.0.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"7e578125ec9bc6050861aa93f2d59f1d8d085595d6551c2c90b6f4fad8d3a9f1\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"pytest-timeout\\\\\", \\\\\"version\\\\\": \\\\\"2.4.0\\\\\", \\\\\"filename\\\\\": \\\\\"pytest_timeout-2.4.0.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/ac/82/4c9ecabab13363e72d880f2fb504c5f750433b2b6f16e99f4ec21ada284c/pytest_timeout-2.4.0.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"7e68e90b01f9eff71332b25001f85c75495fc4e3a836701876183c4bcfd0540a\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"charset-normalizer\\\\\", \\\\\"version\\\\\": \\\\\"3.5.2\\\\\", \\\\\"filename\\\\\": \\\\\"charset_normalizer-3.5.2.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/33/1c/f41d4e74c28ab327ff3acd36053f7ea506c55872d7a90b0fa71aa3ab0c89/charset_normalizer-3.5.2.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"39de2a259fc954455c57274dc94c79d5842774e1247a016aff30bc0efed0f4ef\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"tzdata\\\\\", \\\\\"version\\\\\": \\\\\"2026.6\\\\\", \\\\\"filename\\\\\": \\\\\"tzdata-2026.6.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/7a/29/6a1391d31cd00ff9e927215a224a880e1e84e826b64ba80a499e51c074d8/tzdata-2026.6.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"85d2cd9c09f81f0bb29db27759fc83af4f1e620efb814f8c5bf8b4cc4feece6d\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"coverage\\\\\", \\\\\"version\\\\\": \\\\\"7.17.3\\\\\", \\\\\"filename\\\\\": \\\\\"coverage-7.17.3.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/ed/8f/19651ed6f648de7e1383bb759207078e2ad8addeca711187e1cb3a495f14/coverage-7.17.3.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"6695d1bb2a9a2fbd7806d69d78cf30f35eb0f65045da0ec5b5045242fadd6a78\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"execnet\\\\\", \\\\\"version\\\\\": \\\\\"2.1.2\\\\\", \\\\\"filename\\\\\": \\\\\"execnet-2.1.2.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/bf/89/780e11f9588d9e7128a3f87788354c7946a9cbb1401ad38a48c4db9a4f07/execnet-2.1.2.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"63d83bfdd9a23e35b9c6a3261412324f964c2ec8dcd8d3c6916ee9373e0befcd\\\\\"}, {\\\\\"name\\\
+        \\\": \\\\\"flit-core\\\\\", \\\\\"version\\\\\": \\\\\"4.2.0\\\\\", \\\\\"filename\\\\\": \\\\\"flit_core-4.2.0.tar.gz\\\
+        \\\", \\\\\"url\\\\\": \\\\\"https://files.pythonhosted.org/packages/d3/8b/0370578a456986d6995344967a479dd5c9d4e064681550c2a9594bb58b4a/flit_core-4.2.0.tar.gz\\\
+        \\\", \\\\\"sha256\\\\\": \\\\\"84e4e4d8fdd45ba2613800a3ebc6834de26d47ec9746efc3719f94181137b460\\\\\"}, {\\\\\"filename\\\
+        \\\": \\\\\"libjxl-0.12.0.tar.gz\\\\\", \\\\\"url\\\\\": \\\\\"https://github.com/libjxl/libjxl/archive/v0.12.0/libjxl-0.12.0.tar.gz\\\
         \\\", \\\\\"sha256\\\\\": \\\\\"03e9be69a30be4011f559da75328b6d7cea8ad921fabfbd551ce10bf45cdc992\\\\\", \\\\\"md5\\\
         \\\": \\\\\"a0fd3ac7b474525dadb99bbcb5d814f9\\\\\"}, {\\\\\"filename\\\\\": \\\\\"libjxl-testdata-73695d303670c90e4d506ea89d9901b081385089.tar.gz\\\
         \\\", \\\\\"url\\\\\": \\\\\"https://github.com/libjxl/testdata/archive/73695d303670c90e4d506ea89d9901b081385089.tar.gz\\\
@@ -50,45 +123,88 @@ jobs:
         \ lock:\\n p=Path(\\'/mnt/nav-lfs/sources\\')/x[\\'filename\\']\\n with urllib.request.urlopen(x[\\'url\\'],timeout=120)as\
         \ r,p.open(\\'wb\\')as f:\\n  while q:=r.read(1024*1024):f.write(q)\\n assert hashlib.file_digest(p.open(\\'rb\\'),\\\
         'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\',x[\\'filename\\'],flush=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/jxl\\\
-        ').mkdir(exist_ok=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/jxl/source-lock.json\\').write_text(json.dumps(lock,indent=2))\\\
-        nDOWNLOADS\\ncd \"$LFS/sources\"\\ntar -xf libjxl-0.12.0.tar.gz\\ncd libjxl-0.12.0\\n# Recover authentic tag metadata\
-        \ only, leaving hash-checked archive sources untouched.\\ngit init\\ngit remote add origin https://github.com/libjxl/libjxl.git\\\
-        ngit fetch --depth 1 origin tag v0.12.0\\ngit reset --mixed FETCH_HEAD\\ngit diff --exit-code --ignore-submodules=all\\\
-        ntest \"$(git ls-tree HEAD testdata | awk \\'{print $3}\\')\" = 73695d303670c90e4d506ea89d9901b081385089\\nmkdir -p\
-        \ testdata\\ntar -xf ../libjxl-testdata-73695d303670c90e4d506ea89d9901b081385089.tar.gz -C testdata --strip-components=1\\\
+        ').mkdir(exist_ok=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/numpy\\').mkdir(exist_ok=True)\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/numpy/source-lock.json\\\
+        ').write_text(json.dumps(lock,indent=2))\\nDOWNLOADS\\ncd \"$LFS/sources\"\\ntar -xf libjxl-0.12.0.tar.gz\\ncd libjxl-0.12.0\\\
+        n# Recover authentic tag metadata only, leaving hash-checked archive sources untouched.\\ngit init\\ngit remote add\
+        \ origin https://github.com/libjxl/libjxl.git\\ngit fetch --depth 1 origin tag v0.12.0\\ngit reset --mixed FETCH_HEAD\\\
+        ngit diff --exit-code --ignore-submodules=all\\ntest \"$(git ls-tree HEAD testdata | awk \\'{print $3}\\')\" = 73695d303670c90e4d506ea89d9901b081385089\\\
+        nmkdir -p testdata\\ntar -xf ../libjxl-testdata-73695d303670c90e4d506ea89d9901b081385089.tar.gz -C testdata --strip-components=1\\\
         ncd /\\npython3 - <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/jxl-stage.sh\\').write_text(\\\
         'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport MAKEFLAGS=-j2 PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
-        \ LANG=C.UTF-8\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir -p /nav-build-metadata/jxl\\\\ncd\
-        \ /sources/libjxl-0.12.0\\\\n{ gcc --version; pkg-config --modversion libhwy lcms2 libbrotlidec libpng libjpeg gtest;\
-        \ test -f /usr/include/gif_lib.h; ls -l /usr/lib/libgif.so*; git --version; ulimit -a; lscpu; git rev-parse HEAD;\
-        \ git ls-tree HEAD testdata; git diff --exit-code --ignore-submodules=all; test \"$(git ls-files | wc -l)\" -gt 500;\
-        \ } > /nav-build-metadata/jxl/preflight.log 2>&1\\\\ncat /nav-build-metadata/jxl/preflight.log\\\\nset +e\\\\ncmake\
-        \ -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=ON\
-        \ -DJPEGXL_TEST_TOOLS=ON -DJPEGXL_ENABLE_DEVTOOLS=ON -DJPEGXL_ENABLE_SKCMS=OFF -DJPEGXL_ENABLE_SJPEG=OFF -DJPEGXL_ENABLE_PLUGINS=OFF\
-        \ -DJPEGXL_INSTALL_JARDIR=/usr/share/java -DJPEGXL_FORCE_SYSTEM_BROTLI=ON -DJPEGXL_FORCE_SYSTEM_HWY=ON -DJPEGXL_FORCE_SYSTEM_LCMS2=ON\
-        \ -DJPEGXL_FORCE_SYSTEM_GTEST=ON > /nav-build-metadata/jxl/config.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ncat /nav-build-metadata/jxl/config.log\\\
-        \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/jxl/config.exit\\\\ntest \"$rc\" = 0\\\\ncp build/CMakeCache.txt\
-        \ /nav-build-metadata/jxl/CMakeCache.txt\\\\nset +e\\\\ncmake --build build --parallel 2 > /nav-build-metadata/jxl/build.log\
-        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\ntail -100 /nav-build-metadata/jxl/build.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"\
-        $rc\" > /nav-build-metadata/jxl/build.exit\\\\ntest \"$rc\" = 0\\\\nchown -R tester .\\\\nset +e\\\\nsu tester -c\
-        \ \\\\\\'export PATH=/usr/bin:/usr/sbin:/bin:/sbin; cd /sources/libjxl-0.12.0/build; ctest --no-tests=error --output-on-failure\
-        \ -j2 -R \"^JxlTest.Roundtrip(Animation|LosslessAnimation|AnimationPatches)$\"\\\\\\' > /nav-build-metadata/jxl/animation-tests.log\
-        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/jxl/animation-tests.exit\\\
-        \\ncp build/Testing/Temporary/LastTest.log /nav-build-metadata/jxl/animation-original.log\\\\ncat /nav-build-metadata/jxl/animation-tests.log\\\
-        \\ntest \"$rc\" = 0\\\\nprintf \\\\\\'NAV_JXL_ORIGINAL3_ANIMATION_DIAGNOSTIC_NO_INSTALL_NO_SAVE\\\\n\\\\\\'\\\\n\\\
-        ')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\"\
-        \ unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\nmount --bind \"$LFS\"\
-        \ \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts devpts -o gid=5,mode=0620\
-        \ \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o\
-        \ nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ]; then\\n install -d -m 1777 \"$LFS$(realpath /dev/shm)\"\
-        \\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env\
-        \ -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test\
-        \ \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\
-        \\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2\
-        \ LC_ALL=POSIX /bin/bash --noprofile --norc /sources/jxl-stage.sh\\nchroot --userspec=101:101 \"$LFS\" /usr/bin/env\
-        \ -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\'set -euo pipefail; test\
-        \ \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\\n\"\
-        \\'\\nNAV_MOUNT_BUILD\\nsudo rm -f \"$LFS/sources/jxl-stage.sh\" \"$LFS/sources/\"*.tar.*\\nprintf \\'NAV_JXL_DIAGNOSTIC_NO_SAVE_NO_INSTALL\\\
+        \ LANG=C.UTF-8 PYTHONUNBUFFERED=1\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nmkdir -p /nav-build-metadata/numpy\\\
+        \\n{ gcc --version; python3 --version; pip3 list; ulimit -a; } > /nav-build-metadata/numpy/preflight.log 2>&1\\\\\
+        npython3 /sources/numpy-build-prefix.py > /nav-build-metadata/numpy/source-builds.log 2>&1\\\\nexport PYTHONPATH=/sources/numpy-tooling-prefix/lib/python3.14/site-packages\
+        \ PATH=/sources/numpy-tooling-prefix/bin:$PATH OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2\\\\npython3 -c \\\\\\'import\
+        \ numpy,pytest,hypothesis,attrs,pytz; print(numpy.__version__,numpy.__file__); print(pytest.__version__,hypothesis.__version__);\
+        \ numpy.show_config()\\\\\\' > /nav-build-metadata/numpy/import-config.log 2>&1\\\\ncd /sources/libjxl-0.12.0\\\\\
+        n{ gcc --version; pkg-config --modversion libhwy lcms2 libbrotlidec libpng libjpeg gtest; git --version; ulimit -a;\
+        \ lscpu; git rev-parse HEAD; git ls-tree HEAD testdata; git diff --exit-code --ignore-submodules=all; test \"$(git\
+        \ ls-files | wc -l)\" -gt 500; } > /nav-build-metadata/jxl/preflight.log 2>&1\\\\ncat /nav-build-metadata/jxl/preflight.log\\\
+        \\nset +e\\\\ncmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON\
+        \ -DBUILD_TESTING=ON -DJPEGXL_TEST_TOOLS=ON -DJPEGXL_ENABLE_DEVTOOLS=ON -DJPEGXL_ENABLE_SKCMS=OFF -DJPEGXL_ENABLE_SJPEG=OFF\
+        \ -DJPEGXL_ENABLE_PLUGINS=OFF -DJPEGXL_INSTALL_JARDIR=/usr/share/java -DJPEGXL_FORCE_SYSTEM_BROTLI=ON -DJPEGXL_FORCE_SYSTEM_HWY=ON\
+        \ -DJPEGXL_FORCE_SYSTEM_LCMS2=ON -DJPEGXL_FORCE_SYSTEM_GTEST=ON > /nav-build-metadata/jxl/config.log 2>&1\\\\nrc=$?\\\
+        \\nset -e\\\\ncat /nav-build-metadata/jxl/config.log\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/jxl/config.exit\\\
+        \\ntest \"$rc\" = 0\\\\ncp build/CMakeCache.txt /nav-build-metadata/jxl/CMakeCache.txt\\\\nset +e\\\\ncmake --build\
+        \ build --parallel 2 > /nav-build-metadata/jxl/build.log 2>&1\\\\nrc=$?\\\\nset -e\\\\ntail -100 /nav-build-metadata/jxl/build.log\\\
+        \\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/jxl/build.exit\\\\ntest \"$rc\" = 0\\\\nchown -R\
+        \ tester /sources/libjxl-0.12.0 /sources/numpy-tooling-prefix\\\\nset +e\\\\nsu tester -c \\\\\\'export PATH=/sources/numpy-tooling-prefix/bin:/usr/bin:/usr/sbin:/bin:/sbin\
+        \ PYTHONPATH=/sources/numpy-tooling-prefix/lib/python3.14/site-packages; cd /sources/libjxl-0.12.0/build; ctest --no-tests=error\
+        \ --output-on-failure -j1 -R \"^conformance_tooling_test$\"\\\\\\' > /nav-build-metadata/numpy/conformance.log 2>&1\\\
+        \\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/numpy/conformance.exit\\\\ncp build/Testing/Temporary/LastTest.log\
+        \ /nav-build-metadata/numpy/conformance-original.log\\\\nmkdir -p /home/tester/numpy-test-work\\\\nchown tester /home/tester/numpy-test-work\\\
+        \\nset +e\\\\nsu tester -c \\\\\\'export PATH=/sources/numpy-tooling-prefix/bin:/usr/bin:/usr/sbin:/bin:/sbin PYTHONPATH=/sources/numpy-tooling-prefix/lib/python3.14/site-packages\
+        \ PYTHONUNBUFFERED=1 OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2; cd /home/tester/numpy-test-work; python3 /sources/numpy-run-tests.py\\\
+        \\\\' > /nav-build-metadata/numpy/tests.log 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\n\\\\\\' \"$rc\" > /nav-build-metadata/numpy/tests.exit\\\
+        \\nif test -f /home/tester/numpy-test-work/original-pytest.xml;then cp /home/tester/numpy-test-work/original-pytest.xml\
+        \ /nav-build-metadata/numpy/;fi\\\\nprintf \\\\\\'NAV_NUMPY_CONFORMANCE_NO_SYSTEM_INSTALL_NO_SAVE\\\\n\\\\\\'\\\\\
+        n\\')\\nPath(\\'/mnt/nav-lfs/sources/numpy-build-prefix.py\\').write_text(\\'from pathlib import Path\\\\nimport json,os,subprocess,tarfile,hashlib\\\
+        \\nroot=Path(\\\\\\'/sources\\\\\\');prefix=root/\\\\\\'numpy-tooling-prefix\\\\\\';prefix.mkdir(exist_ok=True);audit=Path(\\\
+        \\\\'/nav-build-metadata/numpy\\\\\\');audit.mkdir(exist_ok=True)\\\\nlock=json.loads((audit/\\\\\\'source-lock.json\\\
+        \\\\').read_text());by={x[\\\\\\'name\\\\\\']:x for x in lock if \\\\\\'name\\\\\\' in x}\\\\norder=[\\\\\\'flit-core\\\
+        \\\\',\\\\\\'poetry-core\\\\\\',\\\\\\'tomlkit\\\\\\',\\\\\\'calver\\\\\\',\\\\\\'pathspec\\\\\\',\\\\\\'trove-classifiers\\\
+        \\\\',\\\\\\'hatchling\\\\\\',\\\\\\'hatch-vcs\\\\\\',\\\\\\'hatch-fancy-pypi-readme\\\\\\',\\\\\\'attrs\\\\\\',\\\
+        \\\\'sortedcontainers\\\\\\',\\\\\\'hypothesis\\\\\\',\\\\\\'pytest\\\\\\',\\\\\\'pytz\\\\\\',\\\\\\'coverage\\\\\\\
+        ',\\\\\\'execnet\\\\\\',\\\\\\'pytest-xdist\\\\\\',\\\\\\'pytest-timeout\\\\\\',\\\\\\'charset-normalizer\\\\\\',\\\
+        \\\\'tzdata\\\\\\',\\\\\\'pytest-cov\\\\\\',\\\\\\'pyproject-metadata\\\\\\',\\\\\\'meson-python\\\\\\',\\\\\\'Cython\\\
+        \\\\',\\\\\\'numpy\\\\\\']\\\\nenv=os.environ.copy();env.update(PYTHONPATH=str(prefix/\\\\\\'lib/python3.14/site-packages\\\
+        \\\\'),PATH=str(prefix/\\\\\\'bin\\\\\\')+\\\\\\':\\\\\\'+env[\\\\\\'PATH\\\\\\'],PYTHONUNBUFFERED=\\\\\\'1\\\\\\\
+        ',NPY_NUM_BUILD_JOBS=\\\\\\'2\\\\\\',CMAKE_BUILD_PARALLEL_LEVEL=\\\\\\'2\\\\\\',OMP_NUM_THREADS=\\\\\\'2\\\\\\',OPENBLAS_NUM_THREADS=\\\
+        \\\\'2\\\\\\',PIP_NO_INDEX=\\\\\\'1\\\\\\')\\\\nrecords=[]\\\\nfor name in order:\\\\n x=by[name];src=root/x[\\\\\\\
+        'filename\\\\\\'];assert hashlib.sha256(src.read_bytes()).hexdigest()==x[\\\\\\'sha256\\\\\\']\\\\n with tarfile.open(src)as\
+        \ t:\\\\n  top=t.getnames()[0].split(\\\\\\'/\\\\\\')[0];t.extractall(root,filter=\\\\\\'data\\\\\\')\\\\n cwd=root/top;dest=cwd/\\\
+        \\\\'dist\\\\\\';cmd=[\\\\\\'python3\\\\\\',\\\\\\'-m\\\\\\',\\\\\\'pip\\\\\\',\\\\\\'wheel\\\\\\',\\\\\\'-w\\\\\\\
+        ',str(dest),\\\\\\'--no-build-isolation\\\\\\',\\\\\\'--no-deps\\\\\\',\\\\\\'--no-cache-dir\\\\\\',str(cwd)]\\\\\
+        n if name==\\\\\\'numpy\\\\\\':cmd+=[\\\\\\'-Csetup-args=-Dallow-noblas=true\\\\\\',\\\\\\'-Ccompile-args=-j2\\\\\\\
+        ']\\\\n if name==\\\\\\'Cython\\\\\\':cmd=[\\\\\\'python3\\\\\\',\\\\\\'setup.py\\\\\\',\\\\\\'build_ext\\\\\\',\\\
+        \\\\'-j2\\\\\\',\\\\\\'bdist_wheel\\\\\\']\\\\n print(\\\\\\'NAV_SOURCE_TOOLING_BUILD_BEGIN\\\\\\',name,flush=True)\\\
+        \\n with (audit/(name+\\\\\\'-build.log\\\\\\')).open(\\\\\\'w\\\\\\')as f:rc=subprocess.run(cmd,cwd=cwd,env=env,stdout=f,stderr=subprocess.STDOUT).returncode\\\
+        \\n (audit/(name+\\\\\\'-build.exit\\\\\\')).write_text(str(rc)+\\\\\\'\\\\\\\\n\\\\\\');assert rc==0,(name,rc)\\\\\
+        n wheels=list(dest.glob(\\\\\\'*.whl\\\\\\'));assert len(wheels)==1,(name,wheels)\\\\n # Only our own source-built\
+        \ wheel enters the disposable diagnostic prefix, never /usr.\\\\n cmd=[\\\\\\'python3\\\\\\',\\\\\\'-m\\\\\\',\\\\\
+        \\'pip\\\\\\',\\\\\\'install\\\\\\',\\\\\\'--no-index\\\\\\',\\\\\\'--no-deps\\\\\\',\\\\\\'--no-compile\\\\\\',\\\
+        \\\\'--ignore-installed\\\\\\',\\\\\\'--prefix\\\\\\',str(prefix),str(wheels[0])]\\\\n with (audit/(name+\\\\\\'-test-prefix.log\\\
+        \\\\')).open(\\\\\\'w\\\\\\')as f:rc=subprocess.run(cmd,env=env,stdout=f,stderr=subprocess.STDOUT).returncode\\\\\
+        n assert rc==0,(name,\\\\\\'prefix\\\\\\',rc)\\\\n records.append({\\\\\\'name\\\\\\':name,\\\\\\'version\\\\\\':x[\\\
+        \\\\'version\\\\\\'],\\\\\\'source_sha256\\\\\\':x[\\\\\\'sha256\\\\\\'],\\\\\\'built_wheel\\\\\\':wheels[0].name,\\\
+        \\\\'built_wheel_sha256\\\\\\':hashlib.sha256(wheels[0].read_bytes()).hexdigest(),\\\\\\'system_install\\\\\\':False,\\\
+        \\\\'backend_test_coverage\\\\\\':\\\\\\'OPEN; build-only dependency in disposable prefix\\\\\\'})\\\\n (audit/\\\\\
+        \\'built-from-source.json\\\\\\').write_text(json.dumps(records,indent=2));print(\\\\\\'NAV_SOURCE_TOOLING_BUILD_COMPLETE\\\
+        \\\\',name,flush=True)\\\\n\\\\nPath(\\\\\\'/sources/numpy-run-tests.py\\\\\\').write_text(\"import numpy,sys; sys.exit(numpy.test(label=\\\
+        \\\\'full\\\\\\',verbose=2,extra_argv=[\\\\\\'-n\\\\\\',\\\\\\'2\\\\\\',\\\\\\'--junitxml=/home/tester/numpy-test-work/original-pytest.xml\\\
+        \\\\']) is False)\")\\\\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\
+        \\nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT_BUILD\\'\\nset -euo pipefail\\\
+        nmount --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t\
+        \ devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs\
+        \ \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ]; then\\n install -d\
+        \ -m 1777 \"$LFS$(realpath /dev/shm)\"\\nelse\\n mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\\nfi\\nchroot\
+        \ --userspec=101:101 \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile\
+        \ --norc -c \\'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke;\
+        \ printf \"NAV_TESTER_UID101_OK\\\\n\"\\'\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin\
+        \ MAKEFLAGS=-j2 TESTSUITEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/jxl-stage.sh\\nchroot --userspec=101:101\
+        \ \"$LFS\" /usr/bin/env -i HOME=/home/tester TERM=dumb PATH=/usr/bin:/usr/sbin /bin/bash --noprofile --norc -c \\\
+        'set -euo pipefail; test \"$(id -u)\" = 101; touch /home/tester/nav-smoke; rm /home/tester/nav-smoke; printf \"NAV_TESTER_UID101_OK\\\
+        \\n\"\\'\\nNAV_MOUNT_BUILD\\nsudo rm -f \"$LFS/sources/jxl-stage.sh\" \"$LFS/sources/\"*.tar.*\\nprintf \\'NAV_JXL_DIAGNOSTIC_NO_SAVE_NO_INSTALL\\\
         \\n\\'\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash',\
         \ str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0,\
         \ sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n\
@@ -102,7 +218,7 @@ jobs:
         \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
         \ 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON',\
         \ 'NAV_TESTER', 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
-        \ 'NAV_PORTAL'])))))\n    import base64\n    for f in sorted(pathlib.Path('/mnt/nav-lfs/nav-build-metadata/jxl').glob('*')):\n\
-        \        if f.is_file():\n            data = f.read_bytes()\n            for i in range(0, len(data), 3000):\n   \
-        \             print('NAV_JXL_' + f.name.replace('.', '_').upper() + '_B64', base64.b64encode(data[i:i + 3000]).decode(),\
-        \ flush=True)\nNAV_GUARD\n"
+        \ 'NAV_PORTAL'])))))\n    import base64\n    for area in ['numpy', 'jxl']:\n        for f in sorted(pathlib.Path('/mnt/nav-lfs/nav-build-metadata/'\
+        \ + area).glob('*')):\n            if f.is_file():\n                data = f.read_bytes()\n                for i in\
+        \ range(0, len(data), 3000):\n                    print('NAV_' + area.upper() + '_' + f.name.replace('.', '_').upper()\
+        \ + '_B64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\nNAV_GUARD\n"
