@@ -16,13 +16,7 @@ jobs:
     - &id001
       name: Prepare owned isolated root and exact bundle files
       shell: bash
-      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle in /mnt/nav-jxl-root.tar.zst\
-        \ /mnt/nav-aom-tooling.tar.zst; do\n test ! -e \"$bundle\"\n sudo install -o \"$(id -u)\" -g \"$(id -g)\" -m 0600\
-        \ /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\
-        \n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\n' > \"$probe/proof\"\
-        \n tar --zstd -cf \"$bundle\" -C \"$probe\" proof\n zstd -t \"$bundle\"\n tar --zstd -xOf \"$bundle\" proof > \"$probe/recovered\"\
-        \n cmp \"$probe/proof\" \"$probe/recovered\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\\
-        n'\n"
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle in /mnt/nav-jxl-root.tar.zst /mnt/nav-aom-tooling.tar.zst; do\n test ! -e \"$bundle\"\n sudo install -o \"$(id -u)\" -g \"$(id -g)\" -m 0600 /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\n' > \"$probe/proof\"\n tar --zstd -cf \"$bundle\" -C \"$probe\" proof\n zstd -t \"$bundle\"\n tar --zstd -xOf \"$bundle\" proof > \"$probe/recovered\"\n cmp \"$probe/proof\" \"$probe/recovered\"\n # Match actions/cache extraction semantics, not only bundle writer access.\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n cp \"$bundle\" \"$probe/expected-bundle\"\n relative_bundle=$(realpath --relative-to=\"$PWD\" \"$bundle\")\n tar --zstd -cf \"$probe/cache.tzst\" -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n env -u TAR_OPTIONS /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program unzstd > \"$probe/default-restore.log\" 2>&1\n negative_rc=$?\n set -e\n test \"$negative_rc\" = 2\n test ! -s \"$bundle\"\n grep -F 'Cannot open: File exists' \"$probe/default-restore.log\"\n TAR_OPTIONS=--overwrite /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program unzstd\n cmp \"$probe/expected-bundle\" \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS %s\\n' \"$bundle\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
     - name: Actual root-owned failure evidence exporter selftest
       shell: bash
       run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
@@ -54,6 +48,8 @@ jobs:
     - &id002
       name: Restore verified JXL bundled root
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
       with:
         path: /mnt/nav-jxl-root.tar.zst
         key: nav-blfs13.1-x86_64-jxl-open-v1
@@ -256,6 +252,8 @@ jobs:
     - &id004
       name: Restore disposable compiled source and fixtures
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
       with:
         path: /mnt/nav-aom-tooling.tar.zst
         key: nav-aom-3.15.3-disposable-source-tests-v1
