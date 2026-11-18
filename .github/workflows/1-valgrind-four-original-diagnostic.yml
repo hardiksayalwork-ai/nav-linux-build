@@ -1,0 +1,150 @@
+name: NAV Valgrind four OPEN original diagnostic no-save
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-valgrind-four-diagnostic
+  cancel-in-progress: false
+jobs:
+  portal-gstreamer:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: Prepare owned isolated target directory
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo mkdir -p /mnt/nav-lfs
+
+        sudo chown "$(id -u):$(id -g)" /mnt/nav-lfs
+
+        sudo modprobe uinput || true
+
+        ls -ld /dev/input /dev/uinput || true
+
+        '
+    - name: Restore tested build infrastructure checkpoint
+      id: cross
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-lfs
+        key: nav-blfs13.1-x86_64-git-open-v1
+        fail-on-cache-miss: true
+    - name: Valgrind original four cases keep-unfiltered no install no save
+      shell: bash
+      run: "python3 - <<'NAV_GUARD'\nfrom pathlib import Path\nimport subprocess, json, gzip, base64, hashlib, os\nexporter\
+        \ = Path('/tmp/cython-export-evidence.py')\nexporter.write_text(\"from pathlib import Path\\nimport subprocess,tarfile,io,gzip,base64,hashlib,json,sys,traceback,os\\\
+        nroot=Path(sys.argv[1]);out=Path(sys.argv[2]);out.mkdir(parents=True,exist_ok=True)\\nprobe=out/'runner-write-probe';probe.write_text('ok');probe.unlink()\\\
+        nmanifest={'source':str(root),'runner_uid':os.getuid(),'files':{},'errors':[]}\\ndef emit(name,data):\\n manifest['files'][name]={'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}\\\
+        n compressed=gzip.compress(data,mtime=0);dest=out/(name+'.gz');dest.write_bytes(compressed)\\n for i in range(0,len(compressed),3000):print('NAV_CYTHON_EXPORT_'+name.upper().replace('.','_').replace('-','_')+'_B64',base64.b64encode(compressed[i:i+3000]).decode(),flush=True)\\\
+        nfor area in ['nav-build-metadata/cython','home/tester/cython-results']:\\n try:\\n  listing=subprocess.check_output(['sudo','find',str(root/area),'-type','f','-print0']).split(b'\\\
+        \\0')\\n except Exception as ex:manifest['errors'].append({'area':area,'error':repr(ex)});continue\\n files=[os.fsdecode(x)for\
+        \ x in listing if x]\\n # Every metadata log emits independently. XML files use separate independent members too.\\\
+        n for idx,file in enumerate(sorted(files)):\\n  try:\\n   rel=str(Path(file).relative_to(root));name=('META_'if area.startswith('nav')else\
+        \ 'XML_')+str(idx)+'_'+Path(file).name\\n   data=subprocess.check_output(['sudo','cat',file]);emit(name,data);manifest['files'][name]['source']=rel\\\
+        n  except Exception as ex:manifest['errors'].append({'file':file,'error':repr(ex)});print('NAV_CYTHON_EXPORT_INDEPENDENT_ERROR',repr(ex),flush=True)\\\
+        nemit('EXPORT_MANIFEST_JSON',json.dumps(manifest,indent=2).encode())\\nif manifest['errors']:sys.exit(2)\\n\")\nprobe\
+        \ = Path('/tmp/cython-evidence-real')\nprobe.mkdir(exist_ok=True)\nf = probe / 'uid-preflight'\nf.write_text(str(os.getuid()))\n\
+        assert f.read_text() == str(os.getuid())\nf.unlink()\nroot = Path('/tmp/cython-export-selftest-root')\nout = Path('/tmp/cython-export-selftest-out')\n\
+        fixture = \"from pathlib import Path\\nimport unittest,io,xml.etree.ElementTree as E\\np=Path('/tmp/cython-export-selftest-root');p.mkdir(exist_ok=True,mode=0o700)\\\
+        nm=p/'nav-build-metadata/cython';m.mkdir(parents=True,exist_ok=True)\\nx=p/'home/tester/cython-results';x.mkdir(parents=True,exist_ok=True)\\\
+        nclass ExportFailureProbe(unittest.TestCase):\\n def test_expected_failure(self):self.fail('synthetic failure for\
+        \ export validation only')\\ns=io.StringIO();r=unittest.TextTestRunner(stream=s,verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(ExportFailureProbe));assert\
+        \ len(r.failures)==1 and not r.errors\\n(m/'tests.log').write_text(s.getvalue());(m/'tests.exit').write_text(str(1)+chr(10))\\\
+        ne=E.Element('testsuite',tests='1',failures='1',errors='0');tc=E.SubElement(e,'testcase',name='test_expected_failure');E.SubElement(tc,'failure').text=r.failures[0][1];E.ElementTree(e).write(x/'probe.xml')\\\
+        n\"\nsubprocess.run(['sudo', 'python3', '-c', fixture], check=True)\nwith Path('/tmp/cython-export-selftest-output.log').open('w')\
+        \ as f:\n    subprocess.run(['python3', str(exporter), str(root), str(out)], stdout=f, check=True)\nassert b'synthetic\
+        \ failure for export validation only' in gzip.decompress((out / 'META_1_tests.log.gz').read_bytes())\nxml = gzip.decompress((out\
+        \ / 'XML_0_probe.xml.gz').read_bytes())\nassert b'failures=\"1\"' in xml and b'test_expected_failure' in xml\nmanifest\
+        \ = json.loads(gzip.decompress((out / 'EXPORT_MANIFEST_JSON.gz').read_bytes()))\nassert not manifest['errors'] and\
+        \ manifest['runner_uid'] == os.getuid()\nsubprocess.run(['sudo', 'mv', str(root / 'home/tester/cython-results'), str(root\
+        \ / 'home/tester/moved-results')], check=True)\nwith Path('/tmp/cython-export-selftest-negative.log').open('w') as\
+        \ f:\n    r = subprocess.run(['python3', str(exporter), str(root), '/tmp/cython-export-selftest-negative'], stdout=f)\n\
+        assert r.returncode == 2 and b'synthetic failure for export validation only' in gzip.decompress(Path('/tmp/cython-export-selftest-negative/META_1_tests.log.gz').read_bytes())\n\
+        print('NAV_CYTHON_SYNTHETIC_FAILURE_EXPORT_SELFTEST_PASS original log+XML survive; missing-source errors independent;\
+        \ not package tests', flush=True)\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
+        \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\nassert os.cpu_count()\
+        \ >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024 ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\n\
+        p.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\ntest -f \"\
+        $LFS/nav-build-metadata/git/GIT-TRANSITIONAL-OPEN.json\"\\npython3 - <<\\'DOWNLOADS\\'\\nfrom pathlib import Path\\\
+        nimport urllib.request,hashlib,json\\nlock=[{\\'filename\\': \\'valgrind-3.27.1.tar.bz2\\', \\'url\\': \\'https://sourceware.org/pub/valgrind/valgrind-3.27.1.tar.bz2\\\
+        ', \\'sha256\\': \\'5d589152eb8071c02feab8ce6ab719e431a1fbc3e2b1700f5432632a8b9264dc\\'}, {\\'filename\\': \\'valgrind-3.27.1-debug-location.patch\\\
+        ', \\'url\\': \\'https://sourceware.org/git/?p=valgrind.git;a=patch;h=44f0352b04d1b4ff68f3900406e6f9beed938b44\\',\
+        \ \\'sha256\\': \\'ea39a08d696ffb52ac4056eac59377a8f37f3c98a55ca89a662bc76026768449\\'}]\\np=Path(\\'/mnt/nav-lfs/nav-build-metadata/cython\\\
+        ');p.mkdir(exist_ok=True)\\nfor x in lock:\\n f=Path(\\'/mnt/nav-lfs/sources\\')/x[\\'filename\\']\\n with urllib.request.urlopen(x[\\\
+        'url\\'],timeout=120)as r,f.open(\\'wb\\')as w:\\n  while block:=r.read(1024*1024):w.write(block)\\n assert hashlib.file_digest(f.open(\\\
+        'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\']\\n print(\\'SOURCE_SHA256_OK\\',x[\\'filename\\'],flush=True)\\\
+        n(p/\\'source-lock.json\\').write_text(json.dumps(lock,indent=2))\\nDOWNLOADS\\npython3 - <<\\'INNER\\'\\nfrom pathlib\
+        \ import Path\\nPath(\\'/mnt/nav-lfs/sources/valgrind-four-stage.sh\\').write_text(\\'set -euo pipefail\\\\numask\
+        \ 022\\\\nulimit -v 4194304\\\\nexport MAKEFLAGS=-j2 PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin LANG=C.UTF-8\
+        \ PYTHONUNBUFFERED=1\\\\nunset LC_ALL LANGUAGE\\\\nulimit -c 0\\\\nchmod 1777 /tmp /var/tmp\\\\nP=/nav-build-metadata/cython\\\
+        \\nmkdir -p \"$P\" /home/tester/cython-results\\\\n# Generic independent exporter directory only. No Cython builds\
+        \ or target installation in this diagnostic.\\\\ncd /sources\\\\ntar -xf valgrind-3.27.1.tar.bz2\\\\ncd valgrind-3.27.1\\\
+        \\n{ gcc --version; g++ --version; gdb --version; ldd --version; ulimit -a; lscpu; valgrind --version || true; } >\
+        \ \"$P/preflight.log\" 2>&1\\\\npython3 - <<\\\\\\'PRISTINE\\\\\\'\\\\nfrom pathlib import Path\\\\nimport hashlib,json\\\
+        \\np=Path(\\\\\\'.\\\\\\')\\\\nx={str(f):hashlib.sha256(f.read_bytes()).hexdigest()for f in p.rglob(\\\\\\'*\\\\\\\
+        ')if f.is_file()}\\\\nPath(\\\\\\'/nav-build-metadata/cython/pristine-source-sha256.json\\\\\\').write_text(json.dumps(x,sort_keys=True))\\\
+        \\nPRISTINE\\\\npatch -Np1 -i ../valgrind-3.27.1-debug-location.patch > \"$P/established-patch.log\" 2>&1\\\\nsed\
+        \ -i \\\\\\'s|/doc/valgrind||\\\\\\' docs/Makefile.in\\\\npython3 - <<\\\\\\'PROVENANCE\\\\\\'\\\\nfrom pathlib import\
+        \ Path\\\\nimport hashlib,json\\\\np=Path(\\\\\\'.\\\\\\');old=json.loads(Path(\\\\\\'/nav-build-metadata/cython/pristine-source-sha256.json\\\
+        \\\\').read_text());changed=[str(f)for f in p.rglob(\\\\\\'*\\\\\\')if f.is_file()and str(f)in old and hashlib.sha256(f.read_bytes()).hexdigest()!=old[str(f)]]\\\
+        \\nassert set(changed)=={\\\\\\'tests/filter_libc\\\\\\',\\\\\\'docs/Makefile.in\\\\\\'},changed\\\\nPath(\\\\\\'/nav-build-metadata/cython/established-recipe-provenance.json\\\
+        \\\\').write_text(json.dumps({\\\\\\'original_run\\\\\\':\\\\\\'https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/43789214749/job/133043593469\\\
+        \\\\',\\\\\\'source\\\\\\':\\\\\\'3.27.1\\\\\\',\\\\\\'established_patch\\\\\\':\\\\\\'44f0352b04d1b4ff68f3900406e6f9beed938b44\\\
+        \\\\',\\\\\\'patch_actual_effect\\\\\\':\\\\\\'tests/filter_libc recognizes sysdep-cancel.h stack frames; historical\
+        \ filename debug-location.patch\\\\\\',\\\\\\'book_sed\\\\\\':\\\\\\'docs/Makefile.in versioned documentation path\\\
+        \\\\',\\\\\\'changed_paths\\\\\\':changed,\\\\\\'additional_source_or_test_edits\\\\\\':[],\\\\\\'link_flag\\\\\\\
+        ':\\\\\\'-Wl,--build-id=sha1\\\\\\',\\\\\\'test_scope\\\\\\':\\\\\\'original four cases only via original vg_regtest\
+        \ with --keep-unfiltered\\\\\\',\\\\\\'all_four_OPEN\\\\\\':True,\\\\\\'install\\\\\\':False,\\\\\\'save\\\\\\':False},indent=2))\\\
+        \\nPROVENANCE\\\\n./configure --prefix=/usr --datadir=/usr/share/doc/valgrind-3.27.1 LDFLAGS=\\\\\\'-Wl,--build-id=sha1\\\
+        \\\\' > \"$P/configure.log\" 2>&1\\\\ncp config.log \"$P/config.log\"\\\\ncp config.h \"$P/config.h\"\\\\nmake -j2\
+        \ > \"$P/build.log\" 2>&1\\\\nchown -R tester:tester .\\\\nset +e\\\\nsu tester -c \\\\\\'cd /sources/valgrind-3.27.1;\
+        \ make -j2 check\\\\\\' > \"$P/test-binary-build.log\" 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\
+        \\' \"$rc\" > \"$P/test-binary-build.exit\"\\\\ntest \"$rc\" = 0\\\\n{ readelf -n memcheck/tests/sendmsg; readelf\
+        \ -n drd/tests/pth_detached3; readelf -n none/tests/tls; } > \"$P/build-ids.log\" 2>&1\\\\nset +e\\\\nsu tester -c\
+        \ \\\\\\'cd /sources/valgrind-3.27.1; tests/vg_regtest --keep-unfiltered gdbserver_tests/hgtls.vgtest memcheck/tests/sendmsg.vgtest\
+        \ drd/tests/pth_detached3.vgtest drd/tests/tls_threads.vgtest\\\\\\' > \"$P/four-original-run.log\" 2>&1\\\\nrc=$?\\\
+        \\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > \"$P/four-original-run.exit\"\\\\npython3 - <<\\\\\\'PRESERVE\\\
+        \\\\'\\\\nfrom pathlib import Path\\\\nimport shutil,json,hashlib\\\\np=Path(\\\\\\'/nav-build-metadata/cython\\\\\
+        \\');src=Path(\\\\\\'/sources/valgrind-3.27.1\\\\\\');files=[]\\\\nfor case in [\\\\\\'gdbserver_tests/hgtls\\\\\\\
+        ',\\\\\\'memcheck/tests/sendmsg\\\\\\',\\\\\\'drd/tests/pth_detached3\\\\\\',\\\\\\'drd/tests/tls_threads\\\\\\']:\\\
+        \\n base=src/case;members=sorted(base.parent.glob(base.name+\\\\\\'.*\\\\\\'))\\\\n for f in members:\\\\n  if f.is_file():\\\
+        \\n   rel=f.relative_to(src);target=p/\\\\\\'original\\\\\\'/rel;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(f,target);files.append({\\\
+        \\\\'path\\\\\\':str(rel),\\\\\\'bytes\\\\\\':f.stat().st_size,\\\\\\'sha256\\\\\\':hashlib.sha256(f.read_bytes()).hexdigest()})\\\
+        \\nfor rel in [\\\\\\'gdbserver_tests/garbage.filtered.out\\\\\\',\\\\\\'tests/filter_libc\\\\\\',\\\\\\'tests/vg_regtest\\\
+        \\\\',\\\\\\'memcheck/tests/filter_sendmsg\\\\\\',\\\\\\'gdbserver_tests/filter_gdb\\\\\\',\\\\\\'gdbserver_tests/filter_make_empty\\\
+        \\\\',\\\\\\'test-suite-overall.log\\\\\\']:\\\\n f=src/rel\\\\n if f.is_file():\\\\n  target=p/\\\\\\'original\\\\\
+        \\'/rel;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(f,target);files.append({\\\\\\'path\\\\\\\
+        ':rel,\\\\\\'bytes\\\\\\':f.stat().st_size,\\\\\\'sha256\\\\\\':hashlib.sha256(f.read_bytes()).hexdigest()})\\\\n(p/\\\
+        \\\\'preserved-source-test-files.json\\\\\\').write_text(json.dumps(files,indent=2))\\\\nfor case in [\\\\\\'gdbserver_tests/hgtls\\\
+        \\\\',\\\\\\'memcheck/tests/sendmsg\\\\\\',\\\\\\'drd/tests/pth_detached3\\\\\\',\\\\\\'drd/tests/tls_threads\\\\\\\
+        ']:\\\\n assert (p/\\\\\\'original\\\\\\'/(case+\\\\\\'.vgtest\\\\\\')).exists(),case\\\\n# These are original results,\
+        \ never force-pass or substitute a diagnostic probe.\\\\nprint(\\\\\\'NAV_VALGRIND_FOUR_ORIGINALS_PRESERVED_NO_INSTALL_NO_SAVE\\\
+        \\\\',len(files))\\\\nPRESERVE\\\\nprintf \\\\\\'NAV_VALGRIND_DIAGNOSTIC_ONLY_NO_INSTALL_NO_SAVE original_rc=%s\\\\\
+        \\\\n\\\\\\' \"$rc\"\\\\n# Retain the original test exit state; always-export guard runs even when nonzero.\\\\ntest\
+        \ \"$rc\" = 0\\\\n\\')\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\\
+        nsudo env LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT\\'\\nset -euo pipefail\\nmount\
+        \ --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts\
+        \ devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\
+        \\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ];then install -d -m1777 \"$LFS$(realpath\
+        \ /dev/shm)\";else mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\";fi\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root\
+        \ TERM=dumb PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/valgrind-four-stage.sh\\\
+        nNAV_MOUNT\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash',\
+        \ str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0,\
+        \ sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n\
+        \        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start\
+        \ > 315 * 60:\n            raise RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds':\
+        \ round(time.monotonic() - start), 'free_disk_bytes': free, 'available_memory_kib': available}), flush=True)\n   \
+        \     time.sleep(20)\n    if proc.returncode:\n        raise RuntimeError('source-build failed with status ' + str(proc.returncode))\n\
+        finally:\n    if proc.poll() is None:\n        os.killpg(proc.pid, signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n\
+        \        except subprocess.TimeoutExpired:\n            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n\
+        \    log.close()\n    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n\
+        \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
+        \ 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON',\
+        \ 'NAV_TESTER', 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
+        \ 'NAV_PORTAL'])))))\n    export_rc = subprocess.run(['python3', '/tmp/cython-export-evidence.py', '/mnt/nav-lfs',\
+        \ '/tmp/cython-evidence-real']).returncode\n    print('NAV_CYTHON_EXPORT_RETURN', export_rc, flush=True)\n    if export_rc:\n\
+        \        raise RuntimeError('independent evidence export had errors, inspect all emitted originals')\nNAV_GUARD\n"
