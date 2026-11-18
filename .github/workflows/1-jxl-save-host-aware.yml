@@ -163,7 +163,7 @@ jobs:
         \ sorted(names) in (s[\\\\\\'canonical_7108\\\\\\'],s[\\\\\\'reconciled_6860\\\\\\']),\\\\\\'unexpected third enumeration\
         \ or name multiset\\\\\\'\\\\\\\\ncount=len(names);audit={\\\\\\'actual_discovered\\\\\\':count,\\\\\\'actual_scope\\\
         \\\\':\\\\\\'canonical_7108\\\\\\'if seen==a else \\\\\\'reconciled_6860\\\\\\',\\\\\\'canonical_scope\\\\\\':{\\\\\
-        \\'discovered\\\\\\':count,\\\\\\'pass\\\\\\':count-2,\\\\\\'cap_OPEN\\\\\\':1,\\\\\\'DISABLED\\\\\\':1},\\\\\\'AVX2_scope\\\
+        \\'discovered\\\\\\':7108,\\\\\\'pass\\\\\\':7106,\\\\\\'cap_OPEN\\\\\\':1,\\\\\\'DISABLED\\\\\\':1},\\\\\\'AVX2_scope\\\
         \\\\':{\\\\\\'discovered\\\\\\':6860,\\\\\\'pass\\\\\\':6858,\\\\\\'cap_OPEN\\\\\\':1,\\\\\\'DISABLED\\\\\\':1},\\\
         \\\\'delta_248\\\\\\':s[\\\\\\'AVX3_DL_delta_248\\\\\\'],\\\\\\'zero_new_names\\\\\\':not seen-a,\\\\\\'canonical_run\\\
         \\\\':s[\\\\\\'canonical_run\\\\\\'],\\\\\\'prior_AVX2_run\\\\\\':s[\\\\\\'reconciled_run\\\\\\'],\\\\\\'scope_manifest_sha256\\\
