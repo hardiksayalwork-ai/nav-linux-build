@@ -1,0 +1,365 @@
+name: NAV heif cargo-c combined install-only recovery original hashes no test replay
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-heif-cargoc-recovery
+  cancel-in-progress: false
+jobs:
+  recovery:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
+        \ in /mnt/nav-aomrepair-root.tar.zst /mnt/nav-recovery-root.tar.zst; do\n test ! -e \"$bundle\"\n sudo install\
+        \ -o \"$(id -u)\" -g \"$(id -g)\" -m 0600 /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"$(stat -c\
+        \ '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n\
+        \ printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\n' > \"$probe/proof\"\n tar --zstd -cf \"$bundle\" -C \"$probe\"\
+        \ proof\n zstd -t \"$bundle\"\n tar --zstd -xOf \"$bundle\" proof > \"$probe/recovered\"\n cmp \"$probe/proof\"\
+        \ \"$probe/recovered\"\n # Match actions/cache extraction semantics, not only bundle writer access.\n test\
+        \ \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n cp \"$bundle\" \"$probe/expected-bundle\"\n\
+        \ relative_bundle=$(realpath --relative-to=\"$PWD\" \"$bundle\")\n tar --zstd -cf \"$probe/cache.tzst\"\
+        \ -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n env -u TAR_OPTIONS /usr/bin/tar -xf \"$probe/cache.tzst\"\
+        \ -P -C \"$PWD\" --use-compress-program unzstd > \"$probe/default-restore.log\" 2>&1\n negative_rc=$?\n\
+        \ set -e\n test \"$negative_rc\" = 2\n test ! -s \"$bundle\"\n grep -F 'Cannot open: File exists' \"$probe/default-restore.log\"\
+        \n TAR_OPTIONS=--overwrite /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program\
+        \ unzstd\n cmp \"$probe/expected-bundle\" \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"\
+        $(id -u):$(id -g):600\"\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS\
+        \ %s\\n' \"$bundle\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic\
+        \ failure evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"\
+        ><failure message=\"synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n\
+        \ f=p/name;f.write_bytes(data)\n subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\\
+        n    data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_RECOVERY_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing =\
+        \ []\\n    manifest['errors'].append({'area': str(p), 'error': repr(ex)})\\nfor item in sorted((x for x\
+        \ in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\n    rel = str(f.relative_to(p))\\n    wanted\
+        \ = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard'\
+        \ and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples'\
+        \ and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name,\
+        \ data)\\n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error':\
+        \ repr(ex)})\\nemit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\\
+        n    raise RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"\
+        '/mnt/nav-lfs/nav-build-metadata/aom-tooling'\",repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\n\
+        assert r.returncode==0,r.stderr\nparts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_RECOVERY_'):\n\
+        \  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\nm=json.loads(gzip.decompress(b''.join(parts['NAV_RECOVERY_EXPORT-MANIFEST_JSON_GZB64'])))\n\
+        assert not m['errors'] and len(m['files'])==len(expected)\nfor name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_RECOVERY_'+name+'_GZB64']))\n\
+        \ assert b==expected[v['source']] and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\n\
+        missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
+        assert r.returncode!=0 and 'NAV_RECOVERY_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_RECOVERY_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
+        EXPORT_SELFTEST\n"
+    - name: Restore protected corrected AOM checkpoint with x265 and libde265
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-aomrepair-root.tar.zst
+        key: nav-blfs13.1-x86_64-aom-static-repair-open-v1
+        fail-on-cache-miss: true
+    - name: Verify exact corrected AOM root
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf "d28cadb0d6b7014f6b83f57fa5d136ead9448456bd640d211a31fa676b37e129  /mnt/nav-aomrepair-root.tar.zst\n"
+        | sha256sum -c -
+
+        zstd -t /mnt/nav-aomrepair-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-aomrepair-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/aom-repair/AOMREPAIR-TRANSITIONAL-OPEN.json
+
+        '
+    - name: Authenticated original archived evidence recovery, all760 payloads byte hash exact
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: "python3 - <<'ARCHIVE'\nimport os,time,json,urllib.request,urllib.error,email.utils\nTOKEN=os.environ['GH_TOKEN'];assert\
+        \ TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\nclass SafeRedirect(urllib.request.HTTPRedirectHandler):\n\
+        \ def redirect_request(self,req,fp,code,msg,headers,newurl):\n  new=super().redirect_request(req,fp,code,msg,headers,newurl)\n\
+        \  if new is not None and not newurl.startswith('https://api.github.com/'):new.remove_header('Authorization')\n\
+        \  return new\nOPENER=urllib.request.build_opener(SafeRedirect())\ndef api(path):\n assert not path.startswith('/')\
+        \ and '://'not in path\n for attempt in range(5):\n  req=urllib.request.Request(BASE+path,headers={'Authorization':'Bearer\
+        \ '+TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \  try:\n   with OPENER.open(req,timeout=120)as r:return r.read()\n  except urllib.error.HTTPError as ex:\n\
+        \   if ex.code not in(403,429,500,502,503,504)or attempt==4:raise RuntimeError('GitHub API request failed\
+        \ status '+str(ex.code))from None\n   delay=max(30,min(600,int(ex.headers.get('Retry-After','60'))))\n \
+        \  if ex.headers.get('X-RateLimit-Remaining')=='0':\n    delay=max(delay,int(ex.headers.get('X-RateLimit-Reset','0'))-int(time.time())+5)\n\
+        \   if delay>900:raise RuntimeError('Rate limit reset beyond bounded retry; no save or deletion')from None\n\
+        \   print('NAV_AUTHENTICATED_API_RETRY',attempt+1,'delay_seconds',delay,flush=True);time.sleep(delay)\n\
+        \ raise RuntimeError('API bounded retries exhausted')\n\nfrom pathlib import Path,PurePosixPath\nimport\
+        \ base64,gzip,re,hashlib,collections,json\nr=Path('/mnt/nav-lfs');p=r/'nav-build-metadata/recovery';p.mkdir(parents=True)\n\
+        for job,prefix,dest,pin in [(135634333285,'NAV_HEIFSAVE_',r/'nav-build-metadata/libheif','783bcf8fd1868b21e2d58025fa7ae71689f14d16072aafa2f400a8dd0425d672'),(135647228499,'NAV_CARGOC_',r/'nav-build-metadata/cargo-c','cab1f2553d7a3ef147b936f9ff1d2711b643541242a0585cf210b57bf62098b7')]:\n\
+        \ raw=api('actions/jobs/'+str(job)+'/logs');text=raw.decode();parts=collections.defaultdict(list)\n for\
+        \ line in text.splitlines():\n  m=re.search(r'\\b'+prefix+r'([A-Z0-9_-]+)_GZB64 ([A-Za-z0-9+/=]+)\\s*$',line)\n\
+        \  if m:parts[m[1]].append(base64.b64decode(m[2],validate=True))\n manifest=gzip.decompress(b''.join(parts['EXPORT-MANIFEST_JSON']));assert\
+        \ hashlib.sha256(manifest).hexdigest()==pin\n m=json.loads(manifest);assert not m['errors'];dest.mkdir(parents=True)\n\
+        \ for name,x in m['files'].items():\n  rel=PurePosixPath(x['source']);assert not rel.is_absolute()and '..'not\
+        \ in rel.parts\n  b=gzip.decompress(b''.join(parts[name]));assert len(b)==x['bytes']and hashlib.sha256(b).hexdigest()==x['sha256'],name\n\
+        \  f=dest/rel;f.parent.mkdir(parents=True,exist_ok=True);f.write_bytes(b)\n (dest/'export-manifest.original.json').write_bytes(manifest);print('NAV_RECOVERY_ORIGINAL_ARCHIVED_EVIDENCE_EXACT',job,len(m['files']),flush=True)\n\
+        \nARCHIVE\n"
+    - name: Prepare exact install-only reconstruction stage
+      shell: bash
+      run: 'python3 - <<''PREPARE_STAGE''
+
+        from pathlib import Path
+
+        Path(''/tmp/nav-source-stage.sh'').write_text(''set -euo pipefail\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\nulimit
+        -v 4194304\numask 022\nmkdir -p "$LFS/nav-build-metadata/recovery"\npython3 - <<\''DOWNLOAD\''\nfrom pathlib
+        import Path,PurePosixPath\nimport urllib.request,hashlib,tarfile,json\nsrc={\''filename\'': \''libheif-1.23.7.tar.gz\'',
+        \''url\'': \''https://github.com/strukturag/libheif/releases/download/v1.23.7/libheif-1.23.7.tar.gz\'',
+        \''sha256\'': \''f7483e818503ea6224c8863e4a56ac02c7089021a98472c811c12aa19faf2475\'', \''md5\'': \''01665401e4c9495d90b703ee85732cac\'',
+        \''top\'': \''libheif-1.23.7\''}\np=Path(\''/mnt/nav-lfs/sources\'')/src[\''filename\'']\nwith urllib.request.urlopen(src[\''url\''],timeout=120)as
+        r:p.write_bytes(r.read())\nassert hashlib.file_digest(p.open(\''rb\''),\''sha256\'').hexdigest()==src[\''sha256\'']\nwith
+        tarfile.open(p)as t:\n for m in t.getmembers():\n  q=PurePosixPath(m.name);assert not q.is_absolute()and
+        \''..\''not in q.parts and q.parts[0]==src[\''top\'']\n  assert m.isfile()or m.isdir(),m.name\n t.extractall(p.parent,filter=\''data\'')\nPath(\''/mnt/nav-lfs/nav-build-metadata/recovery/heif-source-lock.json\'').write_text(json.dumps(src,indent=2))\n\noriginal={}\nfor
+        f in (p.parent/src[\''top\'']).rglob(\''*\''):\n if f.is_file()and not f.is_symlink():original[str(f.relative_to(p.parent/src[\''top\'']))]={\''bytes\'':f.stat().st_size,\''sha256\'':hashlib.file_digest(f.open(\''rb\''),\''sha256\'').hexdigest()}\nPath(\''/mnt/nav-lfs/nav-build-metadata/recovery/heif-downloaded-source-files-sha256.json\'').write_text(json.dumps(original,sort_keys=True,indent=2))\nprint(\''NAV_HEIF_SOURCE_SHA256_OK\'')\nDOWNLOAD\npython3
+        - <<\''DOWNLOAD\''\nfrom pathlib import Path,PurePosixPath\nimport urllib.request,hashlib,tarfile,json\np=Path(\''/mnt/nav-lfs/sources/cargo-c-0.10.24.tar.gz\'');url=\''https://github.com/lu-zero/cargo-c/archive/v0.10.24/cargo-c-0.10.24.tar.gz\''\nwith
+        urllib.request.urlopen(url,timeout=120)as r:p.write_bytes(r.read())\nassert hashlib.file_digest(p.open(\''rb\''),\''sha256\'').hexdigest()==\''91c6e0be34aa0ad26b7ef21ce21a390c95635e4e6e00b7a6ff07323f9af8550b\''\nwith
+        tarfile.open(p)as t:\n for m in t.getmembers():\n  q=PurePosixPath(m.name);assert not q.is_absolute()and
+        \''..\''not in q.parts and q.parts[0]==\''cargo-c-0.10.24\'';assert m.isfile()or m.isdir(),m.name\n t.extractall(p.parent,filter=\''data\'')\ns=p.parent/\''cargo-c-0.10.24\'';lock=s/\''Cargo.lock\''\nwith
+        urllib.request.urlopen(\''https://github.com/lu-zero/cargo-c/releases/download/v0.10.24/Cargo.lock\'',timeout=120)as
+        r:lock.write_bytes(r.read())\nassert hashlib.file_digest(lock.open(\''rb\''),\''sha256\'').hexdigest()==\''0cbf346afe2c77fec7b39f8954b9de0639ced04234764240c8290dbec8d45e82\''\noriginal={str(f.relative_to(s)):{\''bytes\'':f.stat().st_size,\''sha256\'':hashlib.file_digest(f.open(\''rb\''),\''sha256\'').hexdigest()}for
+        f in s.rglob(\''*\'')if f.is_file()and not f.is_symlink()};assert original==json.loads(Path(\''/mnt/nav-lfs/nav-build-metadata/cargo-c/original-source-files-sha256.json\'').read_text());print(\''NAV_CARGOC_SOURCE_AND_RELEASE_LOCK_SHA256_OK\'',len(original))\nDOWNLOAD\npython3
+        - <<\''PREPARE\''\nfrom pathlib import Path\nimport hashlib\nPath(\''/mnt/nav-lfs/sources/recovery-stage.sh\'').write_text(\''set
+        -euo pipefail\\numask 022\\nulimit -v 4194304\\nexport PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin
+        LANG=C.UTF-8 MAKEFLAGS=-j2 CARGO_BUILD_JOBS=2\\nunset LC_ALL LANGUAGE\\nchmod 1777 /tmp /var/tmp\\nP=/nav-build-metadata/recovery\\nH=/nav-build-metadata/libheif\\nC=/nav-build-metadata/cargo-c\\nmkdir
+        -p "$P" "$H" "$C" /tmp/nav-heif-stage\\npkg-config --modversion libde265 x265 aom > "$P/prerequisite-versions.log"\\n#
+        Exact original production source/options. Compile only; no canonical test execution.\\nchown -R tester:tester
+        /sources/libheif-1.23.7 "$P"\\nsu tester -c \\\''cmake -S /sources/libheif-1.23.7 -B /sources/libheif-1.23.7/build-production
+        -D CMAKE_INSTALL_PREFIX=/usr -D CMAKE_BUILD_TYPE=Release -D WITH_GDK_PIXBUF=OFF -D WITH_OpenH264_DECODER=OFF
+        -G Ninja\\\'' > "$P/heif-configure.log" 2>&1\\nsu tester -c \\\''cmake --build /sources/libheif-1.23.7/build-production
+        -j2\\\'' > "$P/heif-build.log" 2>&1\\nDESTDIR=/tmp/nav-heif-stage cmake --install /sources/libheif-1.23.7/build-production
+        > "$P/heif-staged-install.log" 2>&1\\npython3 /sources/recovery-verify.py heif\\n# Copy only the verified
+        staged installation into target root.\\ncp -a /tmp/nav-heif-stage/usr/. /usr/\\nldconfig\\npkg-config --modversion
+        libheif > "$P/heif-installed-version.log"\\ntest "$(cat "$P/heif-installed-version.log")" = 1.23.7\\nldd
+        /usr/lib/libheif.so /usr/bin/heif-enc /usr/bin/heif-dec > "$P/heif-installed-linkage.log" 2>&1\\n! grep
+        -q \\\''not found\\\'' "$P/heif-installed-linkage.log"\\nfor lib in libaom.so.3 libde265.so libx265.so;do
+        grep -q "$lib" "$P/heif-installed-linkage.log";done\\nmkdir /tmp/nav-heif-installed\\ncc /sources/heif-installed-smoke.c
+        $(pkg-config --cflags --libs libheif) -o /tmp/nav-heif-installed/smoke > "$P/heif-smoke-build.log" 2>&1\\n/tmp/nav-heif-installed/smoke
+        heic /tmp/nav-heif-installed/out.heic > "$P/heif-installed-heic-lossless.log" 2>&1\\n/tmp/nav-heif-installed/smoke
+        avif /tmp/nav-heif-installed/out.avif > "$P/heif-installed-avif-lossless.log" 2>&1\\n# Exact original cargo-c
+        release build/lock, no canonical test replay.\\nexport LIBSSH2_SYS_USE_PKG_CONFIG=1 LIBSQLITE3_SYS_USE_PKG_CONFIG=1
+        CARGO_HOME=/tmp/nav-cargo-c-home\\nmkdir "$CARGO_HOME"\\nchown -R tester:tester /sources/cargo-c-0.10.24
+        "$CARGO_HOME"\\nsu tester -c \\\''export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin;cd /sources/cargo-c-0.10.24
+        && CARGO_BUILD_JOBS=2 CARGO_HOME=/tmp/nav-cargo-c-home LIBSSH2_SYS_USE_PKG_CONFIG=1 LIBSQLITE3_SYS_USE_PKG_CONFIG=1
+        cargo build --release --locked\\\'' > "$P/cargoc-build.log" 2>&1\\npython3 /sources/recovery-verify.py cargoc\\ninstall
+        -vm755 /sources/cargo-c-0.10.24/target/release/cargo-{capi,cbuild,cinstall,ctest} /usr/bin/ > "$P/cargoc-install.log"
+        2>&1\\nunset LIBSSH2_SYS_USE_PKG_CONFIG LIBSQLITE3_SYS_USE_PKG_CONFIG\\nfor n in capi cbuild cinstall ctest;do
+        /usr/bin/cargo-$n --version;done > "$P/cargoc-installed-versions.log" 2>&1\\nfor n in capi cbuild cinstall
+        ctest;do ldd /usr/bin/cargo-$n;done > "$P/cargoc-installed-linkage.log" 2>&1\\n! grep -q \\\''not found\\\''
+        "$P/cargoc-installed-linkage.log"\\npython3 /sources/recovery-verify.py final\\n\'')\nPath(\''/mnt/nav-lfs/sources/recovery-verify.py\'').write_text(\''from
+        pathlib import Path\\nimport json,hashlib,os,sys,subprocess,re,shutil,stat\\nP=Path(\\\''/nav-build-metadata/recovery\\\'');H=Path(\\\''/nav-build-metadata/libheif\\\'');C=Path(\\\''/nav-build-metadata/cargo-c\\\'')\\ndef
+        sha(f):return hashlib.file_digest(Path(f).open(\\\''rb\\\''),\\\''sha256\\\'').hexdigest()\\ndef exact(root,original):\\n
+        for rel,x in original.items():\\n  f=Path(root)/rel;assert f.is_file()and not f.is_symlink()and f.stat().st_size==x[\\\''bytes\\\'']and
+        sha(f)==x[\\\''sha256\\\''],rel\\nif sys.argv[1]==\\\''heif\\\'':\\n s=Path(\\\''/sources/libheif-1.23.7\\\'');original=json.loads((H/\\\''original-diagnostics/original-source-files-sha256.json\\\'').read_text());exact(s,original)\\n
+        archived=json.loads((H/\\\''original-diagnostics/tooling-files-sha256.json\\\'').read_text());prefix=\\\''sources/libheif-1.23.7/build-production/\\\''\\n
+        # Compare compiled runtime outputs before install-time RPATH removal. Other compiler intermediates remain
+        non-install evidence.\\n wanted={k:v for k,v in archived.items()if k.startswith(prefix)and (k.split(\\\''/\\\'')[-1].startswith(\\\''libheif.so\\\'')or
+        k.split(\\\''/\\\'')[-1]in [\\\''heif-info\\\'',\\\''heif-enc\\\'',\\\''heif-dec\\\'',\\\''heif-thumbnailer\\\''])}\\n
+        assert len([k for k,v in wanted.items()if \\\''sha256\\\''in v])==5,wanted\\n for rel,x in wanted.items():\\n  f=Path(\\\''/\\\'')/rel\\n  if
+        \\\''symlink\\\''in x:assert f.is_symlink()and os.readlink(f)==x[\\\''symlink\\\''],rel\\n  else:assert
+        f.is_file()and f.stat().st_size==x[\\\''bytes\\\'']and sha(f)==x[\\\''sha256\\\''],rel\\n stage=Path(\\\''/tmp/nav-heif-stage\\\'');records={};expected=Path(\\\''/tmp/nav-heif-rpath-expected\\\'');expected.mkdir()\\n
+        # The previous original install log is the authoritative installed pathname list.\\n original_paths=re.findall(r\\\''^--
+        Installing: (/usr/.*)$\\\'',(H/\\\''install.log\\\'').read_text(),re.M)\\n actual={str(f.relative_to(stage))for
+        f in stage.rglob(\\\''*\\\'')if f.is_file()or f.is_symlink()}\\n expected_paths={x.lstrip(\\\''/\\\'')for
+        x in original_paths if not x.endswith(\\\''/usr/lib/libheif\\\'')}\\n assert actual==expected_paths,{\\\''only_actual\\\'':sorted(actual-expected_paths),\\\''only_expected\\\'':sorted(expected_paths-actual)}\\n
+        known_hashes={x[\\\''sha256\\\'']for x in archived.values()if \\\''sha256\\\''in x}|{x[\\\''sha256\\\'']for
+        x in original.values()}\\n for rel in sorted(actual):\\n  f=stage/rel\\n  if f.is_symlink():\\n   assert
+        rel in [\\\''usr/lib/libheif.so\\\'',\\\''usr/lib/libheif.so.1\\\'']and os.readlink(f)in [\\\''libheif.so.1\\\'',\\\''libheif.so.1.23.7\\\''],rel\\n   records[rel]={\\\''symlink\\\'':os.readlink(f)};continue\\n  digest=sha(f)\\n  if
+        rel.startswith(\\\''usr/bin/\\\''):\\n   src=s/\\\''build-production/examples\\\''/f.name;dst=expected/f.name;shutil.copy2(src,dst)\\n   dynamic=subprocess.check_output([\\\''readelf\\\'',\\\''-d\\\'',str(src)],text=True)\\n   paths=re.findall(r\\\''\\\\((?:RUNPATH|RPATH)\\\\).*?\\\\[(.*?)\\\\]\\\'',dynamic);assert
+        len(paths)==1 and paths[0].startswith(\\\''/sources/libheif-1.23.7/build-production/libheif\\\''),paths\\n   script=expected/(f.name+\\\''.cmake\\\'');script.write_text(\\\''file(RPATH_CHANGE
+        FILE "\\\''+str(dst)+\\\''" OLD_RPATH "\\\''+paths[0]+\\\''" NEW_RPATH "")\\\\n\\\'')\\n   subprocess.run([\\\''cmake\\\'',\\\''-P\\\'',str(script)],check=True,capture_output=True,text=True)\\n   assert
+        digest==sha(dst),{\\\''path\\\'':rel,\\\''reason\\\'':\\\''not solely original CMake RPATH-removal transform\\\''}\\n   classification=\\\''archived
+        compiled hash exact plus independently reproduced original CMake RPATH-removal only\\\''\\n  else:\\n   assert
+        digest in known_hashes,{\\\''path\\\'':rel,\\\''reason\\\'':\\\''staged payload has no exact original source
+        or compiled hash\\\''}\\n   classification=\\\''exact archived original source or compiled hash\\\''\\n  records[rel]={\\\''bytes\\\'':f.stat().st_size,\\\''sha256\\\'':digest,\\\''verification\\\'':classification}\\n
+        (P/\\\''heif-staged-files.json\\\'').write_text(json.dumps(records,indent=2));(P/\\\''heif-reconstruction-gate.json\\\'').write_text(json.dumps({\\\''original_source_files_exact\\\'':len(original),\\\''compiled_runtime_paths_exact\\\'':len(wanted),\\\''staged_payloads\\\'':len(records),\\\''only_original_rpath_removal\\\'':True,\\\''canonical_tests_replayed\\\'':False},indent=2));print(\\\''NAV_RECOVERY_HEIF_STAGED_ALL_PAYLOADS_EXACT_WITH_ORIGINAL_RPATH_TRANSFORM\\\'',len(records))\\nelif
+        sys.argv[1]==\\\''cargoc\\\'':\\n s=Path(\\\''/sources/cargo-c-0.10.24\\\'');original=json.loads((C/\\\''original-source-files-sha256.json\\\'').read_text());exact(s,original)\\n
+        archived=json.loads((C/\\\''installed-checks.json\\\'').read_text());exact(s/\\\''target/release\\\'',archived)\\n
+        (P/\\\''cargoc-reconstruction-gate.json\\\'').write_text(json.dumps({\\\''source_release_lock_files_exact\\\'':len(original),\\\''four_runtime_binaries_original_installed_hashes_exact\\\'':True,\\\''canonical_tests_replayed\\\'':False},indent=2));print(\\\''NAV_RECOVERY_CARGOC_ALL4_ORIGINAL_INSTALLED_HASHES_EXACT\\\'')\\nelif
+        sys.argv[1]==\\\''final\\\'':\\n heif=json.loads((P/\\\''heif-staged-files.json\\\'').read_text())\\n for
+        rel,x in heif.items():\\n  f=Path(\\\''/\\\'')/rel\\n  if \\\''symlink\\\''in x:assert f.is_symlink()and
+        os.readlink(f)==x[\\\''symlink\\\''],rel\\n  else:assert f.is_file()and f.stat().st_size==x[\\\''bytes\\\'']and
+        sha(f)==x[\\\''sha256\\\''],rel\\n exact(\\\''/usr/bin\\\'',json.loads((C/\\\''installed-checks.json\\\'').read_text()))\\n
+        for kind in [\\\''heic\\\'',\\\''avif\\\'']:assert \\\''NAV_HEIF_INSTALLED_\\\''+kind+\\\''_LOSSLESS_PIXELS_EXACT
+        6144\\\''in(P/(\\\''heif-installed-\\\''+kind+\\\''-lossless.log\\\'')).read_text()\\n versions=(P/\\\''cargoc-installed-versions.log\\\'').read_text().splitlines();assert
+        len(versions)==4 and all(\\\''cargo-c 0.10.24+cargo-0.98.0\\\''in x for x in versions),versions\\n for rel,old
+        in [(\\\''libheif/HEIF-TRANSITIONAL-OPEN.json\\\'',\\\''cargo-c/CARGOC-TRANSITIONAL-OPEN.json\\\'')]:\\n  pass\\n
+        a={\\\''classification\\\'':\\\''TRANSITIONAL reconstructed installs only, original canonical test evidence
+        retained but NOT rerun, all inherited gaps OPEN, not OSacceptance\\\'',\\\''heif_version\\\'':\\\''1.23.7\\\'',\\\''cargoc_version\\\'':\\\''0.10.24+cargo-0.98.0\\\'',\\\''heif_gate\\\'':json.loads((P/\\\''heif-reconstruction-gate.json\\\'').read_text()),\\\''cargoc_gate\\\'':json.loads((P/\\\''cargoc-reconstruction-gate.json\\\'').read_text()),\\\''heif_linkage_and_both_lossless6144byte_roundtrips\\\'':\\\''PASS\\\'',\\\''cargoc_fourCLI_versions_linkage_originalhashes\\\'':\\\''PASS\\\'',\\\''canonical_tests_replayed\\\'':False,\\\''jobs\\\'':2,\\\''memory_cap_KiB\\\'':4194304,\\\''source_patches\\\'':[],\\\''all_inherited_gaps_OPEN\\\'':True}\\n
+        (P/\\\''RECOVERY-TRANSITIONAL-OPEN.json\\\'').write_text(json.dumps(a,indent=2));print(\\\''NAV_RECOVERY_INSTALLED_BOTH_ORIGINAL_HASH_GATES_AND_CHEAP_CHECKS_PASS\\\'')\\nelse:raise
+        SystemExit(2)\\n\'')\nPath(\''/mnt/nav-lfs/sources/heif-installed-smoke.c\'').write_text(\''#include <libheif/heif.h>\\n#include
+        <stdio.h>\\n#include <stdlib.h>\\n#include <string.h>\\nstatic void ok(struct heif_error e){if(e.code){fprintf(stderr,"heif
+        error %d/%d: %s\\\\n",e.code,e.subcode,e.message);exit(2);}}\\nstatic unsigned char val(int c,int x,int
+        y){return (unsigned char)((x*7+y*13+c*71)%256);}\\nint main(int argc,char **argv){if(argc!=3)return 3;enum
+        heif_compression_format fmt=!strcmp(argv[1],"avif")?heif_compression_AV1:heif_compression_HEVC;struct heif_context
+        *ctx=heif_context_alloc();struct heif_encoder *enc=0;struct heif_image *im=0,*decoded=0;struct heif_image_handle
+        *handle=0;ok(heif_context_get_encoder_for_format(ctx,fmt,&enc));ok(heif_encoder_set_lossless(enc,1));printf("encoder=%s
+        version=%s\\\\n",heif_encoder_get_name(enc),heif_get_version());ok(heif_image_create(64,64,heif_colorspace_YCbCr,heif_chroma_420,&im));for(int
+        c=0;c<3;c++){int w=c?32:64,h=w,stride;ok(heif_image_add_plane(im,(enum heif_channel)c,w,h,8));unsigned char
+        *p=heif_image_get_plane(im,(enum heif_channel)c,&stride);if(!p)return 4;for(int y=0;y<h;y++)for(int x=0;x<w;x++)p[y*stride+x]=val(c,x,y);}ok(heif_context_encode_image(ctx,im,enc,0,&handle));ok(heif_context_write_to_file(ctx,argv[2]));heif_image_handle_release(handle);heif_encoder_release(enc);heif_image_release(im);heif_context_free(ctx);ctx=heif_context_alloc();ok(heif_context_read_from_file(ctx,argv[2],0));ok(heif_context_get_primary_image_handle(ctx,&handle));ok(heif_decode_image(handle,&decoded,heif_colorspace_YCbCr,heif_chroma_420,0));size_t
+        bytes=0;for(int c=0;c<3;c++){int w=c?32:64,h=w,stride;if(heif_image_get_width(decoded,(enum heif_channel)c)!=w||heif_image_get_height(decoded,(enum
+        heif_channel)c)!=h)return 5;const unsigned char *p=heif_image_get_plane_readonly(decoded,(enum heif_channel)c,&stride);if(!p)return
+        6;for(int y=0;y<h;y++)for(int x=0;x<w;x++){if(p[y*stride+x]!=val(c,x,y)){fprintf(stderr,"pixel mismatch
+        channel%d x%d y%d expected%d actual%d\\\\n",c,x,y,val(c,x,y),p[y*stride+x]);return 7;}bytes++;}}printf("NAV_HEIF_INSTALLED_%s_LOSSLESS_PIXELS_EXACT
+        %zu\\\\n",argv[1],bytes);heif_image_release(decoded);heif_image_handle_release(handle);heif_context_free(ctx);return
+        0;}\\n\'')\nPREPARE\nsudo chown -hR root:root "$LFS"\nsudo chown -R 101:101 "$LFS/home/tester"\npython3
+        - <<\''RESOLVER_HELPER\''\nfrom pathlib import Path\nPath(\''/tmp/nav-aom-resolver-proof.py\'').write_text("import
+        pathlib,stat,os,hashlib,json,sys\\np=pathlib.Path(\''/mnt/nav-lfs/etc/resolv.conf\'')\\ndef state():\\n
+        try:s=p.lstat()\\n except FileNotFoundError:return {\''kind\'':\''absent\''}\\n if stat.S_ISLNK(s.st_mode):return
+        {\''kind\'':\''symlink\'',\''target\'':os.readlink(p),\''mode\'':stat.S_IMODE(s.st_mode),\''uid\'':s.st_uid,\''gid\'':s.st_gid,\''inode\'':s.st_ino,\''mtime_ns\'':s.st_mtime_ns}\\n
+        if not stat.S_ISREG(s.st_mode):return {\''kind\'':\''unsupported\'',\''mode\'':s.st_mode}\\n return {\''kind\'':\''regular\'',\''sha256\'':hashlib.sha256(p.read_bytes()).hexdigest(),\''bytes\'':s.st_size,\''mode\'':stat.S_IMODE(s.st_mode),\''uid\'':s.st_uid,\''gid\'':s.st_gid,\''inode\'':s.st_ino,\''mtime_ns\'':s.st_mtime_ns}\\nf=pathlib.Path(\''/mnt/nav-lfs/nav-build-metadata/recovery/resolver-original-state.json\'')\\nif
+        sys.argv[1]==\''snapshot\'':\\n x=state();f.write_text(json.dumps(x,indent=2));assert x[\''kind\'']in(\''absent\'',\''regular\'')
+        or (x[\''kind\'']==\''symlink\'' and x[\''target\'']==\''/run/systemd/resolve/stub-resolv.conf\''), \''resolver
+        type requires separate review: \''+repr(x)\\nelse:\\n assert state()==json.loads(f.read_text()),\''target
+        resolver changed after namespace\'';print(\''NAV_AOM_TARGET_RESOLVER_ORIGINAL_STATE_UNCHANGED\'')\\n")\nRESOLVER_HELPER\nsudo
+        python3 /tmp/nav-aom-resolver-proof.py snapshot\nHOST_RESOLVER=$(readlink -f /etc/resolv.conf)\ntest -s
+        "$HOST_RESOLVER"\nsudo env LFS="$LFS" HOST_RESOLVER="$HOST_RESOLVER" unshare --mount --propagation private
+        /bin/bash <<\''NAV_MOUNT\''\nset -euo pipefail\nmount --bind "$LFS" "$LFS"\nmkdir -p "$LFS"/{dev,proc,sys,run}\nmount
+        --bind /dev "$LFS/dev"\nmount -t devpts devpts -o gid=5,mode=0620 "$LFS/dev/pts"\nmount -t proc proc "$LFS/proc"\nmount
+        -t sysfs -o ro sysfs "$LFS/sys"\nmount -t tmpfs -o nosuid,nodev tmpfs "$LFS/run"\nif [ -h "$LFS/dev/shm"
+        ];then install -d -m1777 "$LFS$(realpath /dev/shm)";else mount -t tmpfs -o nosuid,nodev tmpfs "$LFS/dev/shm";fi\n#
+        Disposable resolver binding exists only in this namespace and this build stage.\nresolver="$LFS/etc/resolv.conf"\nsymlink_resolver=0\nif
+        [ -L "$resolver" ]; then\n test "$(readlink "$resolver")" = /run/systemd/resolve/stub-resolv.conf\n test
+        "$(findmnt -n -o FSTYPE --target "$LFS/run")" = tmpfs\n mkdir -p "$LFS/run/systemd/resolve"\n resolver="$LFS/run/systemd/resolve/stub-resolv.conf"\n
+        symlink_resolver=1\nfi\ncreated_resolver=0\nbound_resolver=0\ncleanup_resolver() {\n rc=$?\n trap - EXIT\n
+        if [ "$bound_resolver" = 1 ]; then umount "$resolver" || exit 1; fi\n if [ "$created_resolver" = 1 ]; then\n  test
+        ! -L "$resolver" && test -f "$resolver" && test ! -s "$resolver" && test "$(stat -c \''%i\'' "$resolver")"
+        = "$created_inode" || exit 1\n  python3 -c \''import os,sys;os.unlink(sys.argv[1])\'' "$resolver" || exit
+        1\n fi\n python3 /tmp/nav-aom-resolver-proof.py verify || exit 1\n exit "$rc"\n}\ntrap cleanup_resolver
+        EXIT\nif [ ! -e "$resolver" ] && [ ! -L "$resolver" ]; then\n install -m0600 /dev/null "$resolver"\n created_resolver=1\n
+        created_inode=$(stat -c \''%i\'' "$resolver")\nfi\ntest ! -L "$resolver" && test -f "$resolver"\nmount --bind
+        "$HOST_RESOLVER" "$resolver"\nbound_resolver=1\nmount -o remount,bind,ro "$resolver"\nfindmnt -no OPTIONS
+        --target "$resolver" | tr \'',\'' \''\\n\'' | grep -Fx ro\ncmp "$HOST_RESOLVER" "$resolver"\ntimeout 90
+        chroot "$LFS" /usr/bin/env -i HOME=/root PATH=/usr/bin:/usr/sbin LC_ALL=POSIX /usr/bin/python3 - <<\''NETWORK_PROBE\''
+        > "$LFS/nav-build-metadata/recovery/resolver-https-probe.log" 2>&1\nimport socket,urllib.request\nhost=\''index.crates.io\''\nassert
+        socket.getaddrinfo(host,443,type=socket.SOCK_STREAM)\nurl=\''https://index.crates.io/config.json\''\nwith
+        urllib.request.urlopen(url,timeout=60)as r:\n assert r.status==200 and r.read(1)\nprint(\''NAV_CARGOC_CRATES_DNS_HTTPS_PROBE_PASS\'')\nNETWORK_PROBE\ncat
+        "$LFS/nav-build-metadata/recovery/resolver-https-probe.log"\nchroot "$LFS" /usr/bin/env -i HOME=/root TERM=dumb
+        PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/recovery-stage.sh\nNAV_MOUNT\nsudo
+        python3 /tmp/nav-aom-resolver-proof.py verify\n\nsudo python3 - <<\''CLEAN\''\nfrom pathlib import Path\nimport
+        shutil\nr=Path(\''/mnt/nav-lfs\'')\nfor rel in [\''sources/libheif-1.23.7\'',\''sources/cargo-c-0.10.24\'',\''tmp/nav-cargo-c-home\'',\''tmp/nav-heif-stage\'',\''tmp/nav-heif-rpath-expected\'',\''tmp/nav-heif-installed\'']:\n
+        p=r/rel;assert p.is_dir()and not p.is_symlink(),rel;shutil.rmtree(p)\nfor n in [\''recovery-stage.sh\'',\''recovery-verify.py\'',\''heif-installed-smoke.c\'',\''libheif-1.23.7.tar.gz\'',\''cargo-c-0.10.24.tar.gz\'']:(r/\''sources\''/n).unlink()\nassert
+        not(r/\''sources/numpy-tooling-prefix\'').exists()\nCLEAN\nsudo chown -hR "$(id -u):$(id -g)" "$LFS"\nsudo
+        chown root:root "$LFS/usr/bin/fusermount3"\nsudo chmod 4755 "$LFS/usr/bin/fusermount3"\ntest "$(du -sb "$LFS"|cut
+        -f1)" -lt 5368709120\n'')
+
+        PREPARE_STAGE
+
+        '
+    - name: Reconstruct verified installs no canonical test replay, staged exact hash gates and original cheap checks
+      shell: bash
+      run: "python3 - <<'GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
+        \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\n\
+        assert os.cpu_count() >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024\
+        \ ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\nassert p.is_file() and p.stat().st_size>0\nstart =\
+        \ time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash', str(p)],\
+        \ stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0,\
+        \ sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n\
+        \        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic()\
+        \ - start > 315 * 60:\n            raise RuntimeError('resource or stage-time safety floor reached')\n \
+        \       print(json.dumps({'elapsed_seconds': round(time.monotonic() - start), 'free_disk_bytes': free, 'available_memory_kib':\
+        \ available}), flush=True)\n        time.sleep(20)\n    if proc.returncode:\n        raise RuntimeError('source-build\
+        \ failed with status ' + str(proc.returncode))\nfinally:\n    if proc.poll() is None:\n        os.killpg(proc.pid,\
+        \ signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n        except subprocess.TimeoutExpired:\n\
+        \            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n    log.close()\n    lines =\
+        \ pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n    print('\\n'.join(lines[-80:]))\n\
+        \    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK', 'BEGIN_FINAL_PACKAGE',\
+        \ 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON', 'NAV_TESTER',\
+        \ 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
+        \ 'NAV_PORTAL'])))))\n    import base64, gzip, subprocess, os, hashlib, json\n    mode = 'build'\n    p\
+        \ = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/recovery')\n    manifest = {'mode': mode, 'files': {},\
+        \ 'errors': [], 'runner_uid': os.getuid()}\n\n    def emit(name, data):\n        data = gzip.compress(data,\
+        \ mtime=0)\n        for i in range(0, len(data), 3000):\n            print('NAV_RECOVERY_' + name + '_GZB64',\
+        \ base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n    try:\n        listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\x00')\n    except Exception as ex:\n        listing\
+        \ = []\n        manifest['errors'].append({'area': str(p), 'error': repr(ex)})\n    for item in sorted((x\
+        \ for x in listing if x)):\n        f = pathlib.Path(os.fsdecode(item))\n        rel = str(f.relative_to(p))\n\
+        \        wanted = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode\
+        \ == 'shard' and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode\
+        \ == 'examples' and rel.startswith('original-examples'))\n        if wanted:\n            try:\n       \
+        \         data = subprocess.check_output(['sudo', 'cat', str(f)])\n                name = rel.replace('/',\
+        \ '-').replace('.', '_').upper()\n                manifest['files'][name] = {'source': rel, 'bytes': len(data),\
+        \ 'sha256': hashlib.sha256(data).hexdigest()}\n                emit(name, data)\n            except Exception\
+        \ as ex:\n                manifest['errors'].append({'file': rel, 'error': repr(ex)})\n    emit('EXPORT-MANIFEST_JSON',\
+        \ json.dumps(manifest, indent=2).encode())\n    if manifest['errors']:\n        raise RuntimeError('independent\
+        \ evidence export errors: ' + repr(manifest['errors']))\n\nGUARD\n"
+    - name: Candidate independent full metadata filehash replay
+      shell: bash
+      run: "set -euo pipefail\nroot=$(du -sb /mnt/nav-lfs|cut -f1)\ntest \"$root\" -lt 5368709120\ntar --zstd -cf\
+        \ /mnt/nav-recovery-root.tar.zst -C /mnt/nav-lfs .\nzstd -t /mnt/nav-recovery-root.tar.zst\ntar --zstd -tf\
+        \ /mnt/nav-recovery-root.tar.zst > /tmp/nav-recovery-members\n! grep -Eq '^./sources/(numpy-tooling-prefix|libaom-3.15.3/|aom-testdata/|libde265-1.1.3/|x265_4.2/|libheif-1.23.7/|cargo-c-0.10.24/)'\
+        \ /tmp/nav-recovery-members\ngrep -qx './usr/bin/cargo-capi' /tmp/nav-recovery-members\nsudo mkdir /mnt/nav-recovery-replay\n\
+        sudo tar --zstd -xf /mnt/nav-recovery-root.tar.zst -C /mnt/nav-recovery-replay\nsudo python3 - <<'INDEPENDENT'\n\
+        from pathlib import Path\nimport os,stat,hashlib,json\n\ndef manifest(root):\n root=Path(root);out={}\n\
+        \ for d,dirs,files in os.walk(root,followlinks=False):\n  for p in [Path(d)]+[Path(d)/n for n in files]+[Path(d)/n\
+        \ for n in dirs if (Path(d)/n).is_symlink()]:\n   s=p.lstat();x={'type':stat.S_IFMT(s.st_mode),'mode':stat.S_IMODE(s.st_mode),'uid':s.st_uid,'gid':s.st_gid,'mtime':int(s.st_mtime)}\n\
+        \   if stat.S_ISREG(s.st_mode):x.update(bytes=s.st_size,sha256=hashlib.file_digest(p.open('rb'),'sha256').hexdigest())\n\
+        \   elif stat.S_ISLNK(s.st_mode):x['link']=os.readlink(p)\n   elif not stat.S_ISDIR(s.st_mode):x['rdev']=s.st_rdev\n\
+        \   out[str(p.relative_to(root))]=x\n return out\nleft=manifest('/mnt/nav-lfs');right=manifest('/mnt/nav-recovery-replay');assert\
+        \ left==right,{'only_left':list(set(left)-set(right))[:10],'different':[k for k in set(left)&set(right)if\
+        \ left[k]!=right[k]][:10]}\nPath('/tmp/recovery-root-full-manifest.json').write_text(json.dumps(left,sort_keys=True));p=Path('/mnt/nav-recovery-root.tar.zst');proof={'classification':'TRANSITIONAL\
+        \ only, not OS acceptance, inherited gaps OPEN','bundle_bytes':p.stat().st_size,'bundle_sha256':hashlib.file_digest(p.open('rb'),'sha256').hexdigest(),'independent_full_replay_manifest_equal':True,'paths':len(left),'manifest_sha256':hashlib.sha256(json.dumps(left,sort_keys=True).encode()).hexdigest(),'audit':json.loads(Path('/mnt/nav-lfs/nav-build-metadata/recovery/RECOVERY-TRANSITIONAL-OPEN.json').read_text()),'pixels':json.loads(Path('/mnt/nav-lfs/nav-build-metadata/recovery/heif-staged-files.json').read_text())}\n\
+        Path('/tmp/recovery-candidate-proof.json').write_text(json.dumps(proof,sort_keys=True));print('NAV_RECOVERY_CANDIDATE_PROOF_JSON\
+        \ '+json.dumps(proof,sort_keys=True),flush=True)\nINDEPENDENT\nsudo rm -rf /mnt/nav-recovery-replay\n"
+    - name: Authenticated exact protected inventory and measured budget, no deletions
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: "set -euo pipefail\npython3 - <<'BUDGET'\nimport os,time,json,urllib.request,urllib.error,email.utils\n\
+        TOKEN=os.environ['GH_TOKEN'];assert TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\n\
+        class SafeRedirect(urllib.request.HTTPRedirectHandler):\n def redirect_request(self,req,fp,code,msg,headers,newurl):\n\
+        \  new=super().redirect_request(req,fp,code,msg,headers,newurl)\n  if new is not None and not newurl.startswith('https://api.github.com/'):new.remove_header('Authorization')\n\
+        \  return new\nOPENER=urllib.request.build_opener(SafeRedirect())\ndef api(path):\n assert not path.startswith('/')\
+        \ and '://'not in path\n for attempt in range(5):\n  req=urllib.request.Request(BASE+path,headers={'Authorization':'Bearer\
+        \ '+TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \  try:\n   with OPENER.open(req,timeout=120)as r:return r.read()\n  except urllib.error.HTTPError as ex:\n\
+        \   if ex.code not in(403,429,500,502,503,504)or attempt==4:raise RuntimeError('GitHub API request failed\
+        \ status '+str(ex.code))from None\n   delay=max(30,min(600,int(ex.headers.get('Retry-After','60'))))\n \
+        \  if ex.headers.get('X-RateLimit-Remaining')=='0':\n    delay=max(delay,int(ex.headers.get('X-RateLimit-Reset','0'))-int(time.time())+5)\n\
+        \   if delay>900:raise RuntimeError('Rate limit reset beyond bounded retry; no save or deletion')from None\n\
+        \   print('NAV_AUTHENTICATED_API_RETRY',attempt+1,'delay_seconds',delay,flush=True);time.sleep(delay)\n\
+        \ raise RuntimeError('API bounded retries exhausted')\n\nfrom pathlib import Path\nimport ctypes,ctypes.util,hashlib\n\
+        p=Path('/mnt/nav-recovery-root.tar.zst');proof=json.loads(Path('/tmp/recovery-candidate-proof.json').read_text());assert\
+        \ hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==proof['bundle_sha256']\nprotected={'10790873772':\
+        \ {'key': 'nav-blfs13.1-x86_64-aom-static-repair-open-v1', 'ref': 'refs/heads/main', 'version': '69e54c818e6d1830d476051f7c8862dd31fd9fdd162e849ebefc672993823dee',\
+        \ 'size_in_bytes': 1414253410}, '10710908926': {'key': 'nav-blfs13.1-x86_64-jxl-open-v1', 'ref': 'refs/heads/main',\
+        \ 'version': '554507abaeca91255ad1a6f15da321ec0e5bfea6c40ae80755a6e2b33b37debe', 'size_in_bytes': 1404400214},\
+        \ '10700939007': {'key': 'nav-blfs13.1-x86_64-giflib-open-v1', 'ref': 'refs/heads/main', 'version': '14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5',\
+        \ 'size_in_bytes': 1374812746}, '10696846187': {'key': 'nav-blfs13.1-x86_64-git-open-v1', 'ref': 'refs/heads/main',\
+        \ 'version': '14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5', 'size_in_bytes': 1374122764},\
+        \ '10516363617': {'key': 'nav-lfs13.1-x86_64-final-gcc-v1', 'ref': 'refs/heads/main', 'version': '14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5',\
+        \ 'size_in_bytes': 1413472049}, '10515953327': {'key': 'nav-lfs13.1-x86_64-gcc-test-runtime-v1', 'ref':\
+        \ 'refs/heads/main', 'version': 'e15aff5375d0e86d1aaef9fe181e558b39f1a1f784dccea28a3079ab10645ef8', 'size_in_bytes':\
+        \ 148732}, '10511354384': {'key': 'nav-lfs13.1-x86_64-gcc-test-cxx-v1', 'ref': 'refs/heads/main', 'version':\
+        \ 'e15aff5375d0e86d1aaef9fe181e558b39f1a1f784dccea28a3079ab10645ef8', 'size_in_bytes': 1030391}, '10508735204':\
+        \ {'key': 'nav-lfs13.1-x86_64-gcc-test-c-v1', 'ref': 'refs/heads/main', 'version': 'e15aff5375d0e86d1aaef9fe181e558b39f1a1f784dccea28a3079ab10645ef8',\
+        \ 'size_in_bytes': 1021068}, '10480998516': {'key': 'nav-lfs13.1-x86_64-access-tools-v1', 'ref': 'refs/heads/main',\
+        \ 'version': '14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5', 'size_in_bytes': 909038418},\
+        \ '10480209539': {'key': 'nav-lfs13.1-x86_64-final-math-v1', 'ref': 'refs/heads/main', 'version': '14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5',\
+        \ 'size_in_bytes': 901878016}}\nd=json.loads(api('actions/caches?per_page=100'));rows=d['actions_caches'];assert\
+        \ d['total_count']==len(rows)==10\ncurrent={str(x['id']):{k:x[k]for k in ['key','ref','version','size_in_bytes']}for\
+        \ x in rows};assert current==protected,'Protected inventory changed; no save or deletion'\nz=ctypes.CDLL(ctypes.util.find_library('zstd'));z.ZSTD_compressBound.argtypes=[ctypes.c_size_t];z.ZSTD_compressBound.restype=ctypes.c_size_t\n\
+        upper=z.ZSTD_compressBound(p.stat().st_size+1024**2)+64*1024**2;existing=sum(x['size_in_bytes']for x in\
+        \ rows);assert existing+upper<10*1024**3\nprint('NAV_RECOVERY_AUTHENTICATED_BUDGET_AND_ALL10_PROTECTED_EXACT\
+        \ '+json.dumps({'existing':existing,'new_upper':upper,'worst_total':existing+upper,'limit':10*1024**3,'bundle_sha256':proof['bundle_sha256']}),flush=True)\n\
+        BUDGET\n"
+    - name: Save BOTH reconstructed libheif and cargo-c TRANSITIONAL root
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-recovery-root.tar.zst
+        key: nav-blfs13.1-x86_64-heif-cargoc-recovery-open-v1
