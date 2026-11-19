@@ -1,0 +1,401 @@
+name: NAV librsvg2.62.4 TRANSITIONAL install-only exactrender fullrootreplay authenticatedhealth guardedrolling
+  save originalFAIL OPEN
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: nav-rsvg-install-only
+  cancel-in-progress: false
+jobs:
+  rsvg:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
+        \ in /mnt/nav-recovery-root.tar.zst /mnt/nav-rsvg-root.tar.zst; do\n test ! -e \"$bundle\"\n sudo install\
+        \ -o \"$(id -u)\" -g \"$(id -g)\" -m 0600 /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"$(stat -c\
+        \ '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n\
+        \ printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\n' > \"$probe/proof\"\n tar --zstd -cf \"$bundle\" -C \"$probe\"\
+        \ proof\n zstd -t \"$bundle\"\n tar --zstd -xOf \"$bundle\" proof > \"$probe/recovered\"\n cmp \"$probe/proof\"\
+        \ \"$probe/recovered\"\n # Match actions/cache extraction semantics, not only bundle writer access.\n test\
+        \ \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n cp \"$bundle\" \"$probe/expected-bundle\"\n\
+        \ relative_bundle=$(realpath --relative-to=\"$PWD\" \"$bundle\")\n tar --zstd -cf \"$probe/cache.tzst\"\
+        \ -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n env -u TAR_OPTIONS /usr/bin/tar -xf \"$probe/cache.tzst\"\
+        \ -P -C \"$PWD\" --use-compress-program unzstd > \"$probe/default-restore.log\" 2>&1\n negative_rc=$?\n\
+        \ set -e\n test \"$negative_rc\" = 2\n test ! -s \"$bundle\"\n grep -F 'Cannot open: File exists' \"$probe/default-restore.log\"\
+        \n TAR_OPTIONS=--overwrite /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program\
+        \ unzstd\n cmp \"$probe/expected-bundle\" \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"\
+        $(id -u):$(id -g):600\"\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS\
+        \ %s\\n' \"$bundle\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic\
+        \ failure evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"\
+        ><failure message=\"synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n\
+        \ f=p/name;f.write_bytes(data)\n subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\\
+        n    data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_RSVG_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing =\
+        \ []\\n    manifest['errors'].append({'area': str(p), 'error': repr(ex)})\\nfor item in sorted((x for x\
+        \ in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\n    rel = str(f.relative_to(p))\\n    wanted\
+        \ = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard'\
+        \ and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples'\
+        \ and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name,\
+        \ data)\\n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error':\
+        \ repr(ex)})\\nemit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\\
+        n    raise RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"\
+        '/mnt/nav-lfs/nav-build-metadata/aom-tooling'\",repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\n\
+        assert r.returncode==0,r.stderr\nparts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_RSVG_'):\n\
+        \  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\nm=json.loads(gzip.decompress(b''.join(parts['NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64'])))\n\
+        assert not m['errors'] and len(m['files'])==len(expected)\nfor name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_RSVG_'+name+'_GZB64']))\n\
+        \ assert b==expected[v['source']] and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\n\
+        missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
+        assert r.returncode!=0 and 'NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_RSVG_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
+        EXPORT_SELFTEST\n"
+    - name: Restore verified combined heif cargo-c checkpoint
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-recovery-root.tar.zst
+        key: nav-blfs13.1-x86_64-heif-cargoc-recovery-open-v1
+        fail-on-cache-miss: true
+    - name: Verify exact combined checkpoint
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf "b9d323687756afb4ba55c3147eeef988b69b4e8bf9f3455893cb9a25f694b25c  /mnt/nav-recovery-root.tar.zst\n"
+        | sha256sum -c -
+
+        zstd -t /mnt/nav-recovery-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-recovery-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/recovery/RECOVERY-TRANSITIONAL-OPEN.json
+
+        '
+    - name: Recover original oneFAIL canonical diagnostic and separate pixel investigation exact hashes
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "python3 - <<'ARCHIVE'\nimport os,time,json,urllib.request,urllib.error,email.utils\nTOKEN=os.environ['GH_TOKEN'];assert\
+        \ TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\nclass SafeRedirect(urllib.request.HTTPRedirectHandler):\n\
+        \ def redirect_request(self,req,fp,code,msg,headers,newurl):\n  new=super().redirect_request(req,fp,code,msg,headers,newurl)\n\
+        \  if new is not None and not newurl.startswith('https://api.github.com/'):new.remove_header('Authorization')\n\
+        \  return new\nOPENER=urllib.request.build_opener(SafeRedirect())\ndef api(path):\n assert not path.startswith('/')\
+        \ and '://'not in path\n for attempt in range(5):\n  req=urllib.request.Request(BASE+path,headers={'Authorization':'Bearer\
+        \ '+TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \  try:\n   with OPENER.open(req,timeout=120)as r:return r.read()\n  except urllib.error.HTTPError as ex:\n\
+        \   if ex.code not in(403,429,500,502,503,504)or attempt==4:raise RuntimeError('GitHub API request failed\
+        \ status '+str(ex.code))from None\n   delay=max(30,min(600,int(ex.headers.get('Retry-After','60'))))\n \
+        \  if ex.headers.get('X-RateLimit-Remaining')=='0':\n    delay=max(delay,int(ex.headers.get('X-RateLimit-Reset','0'))-int(time.time())+5)\n\
+        \   if delay>900:raise RuntimeError('Rate limit reset beyond bounded retry; no save or deletion')from None\n\
+        \   print('NAV_AUTHENTICATED_API_RETRY',attempt+1,'delay_seconds',delay,flush=True);time.sleep(delay)\n\
+        \ raise RuntimeError('API bounded retries exhausted')\n\nfrom pathlib import Path,PurePosixPath\nimport\
+        \ base64,gzip,re,hashlib,collections,json\nr=Path('/mnt/nav-lfs');p=r/'nav-build-metadata/librsvg';p.mkdir(parents=True)\n\
+        for job,prefix,dest,pin in [(135706647838,'NAV_RSVG_',r/'nav-build-metadata/librsvg/original-diagnostic','e917021fb3d684dcb0d0b6ad1625eabf078ac63869e27b56af09fe7eba1e1132'),(135719543445,'NAV_RSVG_',r/'nav-build-metadata/librsvg/original-investigation','66373a43dde38b63cf88ec6df43b356fde3cfe7670f0e2932ade5a882e0ace24')]:\n\
+        \ raw=api('actions/jobs/'+str(job)+'/logs');text=raw.decode();parts=collections.defaultdict(list)\n for\
+        \ line in text.splitlines():\n  m=re.search(r'\\b'+prefix+r'([A-Z0-9_-]+)_GZB64 ([A-Za-z0-9+/=]+)\\s*$',line)\n\
+        \  if m:parts[m[1]].append(base64.b64decode(m[2],validate=True))\n manifest=gzip.decompress(b''.join(parts['EXPORT-MANIFEST_JSON']));assert\
+        \ hashlib.sha256(manifest).hexdigest()==pin\n m=json.loads(manifest);assert not m['errors'];dest.mkdir(parents=True)\n\
+        \ for name,x in m['files'].items():\n  rel=PurePosixPath(x['source']);assert not rel.is_absolute()and '..'not\
+        \ in rel.parts\n  b=gzip.decompress(b''.join(parts[name]));assert len(b)==x['bytes']and hashlib.sha256(b).hexdigest()==x['sha256'],name\n\
+        \  f=dest/rel;f.parent.mkdir(parents=True,exist_ok=True);f.write_bytes(b)\n (dest/'export-manifest.original.json').write_bytes(manifest);print('NAV_RECOVERY_ORIGINAL_ARCHIVED_EVIDENCE_EXACT',job,len(m['files']),flush=True)\n\
+        \nARCHIVE\n"
+    - name: Prepare install-only helpers and classified original audits
+      shell: bash
+      run: 'python3 - <<''HELPERS''
+
+        from pathlib import Path
+
+        Path(''/mnt/nav-lfs/sources/rsvg-stage.sh'').write_text(''set -euo pipefail\numask 022\nulimit -v 4194304\nexport
+        PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin LANG=C.UTF-8 MAKEFLAGS=-j2 CARGO_BUILD_JOBS=2 CARGO_HOME=/tmp/nav-librsvg-cargo-home\nunset
+        LC_ALL LANGUAGE\nchmod 1777 /tmp /var/tmp\nS=/sources/librsvg-2.62.4\nP=/nav-build-metadata/librsvg\nmkdir
+        -p "$P" "$CARGO_HOME"\nchown -R tester:tester "$S" "$CARGO_HOME"\nsu tester -c \''export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin
+        CARGO_HOME=/tmp/nav-librsvg-cargo-home CARGO_BUILD_JOBS=2;cd /sources/librsvg-2.62.4;meson setup --prefix=/usr
+        --buildtype=release build\'' > "$P/install-only-configure.log" 2>&1\nsu tester -c \''export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin
+        CARGO_HOME=/tmp/nav-librsvg-cargo-home CARGO_BUILD_JOBS=2;cd /sources/librsvg-2.62.4;ninja -C build -j2\''
+        > "$P/install-only-build.log" 2>&1\npython3 /sources/rsvg-install-verify.py compiled\nDESTDIR=/tmp/nav-rsvg-stage
+        meson install -C "$S/build" --no-rebuild > "$P/staged-install.log" 2>&1\npython3 /sources/rsvg-install-verify.py
+        staged\ncp -a /tmp/nav-rsvg-stage/usr/. /usr/\nldconfig\npkg-config --modversion librsvg-2.0 > "$P/installed-version.log"\nrsvg-convert
+        --version >> "$P/installed-version.log"\nldd /usr/lib/librsvg-2.so /usr/bin/rsvg-convert > "$P/installed-linkage.log"
+        2>&1\n! grep -q \''not found\'' "$P/installed-linkage.log"\ncc /sources/rsvg-render-investigation.c $(pkg-config
+        --cflags --libs librsvg-2.0 pangocairo pangoft2 fontconfig) -o /tmp/rsvg-installed-render > "$P/installed-render-build.log"
+        2>&1\n/tmp/rsvg-installed-render "$S/rsvg/tests/fixtures/reftests/svg1.1/text-text-03-b.svg" "$S/rsvg/tests/resources"
+        "$S/rsvg/tests/fixtures/reftests/svg1.1/text-text-03-b-ref.png" "$P/original-investigation/upstream-new-reference.png"
+        "$P/installed-render.png" > "$P/installed-render-comparison.log" 2>&1\npython3 /sources/rsvg-install-verify.py
+        final\n'')
+
+        Path(''/mnt/nav-lfs/sources/rsvg-install-verify.py'').write_text("from pathlib import Path\nimport json,hashlib,os,sys,stat\nP=Path(''/nav-build-metadata/librsvg'');S=Path(''/sources/librsvg-2.62.4'')\ndef
+        sha(f):return hashlib.file_digest(Path(f).open(''rb''),''sha256'').hexdigest()\ndef source():\n old=json.loads((P/''original-diagnostic/original-source-files-sha256.json'').read_text());new=json.loads((P/''fresh-source-files-sha256.json'').read_text());assert
+        old==new\n for rel,x in old.items():\n  f=S/rel;assert f.is_file()and not f.is_symlink()and f.stat().st_size==x[''bytes'']and
+        sha(f)==x[''sha256''],rel\n links=json.loads((P/''original-diagnostic/original-source-symlinks.json'').read_text());assert
+        len(links)==7 and links==json.loads((P/''fresh-source-symlinks.json'').read_text())\n for rel,target in
+        links.items():assert(S/rel).is_symlink()and os.readlink(S/rel)==target,rel\n return len(old),len(links)\ndef
+        manifest(root):\n out={}\n for f in Path(root).rglob(''*''):\n  s=f.lstat();x={''mode'':stat.S_IMODE(s.st_mode)}\n  if
+        f.is_symlink():x[''symlink'']=os.readlink(f)\n  elif f.is_file():x.update(bytes=s.st_size,sha256=sha(f))\n  elif
+        f.is_dir():continue\n  else:raise AssertionError(''unsupported stagedfile ''+str(f))\n  out[str(f.relative_to(root))]=x\n
+        return out\nif sys.argv[1]==''compiled'':\n n,l=source();old=json.loads((P/''original-investigation/compiled-runtime-files-sha256.json'').read_text());names=[''build/rsvg/librsvg-2.so.2.62.4'',''build/rsvg_convert/rsvg-convert''];new={}\n
+        for rel in names:\n  f=S/rel;x={''bytes'':f.stat().st_size,''sha256'':sha(f)};assert x==old[rel],{''runtime_hash_diff'':rel};new[rel]=x\n
+        (P/''compiled-runtime-files-sha256.json'').write_text(json.dumps(new,indent=2));print(''NAV_RSVG_INSTALL_ORIGINAL_SOURCE_LINKS_AND_COMPILED_RUNTIME_HASHES_EXACT'',n,l)\nelif
+        sys.argv[1]==''staged'':\n m=manifest(''/tmp/nav-rsvg-stage'');assert m and all(x.startswith(''usr/'')for
+        x in m);assert ''usr/bin/rsvg-convert''in m and ''usr/lib/librsvg-2.so.2.62.4''in m\n assert not any(''loaders.cache''in
+        x or ''/gdk-pixbuf-''in x for x in m),''legacy SVGloader unexpectedly installed''\n (P/''staged-install-manifest.json'').write_text(json.dumps(m,indent=2));print(''NAV_RSVG_STAGED_ALL_PAYLOADS_HASHED'',len(m))\nelif
+        sys.argv[1]==''final'':\n n,l=source();m=json.loads((P/''staged-install-manifest.json'').read_text())\n
+        for rel,x in m.items():\n  f=Path(''/'')/rel;assert stat.S_IMODE(f.lstat().st_mode)==x[''mode''],rel\n  if
+        ''symlink''in x:assert f.is_symlink()and os.readlink(f)==x[''symlink''],rel\n  else:assert f.is_file()and
+        f.stat().st_size==x[''bytes'']and sha(f)==x[''sha256''],rel\n versions=(P/''installed-version.log'').read_text().splitlines();assert
+        len(versions)==2 and versions[0]==''2.62.4''and ''2.62.4''in versions[1],versions\n comparisons=(P/''installed-render-comparison.log'').read_text();assert
+        ''upstream_reference_only_fix changed_pixels=0 maximum_channel_difference=0''in comparisons;assert ''pinned_original_reference
+        changed_pixels=12 maximum_channel_difference=255 bounds=39,139,216,140''in comparisons\n assert sha(P/''installed-render.png'')==sha(P/''original-investigation/actual-target-render.png'')\n
+        assert ''not found''not in(P/''installed-linkage.log'').read_text()\n a={''classification'':''TRANSITIONAL
+        only, original canonical failure remains FAIL/OPEN, no canonical replay or reference edits, all inherited
+        gaps OPEN, not OSacceptance'',''version'':''2.62.4'',''original_canonical_results'':{''harness_PASS'':1428,''FAIL'':1,''IGNORED'':0,''FILTERED'':0,''silent_upstream_early_returns_OPEN'':5,''compile_only_doctest'':1},''original_failure'':{''name'':''tests::svg1_1_text_text_03_b_svg'',''status'':''FAIL/OPEN'',''investigation'':''Known
+        stale reference for Pango1.58.x decorationedge metrics; separate actual target image pixel-exact to upstream
+        corrected reference''},''source_regular_files_exact'':n,''source_symlinks_exact'':l,''compiled_runtime_hashes_equal_original_investigation'':True,''staged_and_installed_payloads_exact'':len(m),''installed_version_linkage_renderchecks'':''PASS'',''canonical_tests_replayed'':False,''original_references_edited'':False,''source_patches'':[],''jobs'':2,''memory_cap_KiB'':4194304,''optional_gaps_OPEN'':[''dav1dAVIFabsent'',''gi-docgenAPIdocsabsent'',''legacySVGpixbufloaderupstreamdisabledplannedGlycinroute''],''inherited_audit'':''/nav-build-metadata/recovery/RECOVERY-TRANSITIONAL-OPEN.json'',''root_saved'':False}\n
+        (P/''RSVG-TRANSITIONAL-OPEN.json'').write_text(json.dumps(a,indent=2));(P/''BUNDLE-NOTES.txt'').write_text(a[''classification'']+''\\nOriginal
+        oneFAIL remainsOPEN; no source/test/referenceedits, no canonicaltestreplay. Installedrenderpixel-exact to
+        upstreamcorrectedreference, 12edgepixels differfromoriginalgolden. Not bootedVMacceptance.\\n'');print(''NAV_RSVG_INSTALLED_2_62_4_LINKAGE_AND_RENDER_PIXEL_EXACT_TRANSITIONAL_FAILURE_OPEN'')\nelse:raise
+        SystemExit(2)\n")
+
+        Path(''/mnt/nav-lfs/sources/rsvg-render-investigation.c'').write_text(''#include <librsvg/rsvg.h>\n#include
+        <pango/pangocairo.h>\n#include <pango/pangofc-fontmap.h>\n#include <fontconfig/fontconfig.h>\n#include <cairo.h>\n#include
+        <stdio.h>\n#include <stdlib.h>\n#include <stdint.h>\n#include <string.h>\nstatic void check(int ok,const
+        char *msg){if(!ok){fprintf(stderr,"INVESTIGATION_ERROR %s\\n",msg);exit(2);}}\nstatic void compare(cairo_surface_t
+        *actual,const char *path,const char *name){\n cairo_surface_t *ref=cairo_image_surface_create_from_png(path);check(cairo_surface_status(ref)==CAIRO_STATUS_SUCCESS,"load
+        comparison PNG");\n check(cairo_image_surface_get_width(ref)==480&&cairo_image_surface_get_height(ref)==360,"reference
+        geometry");cairo_surface_flush(actual);cairo_surface_flush(ref);\n unsigned char*a=cairo_image_surface_get_data(actual),*b=cairo_image_surface_get_data(ref);int
+        as=cairo_image_surface_get_stride(actual),bs=cairo_image_surface_get_stride(ref);long count=0;int max=0,x0=480,y0=360,x1=-1,y1=-1;\n
+        for(int y=0;y<360;y++)for(int x=0;x<480;x++){int changed=0;for(int c=0;c<4;c++){int d=abs(a[y*as+4*x+c]-b[y*bs+4*x+c]);if(d){changed=1;if(d>max)max=d;}}if(changed){count++;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}}\n
+        printf("COMPARISON %s changed_pixels=%ld maximum_channel_difference=%d bounds=%d,%d,%d,%d\\n",name,count,max,x0,y0,x1,y1);cairo_surface_destroy(ref);\n}\nint
+        main(int argc,char**argv){check(argc==6,"args sourceSVG testFontsDir oldPNG newPNG outputPNG");\n setenv("LANGUAGE","de:en_US:en:",1);setenv("LC_ALL","de:en_US:en:",1);\n
+        FcConfig *config=FcConfigCreate();check(config!=NULL,"FcConfigCreate");check(FcConfigSetCurrent(config),"FcConfigSetCurrent");char
+        path[4096];snprintf(path,sizeof(path),"%s/fonts.conf",argv[2]);check(FcConfigParseAndLoad(config,(const
+        FcChar8*)path,1),"fontconfig fixture config");check(FcConfigAppFontAddDir(config,(const FcChar8*)argv[2]),"fixture
+        fonts");\n PangoFontMap*map=pango_cairo_font_map_new_for_font_type(CAIRO_FONT_TYPE_FT);check(map!=NULL,"fixture
+        fontmap");pango_fc_font_map_set_config(PANGO_FC_FONT_MAP(map),config);pango_cairo_font_map_set_default(PANGO_CAIRO_FONT_MAP(map));FcConfigDestroy(config);\n
+        GError *error=NULL;RsvgHandle*h=rsvg_handle_new_from_file(argv[1],&error);check(h!=NULL,error?error->message:"load
+        SVG");rsvg_handle_internal_set_testing(h,TRUE);rsvg_handle_set_dpi(h,72.0);\n cairo_surface_t*frame=cairo_image_surface_create(CAIRO_FORMAT_ARGB32,574,454);cairo_t*cr=cairo_create(frame);cairo_translate(cr,47,47);RsvgRectangle
+        viewport={0,0,480,360};check(rsvg_handle_render_document(h,cr,&viewport,&error),error?error->message:"render
+        SVG");cairo_destroy(cr);\n cairo_surface_t*out=cairo_image_surface_create(CAIRO_FORMAT_ARGB32,480,360);cr=cairo_create(out);cairo_set_source_surface(cr,frame,-47,-47);cairo_paint(cr);cairo_destroy(cr);check(cairo_surface_write_to_png(out,argv[5])==CAIRO_STATUS_SUCCESS,"write
+        actual PNG");\n printf("RENDER_ONLY_INVESTIGATION originalSVG fixturefonts testmode DPI72 frame47, no upstream
+        test driver invoked\\n");compare(out,argv[3],"pinned_original_reference");compare(out,argv[4],"upstream_reference_only_fix");cairo_surface_destroy(out);cairo_surface_destroy(frame);g_object_unref(h);g_object_unref(map);return
+        0;\n}\n'')
+
+        HELPERS
+
+        '
+    - name: Prepare untouched source install-only rebuild with original resolver isolation
+      shell: bash
+      run: 'python3 - <<''PREPARE_STAGE''
+
+        from pathlib import Path
+
+        Path(''/tmp/nav-source-stage.sh'').write_text(''set -euo pipefail\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\nulimit
+        -v 4194304\numask 022\nmkdir -p "$LFS/nav-build-metadata/librsvg"\npython3 - <<\''DOWNLOAD\''\nfrom pathlib
+        import Path,PurePosixPath\nimport urllib.request,hashlib,tarfile,json,os,posixpath\np=Path(\''/mnt/nav-lfs/sources/librsvg-2.62.4.tar.xz\'')\nwith
+        urllib.request.urlopen(\''https://download.gnome.org/sources/librsvg/2.62/librsvg-2.62.4.tar.xz\'',timeout=120)as
+        r:p.write_bytes(r.read())\nassert hashlib.file_digest(p.open(\''rb\''),\''sha256\'').hexdigest()==\''c982b8157a054b803493bf994d31e50105eb948dd8da6b4ab9734e8d392712a3\''\nlinks={\''librsvg-2.62.4/gdk-pixbuf-loader/COPYING.LIB\'':
+        \''../COPYING.LIB\'', \''librsvg-2.62.4/librsvg-c/COPYING.LIB\'': \''../COPYING.LIB\'', \''librsvg-2.62.4/librsvg-rebind/librsvg-rebind/LICENSE\'':
+        \''../LICENSE\'', \''librsvg-2.62.4/librsvg-rebind/librsvg-rebind/sys/LICENSE\'': \''../../LICENSE\'', \''librsvg-2.62.4/rsvg/COPYING.LIB\'':
+        \''../COPYING.LIB\'', \''librsvg-2.62.4/rsvg-bench/COPYING.LIB\'': \''../COPYING.LIB\'', \''librsvg-2.62.4/rsvg_convert/COPYING.LIB\'':
+        \''../COPYING.LIB\''}\nwith tarfile.open(p)as t:\n assert {m.name:m.linkname for m in t.getmembers()if m.issym()}==links\n
+        for m in t.getmembers():\n  q=PurePosixPath(m.name);assert not q.is_absolute()and \''..\''not in q.parts
+        and q.parts[0]==\''librsvg-2.62.4\'';assert m.isfile()or m.isdir()or(m.issym()and links.get(m.name)==m.linkname
+        and posixpath.normpath(posixpath.join(posixpath.dirname(m.name),m.linkname)).startswith(\''librsvg-2.62.4/\'')),m.name\n
+        t.extractall(p.parent,filter=\''data\'')\nu=Path(\''/mnt/nav-lfs/sources/upstream-new-ref.png\'')\nwith
+        urllib.request.urlopen(\''https://github.com/GNOME/librsvg/raw/55a08a24cbd93c042872d6b95f7bb59d3460a0f3/rsvg%2Ftests%2Ffixtures%2Freftests%2Fsvg1.1%2Ftext-text-03-b-ref.png\'',timeout=120)as
+        r:u.write_bytes(r.read())\nassert hashlib.file_digest(u.open(\''rb\''),\''sha256\'').hexdigest()==\''31ae412241a1bfcd53a2a1e27a4e8ef794656d0e9e233734b3754f0b5c980cfa\''\ns=p.parent/\''librsvg-2.62.4\'';original={str(f.relative_to(s)):{\''bytes\'':f.stat().st_size,\''sha256\'':hashlib.file_digest(f.open(\''rb\''),\''sha256\'').hexdigest()}for
+        f in s.rglob(\''*\'')if f.is_file()and not f.is_symlink()};Path(\''/mnt/nav-lfs/nav-build-metadata/librsvg/fresh-source-files-sha256.json\'').write_text(json.dumps(original,indent=2));Path(\''/mnt/nav-lfs/nav-build-metadata/librsvg/fresh-source-symlinks.json\'').write_text(json.dumps({str(f.relative_to(s)):os.readlink(f)for
+        f in s.rglob(\''*\'')if f.is_symlink()},indent=2));print(\''NAV_RSVG_SOURCE_SHA256_OK\'',len(original))\nDOWNLOAD\npython3
+        - <<\''PREPARE\''\nfrom pathlib import Path\nPREPARE\nsudo chown -hR root:root "$LFS"\nsudo chown -R 101:101
+        "$LFS/home/tester"\npython3 - <<\''RESOLVER_HELPER\''\nfrom pathlib import Path\nPath(\''/tmp/nav-aom-resolver-proof.py\'').write_text("import
+        pathlib,stat,os,hashlib,json,sys\\np=pathlib.Path(\''/mnt/nav-lfs/etc/resolv.conf\'')\\ndef state():\\n
+        try:s=p.lstat()\\n except FileNotFoundError:return {\''kind\'':\''absent\''}\\n if stat.S_ISLNK(s.st_mode):return
+        {\''kind\'':\''symlink\'',\''target\'':os.readlink(p),\''mode\'':stat.S_IMODE(s.st_mode),\''uid\'':s.st_uid,\''gid\'':s.st_gid,\''inode\'':s.st_ino,\''mtime_ns\'':s.st_mtime_ns}\\n
+        if not stat.S_ISREG(s.st_mode):return {\''kind\'':\''unsupported\'',\''mode\'':s.st_mode}\\n return {\''kind\'':\''regular\'',\''sha256\'':hashlib.sha256(p.read_bytes()).hexdigest(),\''bytes\'':s.st_size,\''mode\'':stat.S_IMODE(s.st_mode),\''uid\'':s.st_uid,\''gid\'':s.st_gid,\''inode\'':s.st_ino,\''mtime_ns\'':s.st_mtime_ns}\\nf=pathlib.Path(\''/mnt/nav-lfs/nav-build-metadata/librsvg/resolver-original-state.json\'')\\nif
+        sys.argv[1]==\''snapshot\'':\\n x=state();f.write_text(json.dumps(x,indent=2));assert x[\''kind\'']in(\''absent\'',\''regular\'')
+        or (x[\''kind\'']==\''symlink\'' and x[\''target\'']==\''/run/systemd/resolve/stub-resolv.conf\''), \''resolver
+        type requires separate review: \''+repr(x)\\nelse:\\n assert state()==json.loads(f.read_text()),\''target
+        resolver changed after namespace\'';print(\''NAV_AOM_TARGET_RESOLVER_ORIGINAL_STATE_UNCHANGED\'')\\n")\nRESOLVER_HELPER\nsudo
+        python3 /tmp/nav-aom-resolver-proof.py snapshot\nHOST_RESOLVER=$(readlink -f /etc/resolv.conf)\ntest -s
+        "$HOST_RESOLVER"\nsudo env LFS="$LFS" HOST_RESOLVER="$HOST_RESOLVER" unshare --mount --propagation private
+        /bin/bash <<\''NAV_MOUNT\''\nset -euo pipefail\nmount --bind "$LFS" "$LFS"\nmkdir -p "$LFS"/{dev,proc,sys,run}\nmount
+        --bind /dev "$LFS/dev"\nmount -t devpts devpts -o gid=5,mode=0620 "$LFS/dev/pts"\nmount -t proc proc "$LFS/proc"\nmount
+        -t sysfs -o ro sysfs "$LFS/sys"\nmount -t tmpfs -o nosuid,nodev tmpfs "$LFS/run"\nif [ -h "$LFS/dev/shm"
+        ];then install -d -m1777 "$LFS$(realpath /dev/shm)";else mount -t tmpfs -o nosuid,nodev tmpfs "$LFS/dev/shm";fi\n#
+        Disposable resolver binding exists only in this namespace and this build stage.\nresolver="$LFS/etc/resolv.conf"\nsymlink_resolver=0\nif
+        [ -L "$resolver" ]; then\n test "$(readlink "$resolver")" = /run/systemd/resolve/stub-resolv.conf\n test
+        "$(findmnt -n -o FSTYPE --target "$LFS/run")" = tmpfs\n mkdir -p "$LFS/run/systemd/resolve"\n resolver="$LFS/run/systemd/resolve/stub-resolv.conf"\n
+        symlink_resolver=1\nfi\ncreated_resolver=0\nbound_resolver=0\ncleanup_resolver() {\n rc=$?\n trap - EXIT\n
+        if [ "$bound_resolver" = 1 ]; then umount "$resolver" || exit 1; fi\n if [ "$created_resolver" = 1 ]; then\n  test
+        ! -L "$resolver" && test -f "$resolver" && test ! -s "$resolver" && test "$(stat -c \''%i\'' "$resolver")"
+        = "$created_inode" || exit 1\n  python3 -c \''import os,sys;os.unlink(sys.argv[1])\'' "$resolver" || exit
+        1\n fi\n python3 /tmp/nav-aom-resolver-proof.py verify || exit 1\n exit "$rc"\n}\ntrap cleanup_resolver
+        EXIT\nif [ ! -e "$resolver" ] && [ ! -L "$resolver" ]; then\n install -m0600 /dev/null "$resolver"\n created_resolver=1\n
+        created_inode=$(stat -c \''%i\'' "$resolver")\nfi\ntest ! -L "$resolver" && test -f "$resolver"\nmount --bind
+        "$HOST_RESOLVER" "$resolver"\nbound_resolver=1\nmount -o remount,bind,ro "$resolver"\nfindmnt -no OPTIONS
+        --target "$resolver" | tr \'',\'' \''\\n\'' | grep -Fx ro\ncmp "$HOST_RESOLVER" "$resolver"\ntimeout 90
+        chroot "$LFS" /usr/bin/env -i HOME=/root PATH=/usr/bin:/usr/sbin LC_ALL=POSIX /usr/bin/python3 - <<\''NETWORK_PROBE\''
+        > "$LFS/nav-build-metadata/librsvg/resolver-https-probe.log" 2>&1\nimport socket,urllib.request\nhost=\''index.crates.io\''\nassert
+        socket.getaddrinfo(host,443,type=socket.SOCK_STREAM)\nurl=\''https://index.crates.io/config.json\''\nwith
+        urllib.request.urlopen(url,timeout=60)as r:\n assert r.status==200 and r.read(1)\nprint(\''NAV_CARGOC_CRATES_DNS_HTTPS_PROBE_PASS\'')\nNETWORK_PROBE\ncat
+        "$LFS/nav-build-metadata/librsvg/resolver-https-probe.log"\nchroot "$LFS" /usr/bin/env -i HOME=/root TERM=dumb
+        PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/rsvg-stage.sh\nNAV_MOUNT\nsudo
+        python3 /tmp/nav-aom-resolver-proof.py verify\n\n\nsudo python3 - <<\''CLEAN\''\nfrom pathlib import Path\nimport
+        shutil\nr=Path(\''/mnt/nav-lfs\'');s=r/\''sources/librsvg-2.62.4\'';assert s.is_dir()and not s.is_symlink();shutil.rmtree(s)\nfor
+        n in [\''rsvg-stage.sh\'',\''rsvg-install-verify.py\'',\''rsvg-render-investigation.c\'',\''librsvg-2.62.4.tar.xz\'',\''upstream-new-ref.png\'']:(r/\''sources\''/n).unlink()\nfor
+        n in [\''tmp/nav-librsvg-cargo-home\'',\''tmp/nav-rsvg-stage\'']:\n p=r/n;assert p.is_dir()and not p.is_symlink();shutil.rmtree(p)\nfor
+        n in [\''tmp/rsvg-installed-render\'']:(r/n).unlink()\nassert not(r/\''sources/numpy-tooling-prefix\'').exists()\nCLEAN\nsudo
+        chown -hR "$(id -u):$(id -g)" "$LFS"\nsudo chown root:root "$LFS/usr/bin/fusermount3"\nsudo chmod 4755 "$LFS/usr/bin/fusermount3"\ntest
+        "$(du -sb "$LFS"|cut -f1)" -lt 5368709120\n'')
+
+        PREPARE_STAGE
+
+        '
+    - name: Install-only original release build staged exact hashes linkage version pixel and source gates, no canonical
+        tests
+      shell: bash
+      run: "python3 - <<'GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
+        \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\n\
+        assert os.cpu_count() >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024\
+        \ ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\nassert p.is_file() and p.stat().st_size>0\nstart =\
+        \ time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash', str(p)],\
+        \ stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0,\
+        \ sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n\
+        \        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic()\
+        \ - start > 315 * 60:\n            raise RuntimeError('resource or stage-time safety floor reached')\n \
+        \       print(json.dumps({'elapsed_seconds': round(time.monotonic() - start), 'free_disk_bytes': free, 'available_memory_kib':\
+        \ available}), flush=True)\n        time.sleep(20)\n    if proc.returncode:\n        raise RuntimeError('source-build\
+        \ failed with status ' + str(proc.returncode))\nfinally:\n    if proc.poll() is None:\n        os.killpg(proc.pid,\
+        \ signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n        except subprocess.TimeoutExpired:\n\
+        \            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n    log.close()\n    lines =\
+        \ pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n    print('\\n'.join(lines[-80:]))\n\
+        \    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK', 'BEGIN_FINAL_PACKAGE',\
+        \ 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON', 'NAV_TESTER',\
+        \ 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
+        \ 'NAV_PORTAL'])))))\n    import base64, gzip, subprocess, os, hashlib, json\n    mode = 'build'\n    p\
+        \ = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/librsvg')\n    manifest = {'mode': mode, 'files': {},\
+        \ 'errors': [], 'runner_uid': os.getuid()}\n\n    def emit(name, data):\n        data = gzip.compress(data,\
+        \ mtime=0)\n        for i in range(0, len(data), 3000):\n            print('NAV_RSVG_INSTALL_' + name +\
+        \ '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n    try:\n        listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\x00')\n    except Exception as ex:\n        listing\
+        \ = []\n        manifest['errors'].append({'area': str(p), 'error': repr(ex)})\n    for item in sorted((x\
+        \ for x in listing if x)):\n        f = pathlib.Path(os.fsdecode(item))\n        rel = str(f.relative_to(p))\n\
+        \        wanted = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode\
+        \ == 'shard' and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode\
+        \ == 'examples' and rel.startswith('original-examples'))\n        if wanted:\n            try:\n       \
+        \         data = subprocess.check_output(['sudo', 'cat', str(f)])\n                name = rel.replace('/',\
+        \ '-').replace('.', '_').upper()\n                manifest['files'][name] = {'source': rel, 'bytes': len(data),\
+        \ 'sha256': hashlib.sha256(data).hexdigest()}\n                emit(name, data)\n            except Exception\
+        \ as ex:\n                manifest['errors'].append({'file': rel, 'error': repr(ex)})\n    emit('EXPORT-MANIFEST_JSON',\
+        \ json.dumps(manifest, indent=2).encode())\n    if manifest['errors']:\n        raise RuntimeError('independent\
+        \ evidence export errors: ' + repr(manifest['errors']))\n\nGUARD\n"
+    - name: Save localcandidate and independently replay EVERY root path metadata hash, no cache mutation
+      shell: bash
+      run: "set -euo pipefail\nroot=$(du -sb /mnt/nav-lfs|cut -f1)\ntest \"$root\" -lt 5368709120\ntar --zstd -cf\
+        \ /mnt/nav-rsvg-root.tar.zst -C /mnt/nav-lfs .\nzstd -t /mnt/nav-rsvg-root.tar.zst\ntar --zstd -tf /mnt/nav-rsvg-root.tar.zst\
+        \ > /tmp/nav-rsvg-members\n! grep -Eq '^./sources/(numpy-tooling-prefix|libaom-3.15.3/|aom-testdata/|libde265-1.1.3/|x265_4.2/|libheif-1.23.7/|cargo-c-0.10.24/|librsvg-2.62.4/)'\
+        \ /tmp/nav-rsvg-members\ngrep -qx './usr/bin/rsvg-convert' /tmp/nav-rsvg-members\nsudo mkdir /mnt/nav-rsvg-replay\n\
+        sudo tar --zstd -xf /mnt/nav-rsvg-root.tar.zst -C /mnt/nav-rsvg-replay\nsudo python3 - <<'INDEPENDENT'\n\
+        from pathlib import Path\nimport os,stat,hashlib,json\n\ndef manifest(root):\n root=Path(root);out={}\n\
+        \ for d,dirs,files in os.walk(root,followlinks=False):\n  for p in [Path(d)]+[Path(d)/n for n in files]+[Path(d)/n\
+        \ for n in dirs if (Path(d)/n).is_symlink()]:\n   s=p.lstat();x={'type':stat.S_IFMT(s.st_mode),'mode':stat.S_IMODE(s.st_mode),'uid':s.st_uid,'gid':s.st_gid,'mtime':int(s.st_mtime)}\n\
+        \   if stat.S_ISREG(s.st_mode):x.update(bytes=s.st_size,sha256=hashlib.file_digest(p.open('rb'),'sha256').hexdigest())\n\
+        \   elif stat.S_ISLNK(s.st_mode):x['link']=os.readlink(p)\n   elif not stat.S_ISDIR(s.st_mode):x['rdev']=s.st_rdev\n\
+        \   out[str(p.relative_to(root))]=x\n return out\nleft=manifest('/mnt/nav-lfs');right=manifest('/mnt/nav-rsvg-replay');assert\
+        \ left==right,{'only_left':list(set(left)-set(right))[:10],'different':[k for k in set(left)&set(right)if\
+        \ left[k]!=right[k]][:10]}\nPath('/tmp/rsvg-root-full-manifest.json').write_text(json.dumps(left,sort_keys=True));p=Path('/mnt/nav-rsvg-root.tar.zst');proof={'classification':'TRANSITIONAL\
+        \ only, not OS acceptance, inherited gaps OPEN','bundle_bytes':p.stat().st_size,'bundle_sha256':hashlib.file_digest(p.open('rb'),'sha256').hexdigest(),'independent_full_replay_manifest_equal':True,'paths':len(left),'manifest_sha256':hashlib.sha256(json.dumps(left,sort_keys=True).encode()).hexdigest(),'audit':json.loads(Path('/mnt/nav-lfs/nav-build-metadata/librsvg/RSVG-TRANSITIONAL-OPEN.json').read_text())}\n\
+        Path('/tmp/rsvg-candidate-proof.json').write_text(json.dumps(proof,sort_keys=True));print('NAV_RSVG_CANDIDATE_PROOF_JSON\
+        \ '+json.dumps(proof,sort_keys=True),flush=True)\nINDEPENDENT\nsudo rm -rf /mnt/nav-rsvg-replay\n"
+    - name: Authenticated API health headroom and verifiedcandidate gate, delete ONLY10797119931, all10protected
+        exact before after
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "python3 - <<'INVENTORY'\nfrom pathlib import Path\nPath('/tmp/rsvg-protected-inventory.json').write_text('{\"\
+        10790873772\": {\"key\": \"nav-blfs13.1-x86_64-aom-static-repair-open-v1\", \"ref\": \"refs/heads/main\"\
+        , \"version\": \"69e54c818e6d1830d476051f7c8862dd31fd9fdd162e849ebefc672993823dee\", \"size_in_bytes\":\
+        \ 1414253410}, \"10710908926\": {\"key\": \"nav-blfs13.1-x86_64-jxl-open-v1\", \"ref\": \"refs/heads/main\"\
+        , \"version\": \"554507abaeca91255ad1a6f15da321ec0e5bfea6c40ae80755a6e2b33b37debe\", \"size_in_bytes\":\
+        \ 1404400214}, \"10700939007\": {\"key\": \"nav-blfs13.1-x86_64-giflib-open-v1\", \"ref\": \"refs/heads/main\"\
+        , \"version\": \"14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5\", \"size_in_bytes\":\
+        \ 1374812746}, \"10696846187\": {\"key\": \"nav-blfs13.1-x86_64-git-open-v1\", \"ref\": \"refs/heads/main\"\
+        , \"version\": \"14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5\", \"size_in_bytes\":\
+        \ 1374122764}, \"10516363617\": {\"key\": \"nav-lfs13.1-x86_64-final-gcc-v1\", \"ref\": \"refs/heads/main\"\
+        , \"version\": \"14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5\", \"size_in_bytes\":\
+        \ 1413472049}, \"10515953327\": {\"key\": \"nav-lfs13.1-x86_64-gcc-test-runtime-v1\", \"ref\": \"refs/heads/main\"\
+        , \"version\": \"e15aff5375d0e86d1aaef9fe181e558b39f1a1f784dccea28a3079ab10645ef8\", \"size_in_bytes\":\
+        \ 148732}, \"10511354384\": {\"key\": \"nav-lfs13.1-x86_64-gcc-test-cxx-v1\", \"ref\": \"refs/heads/main\"\
+        , \"version\": \"e15aff5375d0e86d1aaef9fe181e558b39f1a1f784dccea28a3079ab10645ef8\", \"size_in_bytes\":\
+        \ 1030391}, \"10508735204\": {\"key\": \"nav-lfs13.1-x86_64-gcc-test-c-v1\", \"ref\": \"refs/heads/main\"\
+        , \"version\": \"e15aff5375d0e86d1aaef9fe181e558b39f1a1f784dccea28a3079ab10645ef8\", \"size_in_bytes\":\
+        \ 1021068}, \"10480998516\": {\"key\": \"nav-lfs13.1-x86_64-access-tools-v1\", \"ref\": \"refs/heads/main\"\
+        , \"version\": \"14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5\", \"size_in_bytes\":\
+        \ 909038418}, \"10480209539\": {\"key\": \"nav-lfs13.1-x86_64-final-math-v1\", \"ref\": \"refs/heads/main\"\
+        , \"version\": \"14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5\", \"size_in_bytes\":\
+        \ 901878016}}'\n)\nPath('/tmp/rsvg-combined-inventory.json').write_text('{\"10797119931\": {\"key\": \"\
+        nav-blfs13.1-x86_64-heif-cargoc-recovery-open-v1\", \"ref\": \"refs/heads/main\", \"version\": \"a1df066836faded546fa4ff8ebb48c7f995cc25e2e478b698627a0d3b66f286c\"\
+        , \"size_in_bytes\": 1459596875}}'\n)\nINVENTORY\npython3 - <<'HEALTH_DELETE'\nimport os,time,json,urllib.request,urllib.error,hashlib,ctypes,ctypes.util\n\
+        from pathlib import Path\nTOKEN=os.environ['GH_TOKEN'];assert TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\n\
+        def request(url,method='GET'):\n assert url.startswith('https://api.github.com/')\n req=urllib.request.Request(url,method=method,headers={'Authorization':'Bearer\
+        \ '+TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \ with urllib.request.urlopen(req,timeout=90)as r:return r.status,r.read(),dict(r.headers)\ndef api(path):\n\
+        \ for attempt in range(5):\n  try:return request(BASE+path)[1]\n  except urllib.error.HTTPError as ex:\n\
+        \   if ex.code not in(403,429,500,502,503,504)or attempt==4:raise RuntimeError('API status '+str(ex.code))from\
+        \ None\n   delay=max(30,min(600,int(ex.headers.get('Retry-After','60'))))\n   if ex.headers.get('X-RateLimit-Remaining')=='0':delay=max(delay,int(ex.headers.get('X-RateLimit-Reset','0'))-int(time.time())+5)\n\
+        \   if delay>900:raise RuntimeError('Rate reset beyond bounded retry, no deletion')from None\n   print('NAV_RSVG_AUTH_RETRY',attempt+1,delay,flush=True);time.sleep(delay)\n\
+        \ raise RuntimeError('API retries exhausted')\nprotected=json.loads(Path('/tmp/rsvg-protected-inventory.json').read_text());combined=json.loads(Path('/tmp/rsvg-combined-inventory.json').read_text());key='nav-blfs13.1-x86_64-librsvg-transitional-open-v1';p=Path('/mnt/nav-rsvg-root.tar.zst');proof=json.loads(Path('/tmp/rsvg-candidate-proof.json').read_text());assert\
+        \ proof['independent_full_replay_manifest_equal']and proof['audit']['original_canonical_results']['FAIL']==1\n\
+        assert hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==proof['bundle_sha256']\ndef inventory():\n\
+        \ d=json.loads(api('actions/caches?per_page=100'));rows=d['actions_caches'];assert d['total_count']==len(rows);return\
+        \ {str(x['id']):{k:x[k]for k in['key','ref','version','size_in_bytes']}for x in rows}\npre=inventory();assert\
+        \ pre==protected|combined,'Cache inventory differs: NO deletion'\nz=ctypes.CDLL(ctypes.util.find_library('zstd'));z.ZSTD_compressBound.argtypes=[ctypes.c_size_t];z.ZSTD_compressBound.restype=ctypes.c_size_t\n\
+        upper=z.ZSTD_compressBound(p.stat().st_size+1024**2)+64*1024**2;existing=sum(x['size_in_bytes']for x in\
+        \ protected.values());assert existing+upper<10*1024**3\n# Last network call before the sole DELETE is an\
+        \ authenticated global rate limit health check.\nstatus,b,h=request('https://api.github.com/rate_limit');health=json.loads(b);core=health['resources']['core'];assert\
+        \ status==200 and core['limit']>=1000 and core['remaining']>=250 and core['reset']>time.time(),{'health_low_hold_no_deletion':core}\n\
+        print('NAV_RSVG_AUTHENTICATED_PREDELETE_HEALTH '+json.dumps({'core':core,'candidate_sha256':proof['bundle_sha256'],'worst_total':existing+upper,'limit_bytes':10*1024**3,'delete_only':'10797119931'}),flush=True)\n\
+        # Do not retry DELETE on any anomaly. There is no other deletion target or endpoint.\nstatus,b,h=request(BASE+'actions/caches/10797119931',method='DELETE');assert\
+        \ status==204 and not b\npost=inventory();assert post==protected,'Postdelete protected inventory differs:\
+        \ STOP'\na={'before':pre,'after_delete':post,'authenticated_health':core,'deleted_only':'10797119931','candidate_sha256':proof['bundle_sha256'],'new_upper_bytes':upper,'worst_total':existing+upper}\n\
+        Path('/tmp/rsvg-pre-save-audit.json').write_text(json.dumps(a,sort_keys=True));print('NAV_RSVG_PRE_SAVE_AUDIT_JSON\
+        \ '+json.dumps(a,sort_keys=True),flush=True)\n\nHEALTH_DELETE\n"
+    - name: Save transitional librsvg root originalcanonicalFAIL OPEN no tests replayed
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-rsvg-root.tar.zst
+        key: nav-blfs13.1-x86_64-librsvg-transitional-open-v1
+    - name: Verify saved successor onlynew cache and all10protected exact and finalbudget
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "python3 - <<'SAVED'\nimport os,time,json,urllib.request,urllib.error,hashlib\nfrom pathlib import Path\n\
+        TOKEN=os.environ['GH_TOKEN'];assert TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\n\
+        def api(path):\n for attempt in range(5):\n  try:\n   req=urllib.request.Request(BASE+path,headers={'Authorization':'Bearer\
+        \ '+TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \   with urllib.request.urlopen(req,timeout=90)as r:return r.read()\n  except urllib.error.HTTPError as\
+        \ ex:\n   if ex.code not in(403,429,500,502,503,504)or attempt==4:raise RuntimeError('API status '+str(ex.code))from\
+        \ None\n   delay=max(30,min(600,int(ex.headers.get('Retry-After','60'))))\n   if ex.headers.get('X-RateLimit-Remaining')=='0':delay=max(delay,int(ex.headers.get('X-RateLimit-Reset','0'))-int(time.time())+5)\n\
+        \   if delay>900:raise RuntimeError('Rate reset beyond retry')from None\n   print('NAV_RSVG_VERIFY_AUTH_RETRY',attempt+1,delay,flush=True);time.sleep(delay)\n\
+        \ raise RuntimeError('API retries exhausted')\nprotected=json.loads(Path('/tmp/rsvg-protected-inventory.json').read_text());before=json.loads(Path('/tmp/rsvg-pre-save-audit.json').read_text());proof=json.loads(Path('/tmp/rsvg-candidate-proof.json').read_text());p=Path('/mnt/nav-rsvg-root.tar.zst');assert\
+        \ hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==proof['bundle_sha256']\nd=json.loads(api('actions/caches?per_page=100'));rows=d['actions_caches'];assert\
+        \ d['total_count']==len(rows)==11\ncurrent={str(x['id']):{k:x[k]for k in ['key','ref','version','size_in_bytes']}for\
+        \ x in rows};assert all(current.get(k)==v for k,v in protected.items());assert '10797119931'not in current\n\
+        new={k:v for k,v in current.items()if k not in protected};assert len(new)==1;newid,x=next(iter(new.items()));assert\
+        \ x['key']=='nav-blfs13.1-x86_64-librsvg-transitional-open-v1'and x['ref']=='refs/heads/main'and 0<x['size_in_bytes']<=before['new_upper_bytes'];assert\
+        \ sum(x['size_in_bytes']for x in current.values())<10*1024**3\na={'classification':'SAVED TRANSITIONAL only.\
+        \ Original canonical1FAIL retained OPEN, all inheritedgapsOPEN, no OS or bootedVMacceptance','saved_cache_id':newid,'saved_cache':x,'protected_all10_exact':True,'deleted_only':'10797119931','new_fullroot_proof':proof,'before_after':before,'after_save':current,'total_cache_bytes':sum(x['size_in_bytes']for\
+        \ x in current.values())};Path('/tmp/rsvg-saved-audit.json').write_text(json.dumps(a,sort_keys=True));print('NAV_RSVG_SAVED_VERIFIED_AUDIT_JSON\
+        \ '+json.dumps(a,sort_keys=True),flush=True)\n\nSAVED\n"
