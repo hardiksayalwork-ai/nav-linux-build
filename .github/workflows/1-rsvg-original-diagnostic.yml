@@ -186,9 +186,10 @@ jobs:
         records.append({\''suite\'':t[\''name\''],\''original_cmd\'':t[\''cmd\''],\''listing_only_cmd\'':cmd,\''cwd\'':cwd,\''exit\'':r.returncode})\n(p/\''discovery-tooling-audit.json\'').write_text(json.dumps({\''original_wrapper_sha256\'':hashlib.sha256(wrapper.read_bytes()).hexdigest(),\''listing_copy_sha256\'':hashlib.sha256(copy.read_bytes()).hexdigest(),\''only_copy_difference\'':\''append
         --list after the original --include-ignored, no test bodies executed by discovery\'',\''suites\'':records},indent=2));print(\''NAV_RSVG_ALL4_ORIGINAL_SUITE_DISCOVERY_COMPLETE\'')\n'')
 
-        Path(''/mnt/nav-lfs/sources/rsvg-source-audit.py'').write_text(''from pathlib import Path\nimport json,re,sys,hashlib,collections\ns=Path(sys.argv[1]);p=Path(sys.argv[2]);original=json.loads((p/\''original-source-files-sha256.json\'').read_text())\nfor
+        Path(''/mnt/nav-lfs/sources/rsvg-source-audit.py'').write_text(''from pathlib import Path\nimport json,re,sys,hashlib,collections,os\ns=Path(sys.argv[1]);p=Path(sys.argv[2]);original=json.loads((p/\''original-source-files-sha256.json\'').read_text())\nfor
         rel,x in original.items():\n f=s/rel;assert f.is_file()and not f.is_symlink()and f.stat().st_size==x[\''bytes\'']and
-        hashlib.file_digest(f.open(\''rb\''),\''sha256\'').hexdigest()==x[\''sha256\''],rel\nref=(s/\''rsvg/tests/reference.rs\'').read_text();assert
+        hashlib.file_digest(f.open(\''rb\''),\''sha256\'').hexdigest()==x[\''sha256\''],rel\nlinks=json.loads((p/\''original-source-symlinks.json\'').read_text());assert
+        len(links)==7\nfor rel,target in links.items():assert(s/rel).is_symlink()and os.readlink(s/rel)==target,rel\nref=(s/\''rsvg/tests/reference.rs\'').read_text();assert
         \''if path_base_name.starts_with("ignore") {\\n        return;\\n    }\''in ref\nsilent=[{\''name\'':\''tests::\''+n,\''fixture\'':v,\''classification\'':\''OPEN,
         upstream returns before rendering fixture, not coverage even if harness reports ok\''}for n,v in re.findall(r\''t!\\(\\s*(\\w+)\\s*,\\s*"([^"]+)"\\s*\\);\'',ref)if
         Path(v).name.startswith(\''ignore\'')];assert len(silent)==5\nr=json.loads((p/\''test-recount-audit.json\'').read_text());found={}\nfor
@@ -210,12 +211,19 @@ jobs:
 
         Path(''/tmp/nav-source-stage.sh'').write_text(''set -euo pipefail\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\nulimit
         -v 4194304\numask 022\nmkdir -p "$LFS/nav-build-metadata/librsvg"\npython3 - <<\''DOWNLOAD\''\nfrom pathlib
-        import Path,PurePosixPath\nimport urllib.request,hashlib,tarfile,json\np=Path(\''/mnt/nav-lfs/sources/librsvg-2.62.4.tar.xz\'')\nwith
+        import Path,PurePosixPath\nimport urllib.request,hashlib,tarfile,json,os,posixpath\np=Path(\''/mnt/nav-lfs/sources/librsvg-2.62.4.tar.xz\'')\nwith
         urllib.request.urlopen(\''https://download.gnome.org/sources/librsvg/2.62/librsvg-2.62.4.tar.xz\'',timeout=120)as
-        r:p.write_bytes(r.read())\nassert hashlib.file_digest(p.open(\''rb\''),\''sha256\'').hexdigest()==\''c982b8157a054b803493bf994d31e50105eb948dd8da6b4ab9734e8d392712a3\''\nwith
-        tarfile.open(p)as t:\n for m in t.getmembers():\n  q=PurePosixPath(m.name);assert not q.is_absolute()and
-        \''..\''not in q.parts and q.parts[0]==\''librsvg-2.62.4\'';assert m.isfile()or m.isdir(),m.name\n t.extractall(p.parent,filter=\''data\'')\ns=p.parent/\''librsvg-2.62.4\'';original={str(f.relative_to(s)):{\''bytes\'':f.stat().st_size,\''sha256\'':hashlib.file_digest(f.open(\''rb\''),\''sha256\'').hexdigest()}for
-        f in s.rglob(\''*\'')if f.is_file()and not f.is_symlink()};Path(\''/mnt/nav-lfs/nav-build-metadata/librsvg/original-source-files-sha256.json\'').write_text(json.dumps(original,indent=2));print(\''NAV_RSVG_SOURCE_SHA256_OK\'',len(original))\nDOWNLOAD\npython3
+        r:p.write_bytes(r.read())\nassert hashlib.file_digest(p.open(\''rb\''),\''sha256\'').hexdigest()==\''c982b8157a054b803493bf994d31e50105eb948dd8da6b4ab9734e8d392712a3\''\nlinks={\''librsvg-2.62.4/gdk-pixbuf-loader/COPYING.LIB\'':
+        \''../COPYING.LIB\'', \''librsvg-2.62.4/librsvg-c/COPYING.LIB\'': \''../COPYING.LIB\'', \''librsvg-2.62.4/librsvg-rebind/librsvg-rebind/LICENSE\'':
+        \''../LICENSE\'', \''librsvg-2.62.4/librsvg-rebind/librsvg-rebind/sys/LICENSE\'': \''../../LICENSE\'', \''librsvg-2.62.4/rsvg/COPYING.LIB\'':
+        \''../COPYING.LIB\'', \''librsvg-2.62.4/rsvg-bench/COPYING.LIB\'': \''../COPYING.LIB\'', \''librsvg-2.62.4/rsvg_convert/COPYING.LIB\'':
+        \''../COPYING.LIB\''}\nwith tarfile.open(p)as t:\n assert {m.name:m.linkname for m in t.getmembers()if m.issym()}==links\n
+        for m in t.getmembers():\n  q=PurePosixPath(m.name);assert not q.is_absolute()and \''..\''not in q.parts
+        and q.parts[0]==\''librsvg-2.62.4\'';assert m.isfile()or m.isdir()or(m.issym()and links.get(m.name)==m.linkname
+        and posixpath.normpath(posixpath.join(posixpath.dirname(m.name),m.linkname)).startswith(\''librsvg-2.62.4/\'')),m.name\n
+        t.extractall(p.parent,filter=\''data\'')\ns=p.parent/\''librsvg-2.62.4\'';original={str(f.relative_to(s)):{\''bytes\'':f.stat().st_size,\''sha256\'':hashlib.file_digest(f.open(\''rb\''),\''sha256\'').hexdigest()}for
+        f in s.rglob(\''*\'')if f.is_file()and not f.is_symlink()};Path(\''/mnt/nav-lfs/nav-build-metadata/librsvg/original-source-files-sha256.json\'').write_text(json.dumps(original,indent=2));Path(\''/mnt/nav-lfs/nav-build-metadata/librsvg/original-source-symlinks.json\'').write_text(json.dumps({str(f.relative_to(s)):os.readlink(f)for
+        f in s.rglob(\''*\'')if f.is_symlink()},indent=2));print(\''NAV_RSVG_SOURCE_SHA256_OK\'',len(original))\nDOWNLOAD\npython3
         - <<\''PREPARE\''\nfrom pathlib import Path\nPREPARE\nsudo chown -hR root:root "$LFS"\nsudo chown -R 101:101
         "$LFS/home/tester"\npython3 - <<\''RESOLVER_HELPER\''\nfrom pathlib import Path\nPath(\''/tmp/nav-aom-resolver-proof.py\'').write_text("import
         pathlib,stat,os,hashlib,json,sys\\np=pathlib.Path(\''/mnt/nav-lfs/etc/resolv.conf\'')\\ndef state():\\n
