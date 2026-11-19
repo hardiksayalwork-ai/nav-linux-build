@@ -1,0 +1,338 @@
+name: NAV GTK full original diagnostic unstable alltests Vulkan realAdwaita trustedshaderonly OPEN VM
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-gtk-original-full-diagnostic
+  cancel-in-progress: false
+jobs:
+  diagnostic:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+    - name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
+        \ in /mnt/nav-rsvg-root.tar.zst /mnt/nav-gtk-prerequisites.tar.zst; do\n test ! -e \"$bundle\"\n sudo install\
+        \ -o \"$(id -u)\" -g \"$(id -g)\" -m 0600 /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"$(stat -c\
+        \ '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n\
+        \ printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\n' > \"$probe/proof\"\n tar --zstd -cf \"$bundle\" -C \"$probe\"\
+        \ proof\n zstd -t \"$bundle\"\n tar --zstd -xOf \"$bundle\" proof > \"$probe/recovered\"\n cmp \"$probe/proof\"\
+        \ \"$probe/recovered\"\n # Match actions/cache extraction semantics, not only bundle writer access.\n test\
+        \ \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n cp \"$bundle\" \"$probe/expected-bundle\"\n\
+        \ relative_bundle=$(realpath --relative-to=\"$PWD\" \"$bundle\")\n tar --zstd -cf \"$probe/cache.tzst\"\
+        \ -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n env -u TAR_OPTIONS /usr/bin/tar -xf \"$probe/cache.tzst\"\
+        \ -P -C \"$PWD\" --use-compress-program unzstd > \"$probe/default-restore.log\" 2>&1\n negative_rc=$?\n\
+        \ set -e\n test \"$negative_rc\" = 2\n test ! -s \"$bundle\"\n grep -F 'Cannot open: File exists' \"$probe/default-restore.log\"\
+        \n TAR_OPTIONS=--overwrite /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program\
+        \ unzstd\n cmp \"$probe/expected-bundle\" \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"\
+        $(id -u):$(id -g):600\"\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS\
+        \ %s\\n' \"$bundle\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic\
+        \ failure evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"\
+        ><failure message=\"synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n\
+        \ f=p/name;f.write_bytes(data)\n subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\\
+        n    data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_RSVG_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing =\
+        \ []\\n    manifest['errors'].append({'area': str(p), 'error': repr(ex)})\\nfor item in sorted((x for x\
+        \ in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\n    rel = str(f.relative_to(p))\\n    wanted\
+        \ = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard'\
+        \ and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples'\
+        \ and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name,\
+        \ data)\\n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error':\
+        \ repr(ex)})\\nemit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\\
+        n    raise RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"\
+        '/mnt/nav-lfs/nav-build-metadata/aom-tooling'\",repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\n\
+        assert r.returncode==0,r.stderr\nparts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_RSVG_'):\n\
+        \  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\nm=json.loads(gzip.decompress(b''.join(parts['NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64'])))\n\
+        assert not m['errors'] and len(m['files'])==len(expected)\nfor name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_RSVG_'+name+'_GZB64']))\n\
+        \ assert b==expected[v['source']] and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\n\
+        missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
+        assert r.returncode!=0 and 'NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_RSVG_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
+        EXPORT_SELFTEST\n"
+    - name: Restore newest verified librsvg TRANSITIONAL root
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-rsvg-root.tar.zst
+        key: nav-blfs13.1-x86_64-librsvg-transitional-open-v1
+        fail-on-cache-miss: true
+    - name: Verify newest saved root archive
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf ''b18303bde2a0da1f126fd595f21fd56ae353e1f2561adc0616337c380f21d2de  /mnt/nav-rsvg-root.tar.zst
+
+        '' | sha256sum -c -
+
+        zstd -t /mnt/nav-rsvg-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-rsvg-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/librsvg/RSVG-TRANSITIONAL-OPEN.json
+
+        '
+    - name: Restore separately verified original Graphene ISO hicolor install-only payload
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gtk-prerequisites.tar.zst
+        key: nav-graphene-isocodes-hicolor-install-only-open-v1
+        fail-on-cache-miss: true
+    - name: Independently replay all2378 prerequisite paths exact full metadata hashes then install into disposable
+        diagnostic root
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'PROOFRECOVER'\nimport os,json,time,urllib.request,hashlib,base64,gzip,re\n\
+        from pathlib import Path\nTOKEN=os.environ['GH_TOKEN'];assert TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\n\
+        class SafeRedirect(urllib.request.HTTPRedirectHandler):\n def redirect_request(self,req,fp,code,msg,headers,newurl):\n\
+        \  new=super().redirect_request(req,fp,code,msg,headers,newurl)\n  if new is not None and not newurl.startswith('https://api.github.com/'):new.remove_header('Authorization')\n\
+        \  return new\nOPENER=urllib.request.build_opener(SafeRedirect())\n_probe=urllib.request.Request('https://api.github.com/synthetic',headers={'Authorization':'Bearer\
+        \ SYNTHETIC_NOT_A_SECRET'})\n_cross=SafeRedirect().redirect_request(_probe,None,302,'Found',{},'https://example.invalid/synthetic-log')\n\
+        _same=SafeRedirect().redirect_request(_probe,None,302,'Found',{},'https://api.github.com/synthetic-next')\n\
+        assert not _cross.has_header('Authorization') and _same.get_header('Authorization')=='Bearer SYNTHETIC_NOT_A_SECRET'\n\
+        print('NAV_SAFE_REDIRECT_HEADER_SCOPE_SYNTHETIC_SELFTEST_PASS',flush=True)\ndef get(path):\n url=path if\
+        \ path.startswith('https://api.github.com/')else BASE+path\n req=urllib.request.Request(url,headers={'Authorization':'Bearer\
+        \ '+TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \ with OPENER.open(req,timeout=90)as r:return r.read()\ndef inventory():\n d=json.loads(get('actions/caches?per_page=100'));assert\
+        \ d['total_count']==len(d['actions_caches']);return {str(x['id']):{k:x[k]for k in ['key','ref','version','size_in_bytes']}for\
+        \ x in d['actions_caches']}\ndef unique_record(text,marker):\n rows=[]\n for l in text.splitlines():\n \
+        \ l=re.sub(r'^\\S+Z ','',l)\n  if l.startswith(marker+' '):rows.append(json.loads(l.split(' ',1)[1]))\n\
+        \ assert len(rows)==1,(marker,len(rows));return rows[0]\n\nEXPECTED={'bytes': 540111, 'file': 'bundle-proof.json',\
+        \ 'sha256': 'feea69c224a5e9d19ca3573f3019e594a1086e025549678f531013df89748f16'}\nraw=get('actions/jobs/135786710258/logs').decode();manifest=unique_record(raw,'NAV_GTKPRE_EXPORT_MANIFEST_JSON');assert\
+        \ manifest['BUNDLE-PROOF_JSON']==EXPECTED\nparts=[]\nfor l in raw.splitlines():\n l=re.sub(r'^\\S+Z ','',l)\n\
+        \ if l.startswith('NAV_GTKPRE_BUNDLE-PROOF_JSON_GZB64 '):parts.append(base64.b64decode(l.split(' ',1)[1]))\n\
+        b=gzip.decompress(b''.join(parts));assert len(b)==EXPECTED['bytes']and hashlib.sha256(b).hexdigest()==EXPECTED['sha256'];Path('/tmp/nav-gtk-prerequisite-proof.json').write_bytes(b)\n\
+        \nPROOFRECOVER\nset -euo pipefail\nsudo python3 - <<'VERIFY'\nfrom pathlib import Path\nimport json,hashlib,subprocess,stat,os\n\
+        P=json.loads(Path('/tmp/nav-gtk-prerequisite-proof.json').read_text())\nf=Path('/mnt/nav-gtk-prerequisites.tar.zst');assert\
+        \ f.stat().st_size==P['bundle_bytes']and hashlib.file_digest(f.open('rb'),'sha256').hexdigest()==P['bundle_sha256']\n\
+        root=Path('/mnt/nav-gtk-prerequisite-replay');root.mkdir();subprocess.run(['tar','--zstd','--same-owner','--same-permissions','-xpf',str(f),'-C',str(root)],check=True)\n\
+        def manifest(root):\n out={}\n for p in [root]+sorted(root.rglob('*')):\n  s=p.lstat();v={'type':stat.S_IFMT(s.st_mode),'mode':stat.S_IMODE(s.st_mode),'uid':s.st_uid,'gid':s.st_gid,'mtime':s.st_mtime_ns}\n\
+        \  if p.is_symlink():v['symlink']=os.readlink(p)\n  elif p.is_file():v['bytes']=s.st_size;v['sha256']=hashlib.file_digest(p.open('rb'),'sha256').hexdigest()\n\
+        \  out[str(p.relative_to(root))]=v\n return out\nactual=manifest(root);assert actual==P['manifest'],[(k,actual.get(k),v)for\
+        \ k,v in P['manifest'].items()if actual.get(k)!=v][:3]\nsubprocess.run(['tar','--zstd','--same-owner','--same-permissions','-xpf',str(f),'-C','/mnt/nav-lfs'],check=True)\n\
+        for name,v in P['manifest'].items():\n p=Path('/mnt/nav-lfs')/name\n if v['type']==stat.S_IFREG:assert p.is_file()and\
+        \ hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==v['sha256'],name\n if v['type']==stat.S_IFLNK:assert\
+        \ p.is_symlink()and os.readlink(p)==v['symlink'],name\nA=Path('/mnt/nav-lfs/sources/nav-gtk-evidence');A.mkdir(parents=True,exist_ok=True);(A/'prerequisite-replay.json').write_text(json.dumps({'paths_exact':len(actual),'bundle_sha256':P['bundle_sha256'],'bundle_bytes':P['bundle_bytes'],'all_inherited_gaps':'OPEN','original_tests_replayed':False},sort_keys=True));print('NAV_GTK_PREREQUISITE_REPLAY_EXACT',len(actual),flush=True)\n\
+        VERIFY\n"
+    - name: Authenticated recover and strict recount original32Shaderc exports no canonical replay
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'RECOVER'\nimport os,json,time,urllib.request,hashlib,base64,gzip,re\n\
+        from pathlib import Path\nTOKEN=os.environ['GH_TOKEN'];assert TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\n\
+        class SafeRedirect(urllib.request.HTTPRedirectHandler):\n def redirect_request(self,req,fp,code,msg,headers,newurl):\n\
+        \  new=super().redirect_request(req,fp,code,msg,headers,newurl)\n  if new is not None and not newurl.startswith('https://api.github.com/'):new.remove_header('Authorization')\n\
+        \  return new\nOPENER=urllib.request.build_opener(SafeRedirect())\n_probe=urllib.request.Request('https://api.github.com/synthetic',headers={'Authorization':'Bearer\
+        \ SYNTHETIC_NOT_A_SECRET'})\n_cross=SafeRedirect().redirect_request(_probe,None,302,'Found',{},'https://example.invalid/synthetic-log')\n\
+        _same=SafeRedirect().redirect_request(_probe,None,302,'Found',{},'https://api.github.com/synthetic-next')\n\
+        assert not _cross.has_header('Authorization') and _same.get_header('Authorization')=='Bearer SYNTHETIC_NOT_A_SECRET'\n\
+        print('NAV_SAFE_REDIRECT_HEADER_SCOPE_SYNTHETIC_SELFTEST_PASS',flush=True)\ndef get(path):\n url=path if\
+        \ path.startswith('https://api.github.com/')else BASE+path\n req=urllib.request.Request(url,headers={'Authorization':'Bearer\
+        \ '+TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \ with OPENER.open(req,timeout=90)as r:return r.read()\ndef inventory():\n d=json.loads(get('actions/caches?per_page=100'));assert\
+        \ d['total_count']==len(d['actions_caches']);return {str(x['id']):{k:x[k]for k in ['key','ref','version','size_in_bytes']}for\
+        \ x in d['actions_caches']}\ndef unique_record(text,marker):\n rows=[]\n for l in text.splitlines():\n \
+        \ l=re.sub(r'^\\S+Z ','',l)\n  if l.startswith(marker+' '):rows.append(json.loads(l.split(' ',1)[1]))\n\
+        \ assert len(rows)==1,(marker,len(rows));return rows[0]\nraw=get('actions/jobs/135791224505/logs').decode();A=Path('/mnt/nav-lfs/sources/nav-gtk-evidence/original-shaderc');A.mkdir(parents=True,exist_ok=True)\n\
+        manifest=unique_record(raw,'NAV_SHADERC_EXPORT_MANIFEST_JSON');assert len(manifest)==32;parts={}\nfor l\
+        \ in raw.splitlines():\n l=re.sub(r'^\\S+Z ','',l)\n if l.startswith('NAV_SHADERC_')and'_GZB64 'in l:\n\
+        \  k,v=l.split(' ',1);parts.setdefault(k,[]).append(base64.b64decode(v))\nfor k,v in manifest.items():\n\
+        \ b=gzip.decompress(b''.join(parts['NAV_SHADERC_'+k+'_GZB64']));assert len(b)==v['bytes']and hashlib.sha256(b).hexdigest()==v['sha256'];p=A/v['file'];assert\
+        \ not p.is_absolute()or p.is_relative_to(A);assert '..'not in Path(v['file']).parts;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(b)\n\
+        import xml.etree.ElementTree as E\ncoverage=json.loads((A/'coverage.json').read_text());assert coverage['ctest_cases']==24\
+        \ and not coverage['ctest_failed']and not coverage['ctest_skipped'];assert sum(x['tests']for x in coverage['gtest_xml'])==1083\
+        \ and sum(x['disabled']for x in coverage['gtest_xml'])==3 and all(x['failures']==x['errors']==x['skipped']==0\
+        \ for x in coverage['gtest_xml'])\ncases=E.parse(A/'ctest.xml').getroot().findall('.//testcase');assert\
+        \ len(cases)==24 and all(c.find('failure')is None and c.find('skipped')is None for c in cases)\nrecords=[]\n\
+        for f in sorted((A/'gtest-xml').glob('*.xml')):\n records += E.parse(f).getroot().findall('.//testcase')\n\
+        assert len(records)==1083 and len([c for c in records if c.get('status')=='run'])==1080\nnotrun=[c for c\
+        \ in records if c.get('status')=='notrun'];assert len(notrun)==3 and all(c.get('name')=='DISABLED_TargetEnvIgnoredWhenPreprocessing'for\
+        \ c in notrun)\ns=(A/'LastTest.log').read_text();assert re.findall(r'Ran (\\d+) tests? in ',s)==['4','2'];cli=re.findall(r'^\\\
+        s*(\\d+)/445\\s+\\S+\\s+Passed\\s*$',s,re.M);assert list(map(int,cli))==list(range(1,446)),(len(cli),cli[-3:])\n\
+        (A/'verified-original-export-manifest.json').write_text(json.dumps(manifest,sort_keys=True));print('NAV_GTK_SHADERC_ORIGINAL32_EXPORTS_24CTEST_1080PASS_3DISABLEDOPEN_6PY_445CLI_VERIFIED',flush=True)\n\
+        \nRECOVER\n"
+    - name: Prepare exact original sources and same approved system-library wrapper buildtool-only no canonical
+        Shaderc replay
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'SETUP'\nfrom pathlib import Path\nimport urllib.request,tarfile,hashlib,json\n\
+        LOCK=[{'filename': 'shaderc-2026.3.tar.gz', 'url': 'https://github.com/google/shaderc/archive/v2026.3/shaderc-2026.3.tar.gz',\
+        \ 'sha256': 'ee493ccf1b3038b4ef2fe024664c5eb2dc4bcc1f6b05b33e3909de0e19c81024', 'top': 'shaderc-2026.3'},\
+        \ {'filename': 'SPIRV-Tools-vulkan-sdk-1.4.357.0.tar.gz', 'url': 'https://github.com/KhronosGroup/SPIRV-Tools/archive/vulkan-sdk-1.4.357.0/SPIRV-Tools-vulkan-sdk-1.4.357.0.tar.gz',\
+        \ 'sha256': 'd31e7109b6ef3559067e53e520870eafed7c9534d00db9728814b6df03fa4a5e', 'top': 'SPIRV-Tools-vulkan-sdk-1.4.357.0'},\
+        \ {'filename': 'gtk-4.22.4.tar.xz', 'url': 'https://download.gnome.org/sources/gtk/4.22/gtk-4.22.4.tar.xz',\
+        \ 'sha256': '51bd9f60c7d23a665a556c7364c21fb2e4e282566b3e7e092455e8f910330893', 'top': 'gtk-4.22.4'}, {'filename':\
+        \ 'adwaita-icon-theme-50.0.tar.xz', 'url': 'https://download.gnome.org/sources/adwaita-icon-theme/50/adwaita-icon-theme-50.0.tar.xz',\
+        \ 'md5': 'a03d8d68377a88fcf06e090ba6a6ec2f', 'sha256': 'fac6e0401fca714780561a081b8f7e27c3bc1db34ebda4da175081f26b24d460',\
+        \ 'top': 'adwaita-icon-theme-50.0'}]\nA=Path('/mnt/nav-lfs/sources/nav-gtk-evidence');A.mkdir(parents=True,exist_ok=True)\n\
+        (A/'source-lock.json').write_text(json.dumps(LOCK,sort_keys=True))\nfor x in LOCK:\n with urllib.request.urlopen(x['url'],timeout=120)as\
+        \ r:b=r.read()\n assert hashlib.sha256(b).hexdigest()==x['sha256'],x['filename']\n p=Path('/mnt/nav-lfs/sources')/x['filename'];p.write_bytes(b)\n\
+        \ with tarfile.open(p)as t:\n  for m in t:assert not m.name.startswith('/')and '..'not in Path(m.name).parts\n\
+        \  t.extractall(p.parent)\n print('NAV_GTK_SOURCE_LOCK_OK',x['filename'],len(b),flush=True)\nW=Path('/mnt/nav-lfs/sources/nav-shaderc-system-wrapper');W.mkdir()\n\
+        (W/'CMakeLists.txt').write_text('cmake_minimum_required(VERSION 3.22.1)\\nproject(NAVShadercSystemLibraries\
+        \ C CXX)\\nenable_testing()\\nfind_package(Threads REQUIRED)\\nfind_package(GTest 1.18.0 EXACT CONFIG REQUIRED)\\\
+        nfind_package(SPIRV-Tools CONFIG REQUIRED)\\nfind_package(SPIRV-Tools-opt CONFIG REQUIRED)\\nfind_package(SPIRV-Tools-link\
+        \ CONFIG REQUIRED)\\nfind_package(SPIRV-Tools-tools CONFIG REQUIRED)\\nfind_package(glslang 16.5.0 EXACT\
+        \ CONFIG REQUIRED)\\nadd_library(gmock ALIAS GTest::gmock)\\nadd_library(gtest_main ALIAS GTest::gtest_main)\\\
+        nadd_library(glslang ALIAS glslang::glslang)\\nadd_library(SPIRV ALIAS glslang::SPIRV)\\nset(glslang_SOURCE_DIR\
+        \ /usr/include/glslang)\\nset(spirv-tools_SOURCE_DIR /sources/SPIRV-Tools-vulkan-sdk-1.4.357.0)\\nset(SPIRV-Headers_SOURCE_DIR\
+        \ /usr)\\nset(gmock_SOURCE_DIR /usr)\\nadd_subdirectory(/sources/shaderc-2026.3 shaderc)\\n# The original\
+        \ combiner packs only built static objects. System dependencies are\\n# shared imported targets, so preserve\
+        \ those dependencies on its consumer link.\\ntarget_link_libraries(shaderc_combined INTERFACE glslang SPIRV\
+        \ SPIRV-Tools-opt SPIRV-Tools Threads::Threads)\\n')\nS=Path('/mnt/nav-lfs/sources/nav-shaderc-evidence');S.mkdir()\n\
+        (S/'source-lock.json').write_text(json.dumps(LOCK[:2],sort_keys=True))\nPath('/mnt/nav-lfs/sources/nav-gtk-inner.sh').write_text('set\
+        \ -euo pipefail\\numask 022\\nulimit -v 4194304\\nulimit -c 0\\nA=/sources/nav-shaderc-evidence\\nexport\
+        \ MAKEFLAGS=-j2\\nexport SOURCE_DATE_EPOCH=1795046400\\ncmake -S /sources/nav-shaderc-system-wrapper -B\
+        \ /sources/nav-shaderc-build -G Ninja \\\\\\n -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/sources/nav-build-tools\
+        \ \\\\\\n -DSHADERC_SKIP_TESTS=OFF -DSHADERC_SKIP_EXAMPLES=OFF -DSHADERC_SKIP_EXECUTABLES=OFF \\\\\\n -DSHADERC_SKIP_COPYRIGHT_CHECK=OFF\
+        \ -DSHADERC_ENABLE_HLSL=ON \\\\\\n -DSHADERC_SKIP_INSTALL=ON -DFETCHCONTENT_FULLY_DISCONNECTED=ON \\\\\\\
+        n 2>&1 | tee \"$A/configure.log\"\\nctest --test-dir /sources/nav-shaderc-build --show-only=json-v1 > \"\
+        $A/discovery.json\"\\npython3 - <<\\'DISCOVERY\\'\\nfrom pathlib import Path\\nimport json\\nA=Path(\\'/sources/nav-shaderc-evidence\\\
+        ');d=json.loads((A/\\'discovery.json\\').read_text());names=[x[\\'name\\']for x in d[\\'tests\\']];assert\
+        \ len(names)==len(set(names))==24,names\\nrequired=[\\'shaderc_util_\\'+x for x in [\\'counting_includer\\\
+        ',\\'string_piece\\',\\'format\\',\\'file_finder\\',\\'io_shaderc\\',\\'message\\',\\'mutex\\',\\'version_profile\\\
+        ',\\'compiler\\']]+[p+\\'_\\'+x for p in [\\'shaderc\\',\\'shaderc_shared\\']for x in [\\'shaderc\\',\\\
+        'shaderc_cpp\\',\\'shaderc_private\\']]+[\\'shaderc_combined_shaderc\\',\\'shaderc_combined_shaderc_cpp\\\
+        ',\\'shaderc_c_smoke_test\\']+[\\'glslc_\\'+x for x in [\\'file\\',\\'resource_parse\\',\\'stage\\']]+[\\\
+        'shaderc_expect_unittests\\',\\'shaderc_glslc_test_framework_unittests\\',\\'glslc_tests\\']\\nassert set(names)==set(required),(names,required)\\\
+        nprint(\\'NAV_SHADERC_ALL24_ORIGINAL_CTEST_ENTRIES_JSON \\'+json.dumps(names),flush=True)\\nDISCOVERY\\\
+        nninja -C /sources/nav-shaderc-build -j2 2>&1 | tee \"$A/build.log\"\\npython3 /sources/nav-shaderc-source-verify.py\\\
+        nmkdir -p /sources/nav-build-tools/bin\\ninstall -m755 /sources/nav-shaderc-build/shaderc/glslc/glslc /sources/nav-build-tools/bin/glslc\\\
+        n/sources/nav-build-tools/bin/glslc --version | tee \"$A/install-only-glslc-version.log\"\\npython3 - <<\\\
+        'PRESERVE\\'\\nfrom pathlib import Path\\nimport hashlib,json\\nA=Path(\\'/sources/nav-shaderc-evidence\\\
+        ');p=Path(\\'/sources/nav-build-tools/bin/glslc\\');out={\\'classification\\':\\'Install-only rebuild from\
+        \ identical untouched locked sources and external wrapper. Original32exports retained. Canonical tests NOT\
+        \ replayed. Equivalence to first unexported binaries NOT claimed. Build-time trusted GTK input only. OSV1069/1137\
+        \ OPEN.\\',\\'compiler_path\\':str(p),\\'compiler_sha256\\':hashlib.file_digest(p.open(\\'rb\\'),\\'sha256\\\
+        ').hexdigest(),\\'runtime_install\\':False}\\n(A/\\'install-only-audit.json\\').write_text(json.dumps(out,sort_keys=True));print(\\\
+        'NAV_GTK_SHADERC_INSTALL_ONLY_AUDIT_JSON \\'+json.dumps(out,sort_keys=True),flush=True)\\nPRESERVE\\nexport\
+        \ PATH=/sources/nav-build-tools/bin:/usr/bin:/usr/sbin:/bin:/sbin\\nA=/sources/nav-gtk-evidence\\ncp -a\
+        \ /sources/nav-shaderc-evidence \"$A/install-only-shaderc\"\\ncd /sources/gtk-4.22.4\\nmeson setup build\
+        \ --prefix=/usr --buildtype=release --wrap-mode=nodownload \\\\\\n -Dx11-backend=true -Dwayland-backend=true\
+        \ -Dbroadway-backend=true \\\\\\n -Dvulkan=enabled -Dmedia-gstreamer=enabled -Dintrospection=enabled \\\\\
+        \\n -Dbuild-demos=true -Dbuild-testsuite=true -Dbuild-examples=true -Dbuild-tests=true \\\\\\n 2>&1 | tee\
+        \ \"$A/gtk-configure.log\"\\nmeson introspect --tests build > \"$A/gtk-discovery.json\"\\nmeson introspect\
+        \ --buildoptions build > \"$A/gtk-options.json\"\\nmeson introspect --dependencies build > \"$A/gtk-dependencies.json\"\
+        \\nninja -C build -j2 2>&1 | tee \"$A/gtk-build.log\"\\n# Only real GTK tool is exposed to the following\
+        \ icon-theme configure.\\ntest -x build/tools/gtk4-update-icon-cache\\nexport PATH=/sources/gtk-4.22.4/build/tools:$PATH\\\
+        nbuild/tools/gtk4-update-icon-cache --help > \"$A/real-icon-cache-help.log\"\\ncd /sources/adwaita-icon-theme-50.0\\\
+        nmeson setup build --prefix=/usr --buildtype=release --wrap-mode=nodownload 2>&1 | tee \"$A/adwaita-configure.log\"\
+        \\nmeson introspect --tests build > \"$A/adwaita-discovery.json\"\\nninja -C build -j2 2>&1 | tee \"$A/adwaita-build.log\"\
+        \\n# Install only theme into this disposable root so GTK icon tests have real data.\\nninja -C build install\
+        \ 2>&1 | tee \"$A/adwaita-install.log\"\\nmeson test -C build --no-rebuild --num-processes 2 --print-errorlogs\
+        \ 2>&1 | tee \"$A/adwaita-test.log\"\\npython3 /sources/nav-gtk-source-verify.py\\n# Full original tests:\
+        \ upstream unstable setup retains failing/flaky suites.\\n# X11 excludes Broadway renderer by upstream setup;\
+        \ second run covers that exact set.\\nmkdir -p /tmp/nav-gtk-runtime\\nchmod 1777 /tmp /var/tmp\\nchown -R\
+        \ tester:tester /sources/gtk-4.22.4 /sources/adwaita-icon-theme-50.0 \"$A\" /tmp/nav-gtk-runtime\\nchmod\
+        \ 700 /tmp/nav-gtk-runtime\\nXvfb :98 -screen 0 1280x800x24 -nolisten tcp -ac -noreset > \"$A/xvfb.log\"\
+        \ 2>&1 &\\nxv=$!\\ntrap \\'kill \"$xv\" 2>/dev/null || true\\' EXIT\\nfor i in $(seq 1 100);do test -S /tmp/.X11-unix/X98\
+        \ && break; sleep 0.1;done\\ntest -S /tmp/.X11-unix/X98\\ncd /sources/gtk-4.22.4\\nset +e\\nsu tester -c\
+        \ \\'ulimit -v 4194304;ulimit -c 0;dbus-run-session -- env -u LANGUAGE LANG=C.UTF-8 DISPLAY=:98 XDG_RUNTIME_DIR=/tmp/nav-gtk-runtime\
+        \ LIBGL_ALWAYS_SOFTWARE=1 meson test -C /sources/gtk-4.22.4/build --no-rebuild --setup=x11_unstable --num-processes\
+        \ 2 --print-errorlogs --logbase=nav-x11\\' 2>&1 | tee \"$A/gtk-x11-test.log\"\\nxrc=${PIPESTATUS[0]}\\nset\
+        \ -e\\nprintf \\'%s\\\\n\\' \"$xrc\" > \"$A/gtk-x11-exit.txt\"\\ncp build/meson-logs/nav-x11* \"$A/\"\\\
+        n# Original Broadway renderer needs gtk4-broadwayd. No browser substitute or fake output.\\nsu tester -c\
+        \ \\'XDG_RUNTIME_DIR=/tmp/nav-gtk-runtime /sources/gtk-4.22.4/build/gdk/broadway/gtk4-broadwayd :5\\' >\
+        \ \"$A/broadway.log\" 2>&1 &\\nbw=$!\\ntrap \\'kill \"$xv\" \"$bw\" 2>/dev/null || true\\' EXIT\\nfor i\
+        \ in $(seq 1 100);do test -S /tmp/nav-gtk-runtime/broadway6.socket && break; sleep 0.1;done\\nset +e\\nsu\
+        \ tester -c \\'ulimit -v 4194304;ulimit -c 0;dbus-run-session -- env -u LANGUAGE LANG=C.UTF-8 XDG_RUNTIME_DIR=/tmp/nav-gtk-runtime\
+        \ BROADWAY_DISPLAY=:5 LIBGL_ALWAYS_SOFTWARE=1 meson test -C /sources/gtk-4.22.4/build --no-rebuild --setup=broadway_unstable\
+        \ --suite=gsk-compare-broadway --num-processes 2 --print-errorlogs --logbase=nav-broadway\\' 2>&1 | tee\
+        \ \"$A/gtk-broadway-test.log\"\\nbrc=${PIPESTATUS[0]}\\nset -e\\nprintf \\'%s\\\\n\\' \"$brc\" > \"$A/gtk-broadway-exit.txt\"\
+        \\ncp build/meson-logs/nav-broadway* \"$A/\"\\npython3 /sources/nav-gtk-source-verify.py\\npython3 /sources/nav-gtk-recount.py\\\
+        n# Diagnostic pass/failure is preserved, never converted by OPEN classification.\\nif [ \"$xrc\" -ne 0 ]\
+        \ || [ \"$brc\" -ne 0 ];then exit 1;fi\\n')\nPath('/mnt/nav-lfs/sources/nav-shaderc-source-verify.py').write_text(\"\
+        from pathlib import Path\\nimport json,tarfile,hashlib,os\\nA=Path('/sources/nav-shaderc-evidence');lock=json.loads((A/'source-lock.json').read_text());out={}\\\
+        nfor x in lock:\\n counts={'files_exact':0,'symlinks_exact':0}\\n with tarfile.open('/sources/'+x['filename'])as\
+        \ t:\\n  for m in t:\\n   p=Path('/sources')/m.name\\n   if m.isfile():\\n    expected=hashlib.sha256(t.extractfile(m).read()).hexdigest();assert\
+        \ p.is_file()and not p.is_symlink()and hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==expected,m.name;counts['files_exact']+=1\\\
+        n   elif m.issym():assert p.is_symlink()and os.readlink(p)==m.linkname,m.name;counts['symlinks_exact']+=1\\\
+        n out[x['top']]=counts\\n(A/'source-integrity.json').write_text(json.dumps(out,sort_keys=True));print('NAV_SHADERC_ORIGINAL_SOURCES_EXACT_JSON\
+        \ '+json.dumps(out,sort_keys=True),flush=True)\\n\")\nPath('/mnt/nav-lfs/sources/nav-gtk-source-verify.py').write_text(\"\
+        from pathlib import Path\\nimport json,tarfile,hashlib,os\\nA=Path('/sources/nav-gtk-evidence');lock=json.loads((A/'source-lock.json').read_text());out={}\\\
+        nfor x in lock:\\n counts={'files_exact':0,'symlinks_exact':0}\\n with tarfile.open('/sources/'+x['filename'])as\
+        \ t:\\n  for m in t:\\n   p=Path('/sources')/m.name\\n   if m.isfile():\\n    assert p.is_file()and not\
+        \ p.is_symlink()and hashlib.file_digest(p.open('rb'),'sha256').digest()==hashlib.sha256(t.extractfile(m).read()).digest(),m.name;counts['files_exact']+=1\\\
+        n   elif m.issym():assert p.is_symlink()and os.readlink(p)==m.linkname,m.name;counts['symlinks_exact']+=1\\\
+        n out[x['top']]=counts\\n(A/'source-integrity.json').write_text(json.dumps(out,sort_keys=True));print('NAV_GTK_ORIGINAL_SOURCES_EXACT_JSON\
+        \ '+json.dumps(out,sort_keys=True),flush=True)\\n\")\nPath('/mnt/nav-lfs/sources/nav-gtk-recount.py').write_text(\"\
+        from pathlib import Path\\nimport json,collections,hashlib,re,os\\nA=Path('/sources/nav-gtk-evidence');dis=json.loads((A/'gtk-discovery.json').read_text());expected={x['name']for\
+        \ x in dis};assert len(expected)==len(dis)\\nsets={};counts={};nested={}\\nfor prefix in ['nav-x11','nav-broadway']:\\\
+        n rows=[json.loads(l)for l in(A/(prefix+'.json')).read_text().splitlines()if l.strip()];names=[x['name']for\
+        \ x in rows];assert len(names)==len(set(names));sets[prefix]=set(names);counts[prefix]=dict(collections.Counter(x['result']for\
+        \ x in rows));nested[prefix]={'tap_ok_lines':sum(len(re.findall(r'^ok(?:\\\\s|$)',x.get('stdout',''),re.M))for\
+        \ x in rows),'tap_not_ok_lines':sum(len(re.findall(r'^not ok(?:\\\\s|$)',x.get('stdout',''),re.M))for x\
+        \ in rows),'tap_skip_lines':sum(len(re.findall(r'^.*#\\\\s*SKIP\\\\b',x.get('stdout',''),re.M|re.I))for\
+        \ x in rows)}\\nunion=set.union(*sets.values());missing=sorted(expected-union);extra=sorted(union-expected)\\\
+        n# Meson result names include a project/suite prefix; require exact suffix mapping,\\n# with uniqueness\
+        \ rather than stripping guessed names.\\nif missing or extra:\\n def mapped(name):\\n  if name in expected:return\
+        \ name\\n  choices=[e for e in expected if name.split(' / ',1)[-1]==e]\\n  assert len(choices)==1,(name,choices);return\
+        \ choices[0]\\n sets={k:{mapped(x)for x in v}for k,v in sets.items()};union=set.union(*sets.values());missing=sorted(expected-union);extra=sorted(union-expected)\\\
+        nassert not missing and not extra,{'missing':missing,'extra':extra}\\n# No Shaderc compiler/runtime library\
+        \ may have entered runtime target directories.\\nfor root in ['/usr','/lib','/bin','/sbin']:\\n for p in\
+        \ Path(root).rglob('*'):\\n  assert p.name!='glslc'and not p.name.startswith('libshaderc'),str(p)\\nfiles={}\\\
+        nfor p in Path('/sources/gtk-4.22.4/build/testsuite').rglob('*.png'):\\n if p.is_file():files[str(p)]={'bytes':p.stat().st_size,'sha256':hashlib.file_digest(p.open('rb'),'sha256').hexdigest()}\\\
+        n(A/'render-output-manifest.json').write_text(json.dumps(files,sort_keys=True))\\n# Preserve representative\
+        \ actual pixels, with selection explicit; all render file hashes retained.\\nimport shutil\\nfor i,p in\
+        \ enumerate(sorted(files)[:4]):shutil.copyfile(p,A/('render-sample-'+str(i)+'.png'))\\nout={'classification':'FULL\
+        \ original configured GTK diagnostic, X11 unstable + exact Broadway renderer complement union. No source/test\
+        \ edits, no excluded failing/flaky suites. All inherited gaps OPEN. Not VM/hardware acceptance.','discovered':len(dis),'executed_union':len(union),'counts':counts,'nested_tap':nested,'headless_missing_dependencies_OPEN':['Mutter','WirePlumber','pydbus'],'separate_wayland_backend_variants':'OPEN\
+        \ no actual compositor available','actual_NAV_kernel_USER_NS_UDMABUF_VM':'OPEN','runtime_shaderc_absent':True,'render_output_files':len(files),'representative_pixels_selection':'first4lexical\
+        \ paths in full hashed render manifest','original_sources':json.loads((A/'source-integrity.json').read_text())}\\\
+        n(A/'coverage.json').write_text(json.dumps(out,sort_keys=True));print('NAV_GTK_FULL_ORIGINAL_DIAGNOSTIC_COVERAGE_JSON\
+        \ '+json.dumps(out,sort_keys=True),flush=True)\\n\")\nSETUP\n"
+    - name: GTK full original diagnostic X11 unstable Broadway complement real icon-cache Adwaita under4GiB2jobs
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo chown -hR root:root /mnt/nav-lfs
+
+        sudo env LFS=/mnt/nav-lfs unshare --mount --propagation private /bin/bash <<''MOUNT''
+
+        set -euo pipefail
+
+        mount --bind "$LFS" "$LFS"
+
+        mount --bind /dev "$LFS/dev"
+
+        mount -t devpts devpts -o gid=5,mode=0620 "$LFS/dev/pts"
+
+        mount -t proc proc "$LFS/proc"
+
+        mount -t sysfs -o ro sysfs "$LFS/sys"
+
+        mount -t tmpfs -o nosuid,nodev tmpfs "$LFS/run"
+
+        if [ -h "$LFS/dev/shm" ];then install -d -m1777 "$LFS$(realpath /dev/shm)";else mount -t tmpfs -o nosuid,nodev
+        tmpfs "$LFS/dev/shm";fi
+
+        chroot "$LFS" /usr/bin/env -i HOME=/root LC_ALL=C PATH=/usr/bin:/usr/sbin:/bin:/sbin MAKEFLAGS=-j2 /bin/bash
+        /sources/nav-gtk-inner.sh
+
+        MOUNT
+
+        '
+    - name: Always export source evidence original shader coverage GTK complete raw logs and representative actual
+        pixels no secrets
+      if: always()
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT'\nimport subprocess,base64,gzip,hashlib,json,os\nfrom pathlib\
+        \ import Path\nA=Path('/mnt/nav-lfs/sources/nav-gtk-evidence');files=subprocess.check_output(['sudo','find',str(A),'-type','f','-print0']).split(b'\\\
+        0');manifest={}\nfor p in sorted(x for x in files if x):\n f=Path(os.fsdecode(p));rel=str(f.relative_to(A));b=subprocess.check_output(['sudo','cat',str(f)]);key=rel.replace('/','-').replace('.','_').upper();assert\
+        \ key not in manifest;manifest[key]={'file':rel,'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()};z=gzip.compress(b,mtime=0)\n\
+        \ for i in range(0,len(z),3000):print('NAV_GTKFULL_'+key+'_GZB64 '+base64.b64encode(z[i:i+3000]).decode(),flush=True)\n\
+        print('NAV_GTKFULL_EXPORT_MANIFEST_JSON '+json.dumps(manifest,sort_keys=True),flush=True)\nEXPORT\n"
