@@ -1,0 +1,204 @@
+name: NAV Shaderc untouched full original24tests system glslang16.5 buildtool ONLY security OPEN
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-shaderc-original-full-diagnostic
+  cancel-in-progress: false
+jobs:
+  diagnostic:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+    - name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
+        \ in /mnt/nav-rsvg-root.tar.zst; do\n test ! -e \"$bundle\"\n sudo install -o \"$(id -u)\" -g \"$(id -g)\"\
+        \ -m 0600 /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"\
+        $(id -u):$(id -g):600\"\n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\\
+        n' > \"$probe/proof\"\n tar --zstd -cf \"$bundle\" -C \"$probe\" proof\n zstd -t \"$bundle\"\n tar --zstd\
+        \ -xOf \"$bundle\" proof > \"$probe/recovered\"\n cmp \"$probe/proof\" \"$probe/recovered\"\n # Match actions/cache\
+        \ extraction semantics, not only bundle writer access.\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test\
+        \ ! -w /mnt\n cp \"$bundle\" \"$probe/expected-bundle\"\n relative_bundle=$(realpath --relative-to=\"$PWD\"\
+        \ \"$bundle\")\n tar --zstd -cf \"$probe/cache.tzst\" -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n\
+        \ env -u TAR_OPTIONS /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program unzstd\
+        \ > \"$probe/default-restore.log\" 2>&1\n negative_rc=$?\n set -e\n test \"$negative_rc\" = 2\n test ! -s\
+        \ \"$bundle\"\n grep -F 'Cannot open: File exists' \"$probe/default-restore.log\"\n TAR_OPTIONS=--overwrite\
+        \ /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program unzstd\n cmp \"$probe/expected-bundle\"\
+        \ \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n test \"$(stat -c\
+        \ '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS\
+        \ %s\\n' \"$bundle\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic\
+        \ failure evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"\
+        ><failure message=\"synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n\
+        \ f=p/name;f.write_bytes(data)\n subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\\
+        n    data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_RSVG_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing =\
+        \ []\\n    manifest['errors'].append({'area': str(p), 'error': repr(ex)})\\nfor item in sorted((x for x\
+        \ in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\n    rel = str(f.relative_to(p))\\n    wanted\
+        \ = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard'\
+        \ and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples'\
+        \ and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name,\
+        \ data)\\n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error':\
+        \ repr(ex)})\\nemit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\\
+        n    raise RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"\
+        '/mnt/nav-lfs/nav-build-metadata/aom-tooling'\",repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\n\
+        assert r.returncode==0,r.stderr\nparts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_RSVG_'):\n\
+        \  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\nm=json.loads(gzip.decompress(b''.join(parts['NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64'])))\n\
+        assert not m['errors'] and len(m['files'])==len(expected)\nfor name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_RSVG_'+name+'_GZB64']))\n\
+        \ assert b==expected[v['source']] and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\n\
+        missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
+        assert r.returncode!=0 and 'NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_RSVG_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
+        EXPORT_SELFTEST\n"
+    - name: Restore newest verified librsvg TRANSITIONAL root
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-rsvg-root.tar.zst
+        key: nav-blfs13.1-x86_64-librsvg-transitional-open-v1
+        fail-on-cache-miss: true
+    - name: Verify newest saved root archive
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf ''b18303bde2a0da1f126fd595f21fd56ae353e1f2561adc0616337c380f21d2de  /mnt/nav-rsvg-root.tar.zst
+
+        '' | sha256sum -c -
+
+        zstd -t /mnt/nav-rsvg-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-rsvg-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/librsvg/RSVG-TRANSITIONAL-OPEN.json
+
+        '
+    - name: Source locks original Shaderc plus exact installed SPIRV metadata source external native-library wrapper
+        no source edits
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'SETUP'\nfrom pathlib import Path\nimport urllib.request,tarfile,hashlib,json\n\
+        LOCK=[{'filename': 'shaderc-2026.3.tar.gz', 'url': 'https://github.com/google/shaderc/archive/v2026.3/shaderc-2026.3.tar.gz',\
+        \ 'sha256': 'ee493ccf1b3038b4ef2fe024664c5eb2dc4bcc1f6b05b33e3909de0e19c81024', 'top': 'shaderc-2026.3'},\
+        \ {'filename': 'SPIRV-Tools-vulkan-sdk-1.4.357.0.tar.gz', 'url': 'https://github.com/KhronosGroup/SPIRV-Tools/archive/vulkan-sdk-1.4.357.0/SPIRV-Tools-vulkan-sdk-1.4.357.0.tar.gz',\
+        \ 'sha256': 'd31e7109b6ef3559067e53e520870eafed7c9534d00db9728814b6df03fa4a5e', 'top': 'SPIRV-Tools-vulkan-sdk-1.4.357.0'}]\n\
+        A=Path('/mnt/nav-lfs/sources/nav-shaderc-evidence');A.mkdir(parents=True,exist_ok=True)\n(A/'source-lock.json').write_text(json.dumps(LOCK,sort_keys=True))\n\
+        for x in LOCK:\n with urllib.request.urlopen(x['url'],timeout=120)as r:b=r.read()\n assert hashlib.sha256(b).hexdigest()==x['sha256'],x['filename']\n\
+        \ p=Path('/mnt/nav-lfs/sources')/x['filename'];p.write_bytes(b)\n with tarfile.open(p)as t:\n  for m in\
+        \ t:assert not m.name.startswith('/')and '..'not in Path(m.name).parts\n  t.extractall(p.parent)\n print('NAV_SHADERC_SOURCE_LOCK_OK',x['filename'],len(b),flush=True)\n\
+        W=Path('/mnt/nav-lfs/sources/nav-shaderc-system-wrapper');W.mkdir()\n(W/'CMakeLists.txt').write_text('cmake_minimum_required(VERSION\
+        \ 3.22.1)\\nproject(NAVShadercSystemLibraries C CXX)\\nenable_testing()\\nfind_package(Threads REQUIRED)\\\
+        nfind_package(GTest 1.18.0 EXACT CONFIG REQUIRED)\\nfind_package(SPIRV-Tools CONFIG REQUIRED)\\nfind_package(SPIRV-Tools-opt\
+        \ CONFIG REQUIRED)\\nfind_package(SPIRV-Tools-link CONFIG REQUIRED)\\nfind_package(SPIRV-Tools-tools CONFIG\
+        \ REQUIRED)\\nfind_package(glslang 16.5.0 EXACT CONFIG REQUIRED)\\nadd_library(gmock ALIAS GTest::gmock)\\\
+        nadd_library(gtest_main ALIAS GTest::gtest_main)\\nadd_library(glslang ALIAS glslang::glslang)\\nadd_library(SPIRV\
+        \ ALIAS glslang::SPIRV)\\nset(glslang_SOURCE_DIR /usr/include/glslang)\\nset(spirv-tools_SOURCE_DIR /sources/SPIRV-Tools-vulkan-sdk-1.4.357.0)\\\
+        nset(SPIRV-Headers_SOURCE_DIR /usr)\\nset(gmock_SOURCE_DIR /usr)\\nadd_subdirectory(/sources/shaderc-2026.3\
+        \ shaderc)\\n# The original combiner packs only built static objects. System dependencies are\\n# shared\
+        \ imported targets, so preserve those dependencies on its consumer link.\\ntarget_link_libraries(shaderc_combined\
+        \ INTERFACE glslang SPIRV SPIRV-Tools-opt SPIRV-Tools Threads::Threads)\\n')\n(A/'external-wrapper-CMakeLists.txt').write_text('cmake_minimum_required(VERSION\
+        \ 3.22.1)\\nproject(NAVShadercSystemLibraries C CXX)\\nenable_testing()\\nfind_package(Threads REQUIRED)\\\
+        nfind_package(GTest 1.18.0 EXACT CONFIG REQUIRED)\\nfind_package(SPIRV-Tools CONFIG REQUIRED)\\nfind_package(SPIRV-Tools-opt\
+        \ CONFIG REQUIRED)\\nfind_package(SPIRV-Tools-link CONFIG REQUIRED)\\nfind_package(SPIRV-Tools-tools CONFIG\
+        \ REQUIRED)\\nfind_package(glslang 16.5.0 EXACT CONFIG REQUIRED)\\nadd_library(gmock ALIAS GTest::gmock)\\\
+        nadd_library(gtest_main ALIAS GTest::gtest_main)\\nadd_library(glslang ALIAS glslang::glslang)\\nadd_library(SPIRV\
+        \ ALIAS glslang::SPIRV)\\nset(glslang_SOURCE_DIR /usr/include/glslang)\\nset(spirv-tools_SOURCE_DIR /sources/SPIRV-Tools-vulkan-sdk-1.4.357.0)\\\
+        nset(SPIRV-Headers_SOURCE_DIR /usr)\\nset(gmock_SOURCE_DIR /usr)\\nadd_subdirectory(/sources/shaderc-2026.3\
+        \ shaderc)\\n# The original combiner packs only built static objects. System dependencies are\\n# shared\
+        \ imported targets, so preserve those dependencies on its consumer link.\\ntarget_link_libraries(shaderc_combined\
+        \ INTERFACE glslang SPIRV SPIRV-Tools-opt SPIRV-Tools Threads::Threads)\\n')\nPath('/mnt/nav-lfs/sources/nav-shaderc-inner.sh').write_text('set\
+        \ -euo pipefail\\numask 022\\nulimit -v 4194304\\nulimit -c 0\\nA=/sources/nav-shaderc-evidence\\nexport\
+        \ MAKEFLAGS=-j2\\nexport SOURCE_DATE_EPOCH=1795046400\\ncmake -S /sources/nav-shaderc-system-wrapper -B\
+        \ /sources/nav-shaderc-build -G Ninja \\\\\\n -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/sources/nav-build-tools\
+        \ \\\\\\n -DSHADERC_SKIP_TESTS=OFF -DSHADERC_SKIP_EXAMPLES=OFF -DSHADERC_SKIP_EXECUTABLES=OFF \\\\\\n -DSHADERC_SKIP_COPYRIGHT_CHECK=OFF\
+        \ -DSHADERC_ENABLE_HLSL=ON \\\\\\n -DSHADERC_SKIP_INSTALL=ON -DFETCHCONTENT_FULLY_DISCONNECTED=ON \\\\\\\
+        n 2>&1 | tee \"$A/configure.log\"\\nctest --test-dir /sources/nav-shaderc-build --show-only=json-v1 > \"\
+        $A/discovery.json\"\\npython3 - <<\\'DISCOVERY\\'\\nfrom pathlib import Path\\nimport json\\nA=Path(\\'/sources/nav-shaderc-evidence\\\
+        ');d=json.loads((A/\\'discovery.json\\').read_text());names=[x[\\'name\\']for x in d[\\'tests\\']];assert\
+        \ len(names)==len(set(names))==24,names\\nrequired=[\\'shaderc_util_\\'+x for x in [\\'counting_includer\\\
+        ',\\'string_piece\\',\\'format\\',\\'file_finder\\',\\'io_shaderc\\',\\'message\\',\\'mutex\\',\\'version_profile\\\
+        ',\\'compiler\\']]+[p+\\'_\\'+x for p in [\\'shaderc\\',\\'shaderc_shared\\']for x in [\\'shaderc\\',\\\
+        'shaderc_cpp\\',\\'shaderc_private\\']]+[\\'shaderc_combined_shaderc\\',\\'shaderc_combined_shaderc_cpp\\\
+        ',\\'shaderc_c_smoke_test\\']+[\\'glslc_\\'+x for x in [\\'file\\',\\'resource_parse\\',\\'stage\\']]+[\\\
+        'shaderc_expect_unittests\\',\\'shaderc_glslc_test_framework_unittests\\',\\'glslc_tests\\']\\nassert set(names)==set(required),(names,required)\\\
+        nprint(\\'NAV_SHADERC_ALL24_ORIGINAL_CTEST_ENTRIES_JSON \\'+json.dumps(names),flush=True)\\nDISCOVERY\\\
+        nninja -C /sources/nav-shaderc-build -j2 2>&1 | tee \"$A/build.log\"\\npython3 /sources/nav-shaderc-source-verify.py\\\
+        nmkdir -p \"$A/gtest-xml\"\\nchown -R tester:tester /sources/shaderc-2026.3 /sources/nav-shaderc-build \"\
+        $A\"\\nset +e\\nsu tester -c \\'ulimit -v 4194304;ulimit -c 0;export TZ=UTC GTEST_OUTPUT=xml:/sources/nav-shaderc-evidence/gtest-xml/;ctest\
+        \ --test-dir /sources/nav-shaderc-build --output-on-failure --no-tests=error -j2 --timeout 600 --output-junit\
+        \ /sources/nav-shaderc-evidence/ctest.xml\\' 2>&1 | tee \"$A/test.log\"\\nrc=${PIPESTATUS[0]}\\nset -e\\\
+        nprintf \\'%s\\\\n\\' \"$rc\" > \"$A/test-exit.txt\"\\ncp /sources/nav-shaderc-build/Testing/Temporary/LastTest.log\
+        \ \"$A/LastTest.log\"\\npython3 /sources/nav-shaderc-source-verify.py\\npython3 - <<\\'RECOUNT\\'\\nfrom\
+        \ pathlib import Path\\nimport json,xml.etree.ElementTree as E\\nA=Path(\\'/sources/nav-shaderc-evidence\\\
+        ');root=E.parse(A/\\'ctest.xml\\').getroot();cases=root.findall(\\'.//testcase\\');assert len(cases)==24,len(cases)\\\
+        ng=[]\\nfor f in sorted((A/\\'gtest-xml\\').glob(\\'*.xml\\')):\\n r=E.parse(f).getroot();g.append({\\'file\\\
+        ':f.name,\\'tests\\':int(r.get(\\'tests\\',0)),\\'failures\\':int(r.get(\\'failures\\',0)),\\'disabled\\\
+        ':int(r.get(\\'disabled\\',0)),\\'errors\\':int(r.get(\\'errors\\',0)),\\'skipped\\':len(r.findall(\\'.//skipped\\\
+        '))})\\nout={\\'classification\\':\\'FULL original Shaderc24 configured CTest entries executed once. No\
+        \ test-source edits/replay/waivers. System shared-library integration wrapper only. Build-tool-only trusted\
+        \ GTK shader exposure; runtime exposure forbidden. All inherited gaps OPEN.\\',\\'ctest_cases\\':len(cases),\\\
+        'ctest_failed\\':[c.get(\\'name\\')for c in cases if c.find(\\'failure\\')is not None],\\'ctest_skipped\\\
+        ':[c.get(\\'name\\')for c in cases if c.find(\\'skipped\\')is not None],\\'gtest_xml\\':g,\\'security_OPEN\\\
+        ':[\\'OSV-2026-1069\\',\\'OSV-2026-1137\\'],\\'installed_into_NAV_runtime\\':False}\\n(A/\\'coverage.json\\\
+        ').write_text(json.dumps(out,sort_keys=True));print(\\'NAV_SHADERC_FULL_ORIGINAL_COVERAGE_JSON \\'+json.dumps(out,sort_keys=True),flush=True)\\\
+        nRECOUNT\\nexit \"$rc\"\\n')\nPath('/mnt/nav-lfs/sources/nav-shaderc-source-verify.py').write_text(\"from\
+        \ pathlib import Path\\nimport json,tarfile,hashlib,os\\nA=Path('/sources/nav-shaderc-evidence');lock=json.loads((A/'source-lock.json').read_text());out={}\\\
+        nfor x in lock:\\n counts={'files_exact':0,'symlinks_exact':0}\\n with tarfile.open('/sources/'+x['filename'])as\
+        \ t:\\n  for m in t:\\n   p=Path('/sources')/m.name\\n   if m.isfile():\\n    expected=hashlib.sha256(t.extractfile(m).read()).hexdigest();assert\
+        \ p.is_file()and not p.is_symlink()and hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==expected,m.name;counts['files_exact']+=1\\\
+        n   elif m.issym():assert p.is_symlink()and os.readlink(p)==m.linkname,m.name;counts['symlinks_exact']+=1\\\
+        n out[x['top']]=counts\\n(A/'source-integrity.json').write_text(json.dumps(out,sort_keys=True));print('NAV_SHADERC_ORIGINAL_SOURCES_EXACT_JSON\
+        \ '+json.dumps(out,sort_keys=True),flush=True)\\n\")\n(A/'security-ledger.json').write_text(json.dumps({'OPEN':['OSV-2026-1069','OSV-2026-1137'],'scope':'Build-time\
+        \ trusted locked GTK shader sources only. No glslc or libshaderc installed into NAV runtime. Revisit security\
+        \ exposure before any change.','system_glslang':'16.5.0, not declared globally safe','source_tests_untouched':True},sort_keys=True))\n\
+        SETUP\n"
+    - name: Full original Shaderc diagnostic24entries HLSL ON under4GiB2jobs no runtime install no save
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo chown -hR root:root /mnt/nav-lfs
+
+        sudo env LFS=/mnt/nav-lfs unshare --mount --propagation private /bin/bash <<''MOUNT''
+
+        set -euo pipefail
+
+        mount --bind "$LFS" "$LFS"
+
+        mount --bind /dev "$LFS/dev"
+
+        mount -t devpts devpts -o gid=5,mode=0620 "$LFS/dev/pts"
+
+        mount -t proc proc "$LFS/proc"
+
+        mount -t sysfs -o ro sysfs "$LFS/sys"
+
+        mount -t tmpfs -o nosuid,nodev tmpfs "$LFS/run"
+
+        if [ -h "$LFS/dev/shm" ];then install -d -m1777 "$LFS$(realpath /dev/shm)";else mount -t tmpfs -o nosuid,nodev
+        tmpfs "$LFS/dev/shm";fi
+
+        chroot "$LFS" /usr/bin/env -i HOME=/root LC_ALL=C PATH=/usr/bin:/usr/sbin:/bin:/sbin MAKEFLAGS=-j2 /bin/bash
+        /sources/nav-shaderc-inner.sh
+
+        MOUNT
+
+        '
+    - name: Always export raw original logs discovery XML nested test coverage and security ledger no secrets
+      if: always()
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT'\nimport subprocess,base64,gzip,hashlib,json,os\nfrom pathlib\
+        \ import Path\nA=Path('/mnt/nav-lfs/sources/nav-shaderc-evidence');files=subprocess.check_output(['sudo','find',str(A),'-type','f','-print0']).split(b'\\\
+        0');manifest={}\nfor p in sorted(x for x in files if x):\n f=Path(os.fsdecode(p));rel=str(f.relative_to(A));b=subprocess.check_output(['sudo','cat',str(f)]);key=rel.replace('/','-').replace('.','_').upper();assert\
+        \ key not in manifest;manifest[key]={'file':rel,'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()};z=gzip.compress(b,mtime=0)\n\
+        \ for i in range(0,len(z),3000):print('NAV_SHADERC_'+key+'_GZB64 '+base64.b64encode(z[i:i+3000]).decode(),flush=True)\n\
+        print('NAV_SHADERC_EXPORT_MANIFEST_JSON '+json.dumps(manifest,sort_keys=True),flush=True)\nEXPORT\n"
