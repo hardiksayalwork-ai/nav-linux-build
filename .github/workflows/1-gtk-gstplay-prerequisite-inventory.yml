@@ -1,17 +1,17 @@
-name: NAV GstBad missing elements and tester permissions READ ONLY inventory
+name: NAV Opus FIRST full original configured suite priorBase evidence recovery noinstall nosave
 'on':
   workflow_dispatch: {}
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: nav-gtk-gstplay-read-only-inventory
+  group: nav-opus-original-full-diagnostic
   cancel-in-progress: false
 jobs:
-  inventory:
+  diagnostic:
     if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 150
     steps:
     - name: Prepare owned isolated root and exact bundle files
       shell: bash
@@ -84,19 +84,83 @@ jobs:
         test -f /mnt/nav-lfs/nav-build-metadata/librsvg/RSVG-TRANSITIONAL-OPEN.json
 
         '
-    - name: READ ONLY exact native element and tester permissions inventory no tests registry updates disabled
+    - name: Pin untouched Opus1.6.1 archive exact SHA source
       shell: bash
-      run: "set -euo pipefail\nsudo chroot /mnt/nav-lfs /usr/bin/env -i HOME=/root PATH=/usr/bin:/usr/sbin:/bin:/sbin\
-        \ LC_ALL=C /usr/bin/python3 - <<'INVENTORY'\nfrom pathlib import Path\nimport subprocess,json,os,pwd,stat,hashlib\n\
-        names=['scaletempo','audiofx','rtpbin','rtpmanager','udpsrc','udpsink','dynudpsink','funnel','audiotestsrc','opusenc','opusdec','vorbisdec','oggdemux','theoradec','playbin','souphttpsrc','cvtracker','x264enc']\n\
-        out={'classification':'READ ONLY native element and permissions inventory. No build install tests save or\
-        \ deletion. Registry updates disabled.','elements':{},'paths':{},'tester':{},'pkgconfig':{}}\nfor n in names:\n\
-        \ p=subprocess.run(['gst-inspect-1.0','--gst-disable-registry-update',n],capture_output=True,text=True);out['elements'][n]={'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr}\n\
-        for n in ['/home','/home/tester','/home/tester/.config','/home/tester/.cache','/var/cache/fontconfig','/usr/lib/gstreamer-1.0/libgstaudiofx.so','/usr/lib/gstreamer-1.0/libgstrtpmanager.so','/usr/lib/gstreamer-1.0/libgstudp.so','/usr/lib/gstreamer-1.0/libgstopus.so']:\n\
-        \ p=Path(n)\n if p.exists():\n  s=p.stat();out['paths'][n]={'uid':s.st_uid,'gid':s.st_gid,'mode':oct(stat.S_IMODE(s.st_mode)),'symlink':os.readlink(p)if\
-        \ p.is_symlink()else None,'bytes':s.st_size}\n else:out['paths'][n]={'exists':False}\nfor n in ['opus','gstreamer-plugins-good-1.0','gstreamer-plugins-base-1.0','orc-0.4']:\n\
-        \ p=subprocess.run(['pkg-config','--modversion',n],capture_output=True,text=True);out['pkgconfig'][n]={'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr}\n\
-        p=pwd.getpwnam('tester');out['tester']={'uid':p.pw_uid,'gid':p.pw_gid,'home':p.pw_dir}\np=subprocess.run(['su','tester','-c',\"\
-        python3 -c 'import os,json;print(json.dumps({p:os.access(p,os.W_OK)for p in [\\\"/home/tester\\\",\\\"/home/tester/.config\\\
-        \",\\\"/home/tester/.cache\\\",\\\"/tmp\\\"]}))'\"],capture_output=True,text=True);out['tester']['access_probe']={'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr}\n\
-        print('NAV_GSTBAD_NATIVE_INVENTORY_JSON '+json.dumps(out,sort_keys=True),flush=True)\nINVENTORY\n"
+      run: "set -euo pipefail\npython3 - <<'SETUP'\nfrom pathlib import Path\nimport urllib.request,tarfile,hashlib,json\n\
+        x={'filename': 'opus-1.6.1.tar.gz', 'url': 'https://downloads.xiph.org/releases/opus/opus-1.6.1.tar.gz',\
+        \ 'sha256': '6ffcb593207be92584df15b32466ed64bbec99109f007c82205f0194572411a1', 'top': 'opus-1.6.1'}\nA=Path('/mnt/nav-lfs/sources/nav-opus-evidence');A.mkdir(parents=True,exist_ok=True)\n\
+        (A/'source-lock.json').write_text(json.dumps(x,sort_keys=True))\nwith urllib.request.urlopen(x['url'],timeout=120)as\
+        \ r:b=r.read()\nassert hashlib.sha256(b).hexdigest()==x['sha256']\np=Path('/mnt/nav-lfs/sources')/x['filename'];p.write_bytes(b)\n\
+        with tarfile.open(p)as t:\n for m in t:assert not m.name.startswith('/')and '..'not in Path(m.name).parts\n\
+        \ t.extractall(p.parent)\nPath('/mnt/nav-lfs/sources/nav-opus-inner.sh').write_text('set -euo pipefail\\\
+        numask 022\\nulimit -v 4194304\\nulimit -c 0\\nexport MAKEFLAGS=-j2 CMAKE_BUILD_PARALLEL_LEVEL=2\\nA=/sources/nav-opus-evidence\\\
+        npython3 - <<\\'PRIOR\\'\\nfrom pathlib import Path\\nimport json,hashlib,shutil\\nA=Path(\\'/sources/nav-opus-evidence\\\
+        ');B=Path(\\'/nav-build-metadata/gst-plugins-base\\');p=B/\\'testlog.json\\';assert p.is_file();rows=[json.loads(l)for\
+        \ l in p.read_text().splitlines()if l.strip()];assert rows and not any(\\'opus\\'in x[\\'name\\'].lower()for\
+        \ x in rows);shutil.copyfile(p,A/\\'base-prior-testlog.json\\');files={str(p.relative_to(B)):{\\'bytes\\\
+        ':p.stat().st_size,\\'sha256\\':hashlib.file_digest(p.open(\\'rb\\'),\\'sha256\\').hexdigest()}for p in\
+        \ B.rglob(\\'*\\')if p.is_file()};(A/\\'base-prior-evidence-file-manifest.json\\').write_text(json.dumps(files,sort_keys=True));print(\\\
+        'NAV_OPUS_BASE_PRIOR_CANONICAL_RECOVERED\\',len(rows),\\'NO_OPUS_TEST\\',flush=True)\\nPRIOR\\ncd /sources/opus-1.6.1\\\
+        nmeson setup build --prefix=/usr --buildtype=release --wrap-mode=nodownload -Dtests=enabled -Dextra-programs=enabled\
+        \ -Ddocs=disabled -Ddocdir=/usr/share/doc/opus-1.6.1 2>&1 | tee \"$A/configure.log\"\\nmeson introspect\
+        \ --tests build > \"$A/discovery.json\"\\nmeson introspect --buildoptions build > \"$A/options.json\"\\\
+        nmeson introspect --dependencies build > \"$A/dependencies.json\"\\nmeson introspect --installed build >\
+        \ \"$A/installed-map.json\"\\npython3 - <<\\'DISCOVERY\\'\\nfrom pathlib import Path\\nimport json\\nA=Path(\\\
+        '/sources/nav-opus-evidence\\');d=json.loads((A/\\'discovery.json\\').read_text());assert d and len({x[\\\
+        'name\\']for x in d})==len(d);o={x[\\'name\\']:x[\\'value\\']for x in json.loads((A/\\'options.json\\').read_text())};assert\
+        \ o[\\'tests\\']==\\'enabled\\'and o[\\'extra-programs\\']==\\'enabled\\';print(\\'NAV_OPUS_ORIGINAL_DISCOVERY_JSON\
+        \ \\'+json.dumps({\\'count\\':len(d),\\'names\\':[x[\\'name\\']for x in d]}),flush=True)\\nDISCOVERY\\nninja\
+        \ -C build -j2 2>&1 | tee \"$A/build.log\"\\npython3 /sources/nav-opus-source-verify.py\\nmkdir -p /tmp/nav-opus-home/.config\
+        \ /tmp/nav-opus-home/.cache\\nchmod 1777 /tmp /var/tmp\\nchown -R tester:tester /sources/opus-1.6.1 \"$A\"\
+        \ /tmp/nav-opus-home\\nsu tester -c \\'test -w /tmp/nav-opus-home && touch /tmp/nav-opus-home/write-probe\
+        \ && rm /tmp/nav-opus-home/write-probe\\'\\nprintf \\'%s\\\\n\\' NAV_OPUS_RUNTIME_HOME_WRITE_PROBE_PASS\\\
+        nset +e\\nsu tester -c \\'ulimit -v 4194304;ulimit -c 0;env HOME=/tmp/nav-opus-home XDG_CACHE_HOME=/tmp/nav-opus-home/.cache\
+        \ XDG_CONFIG_HOME=/tmp/nav-opus-home/.config LANG=C.UTF-8 meson test -C /sources/opus-1.6.1/build --no-rebuild\
+        \ --num-processes 2 --print-errorlogs\\' 2>&1 | tee \"$A/test.log\"\\nrc=${PIPESTATUS[0]}\\nset -e\\nprintf\
+        \ \\'%s\\\\n\\' \"$rc\" > \"$A/test-exit.txt\"\\ncp build/meson-logs/testlog.{json,txt} \"$A/\"\\nif [ -f\
+        \ build/meson-logs/testlog.junit.xml ];then cp build/meson-logs/testlog.junit.xml \"$A/\";fi\\npython3 /sources/nav-opus-source-verify.py\\\
+        npython3 - <<\\'RECOUNT\\'\\nfrom pathlib import Path\\nimport json,collections,re\\nA=Path(\\'/sources/nav-opus-evidence\\\
+        ');d=json.loads((A/\\'discovery.json\\').read_text());r=[json.loads(l)for l in(A/\\'testlog.json\\').read_text().splitlines()if\
+        \ l.strip()];assert collections.Counter(x[\\'name\\'].removeprefix(\\'opus:\\')for x in r)==collections.Counter(x[\\\
+        'name\\']for x in d);out={\\'classification\\':\\'FIRST full original configured Opus 1.6.1 suite, no source/test\
+        \ changes. Default disabled DRED/OSCE/Deep PLC/custom modes and non-native architecture coverage OPEN. No\
+        \ install/save. Base prior canonical evidence recovered, not replayed.\\',\\'discovered\\':len(d),\\'records\\\
+        ':len(r),\\'results\\':dict(collections.Counter(x[\\'result\\']for x in r)),\\'non_OK\\':[{\\'name\\':x[\\\
+        'name\\'],\\'result\\':x[\\'result\\']}for x in r if x[\\'result\\']!=\\'OK\\'],\\'nested_warning_lines\\\
+        ':[{\\'name\\':x[\\'name\\'],\\'lines\\':re.findall(r\\'^.*(?:#\\\\s*(?:SKIP|TODO)|status: (?:SKIP|FAIL|ERROR)).*$\\\
+        ',x.get(\\'stdout\\',\\'\\')+\\'\\\\n\\'+x.get(\\'stderr\\',\\'\\'),re.M|re.I)}for x in r if re.search(r\\\
+        '#\\\\s*(?:SKIP|TODO)|status: (?:SKIP|FAIL|ERROR)\\',x.get(\\'stdout\\',\\'\\')+\\'\\\\n\\'+x.get(\\'stderr\\\
+        ',\\'\\'),re.I)]};(A/\\'coverage.json\\').write_text(json.dumps(out,sort_keys=True));print(\\'NAV_OPUS_ORIGINAL_COVERAGE_JSON\
+        \ \\'+json.dumps(out,sort_keys=True),flush=True)\\nRECOUNT\\nexit \"$rc\"\\n')\nPath('/mnt/nav-lfs/sources/nav-opus-source-verify.py').write_text(\"\
+        from pathlib import Path\\nimport tarfile,hashlib,json\\nA=Path('/sources/nav-opus-evidence');x=json.loads((A/'source-lock.json').read_text());n=0\\\
+        nwith tarfile.open('/sources/'+x['filename'])as t:\\n for m in t:\\n  if m.isfile():\\n   p=Path('/sources')/m.name;assert\
+        \ p.is_file()and not p.is_symlink()and hashlib.file_digest(p.open('rb'),'sha256').digest()==hashlib.sha256(t.extractfile(m).read()).digest(),m.name;n+=1\\\
+        n(A/'source-integrity.json').write_text(json.dumps({'files_exact':n,'source_sha256':x['sha256']},sort_keys=True));print('NAV_OPUS_SOURCE_EXACT',n,flush=True)\\\
+        n\")\nprint('NAV_OPUS_SOURCE_LOCK_VERIFIED',len(b),flush=True)\nSETUP\n"
+    - name: FIRST full original configured Opus suite 4GiB2jobs recover prior Base metadata noinstall nosave
+      shell: bash
+      run: "set -euo pipefail\nsudo chown -hR root:root /mnt/nav-lfs\nsudo env LFS=/mnt/nav-lfs unshare --mount\
+        \ --propagation private /bin/bash <<'MOUNT'\nset -euo pipefail\nmount --bind \"$LFS\" \"$LFS\"\nmount --bind\
+        \ /dev \"$LFS/dev\"\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\nmount -t proc proc \"$LFS/proc\"\
+        \nmount -t sysfs -o ro sysfs \"$LFS/sys\"\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\n# Resolver\
+        \ path is interpreted inside the target root, including absolute symlinks.\npython3 - <<'RESOLVER'\nfrom\
+        \ pathlib import Path\nimport os,posixpath,subprocess\nroot=Path('/mnt/nav-lfs');rel='/etc/resolv.conf';seen=[]\n\
+        for i in range(20):\n parts=rel.strip('/').split('/');changed=False\n for n in range(1,len(parts)+1):\n\
+        \  p=root.joinpath(*parts[:n])\n  if p.is_symlink():\n   link=os.readlink(p);tail='/'.join(parts[n:]);base=link\
+        \ if link.startswith('/')else posixpath.join('/'+'/'.join(parts[:n-1]),link);rel=posixpath.normpath(posixpath.join(base,tail));seen.append({'path':'/'+'/'.join(parts[:n]),'link':link});changed=True;break\n\
+        \ if not changed:break\nelse:raise RuntimeError('resolver symlink loop')\nassert rel.startswith('/')and\
+        \ rel not in ['/','/etc','/run'];target=root/rel.lstrip('/');target.parent.mkdir(parents=True,exist_ok=True);target.touch(exist_ok=True)\n\
+        subprocess.run(['mount','--bind','/etc/resolv.conf',str(target)],check=True);subprocess.run(['mount','-o','remount,bind,ro',str(target)],check=True)\n\
+        print('NAV_OPUS_RUNTIME_RESOLVER_MOUNT',rel,seen,flush=True)\nRESOLVER\nif [ -h \"$LFS/dev/shm\" ];then\
+        \ install -d -m1777 \"$LFS$(realpath /dev/shm)\";else mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\
+        ;fi\nchroot \"$LFS\" /usr/bin/env -i HOME=/root LC_ALL=C PATH=/usr/bin:/usr/sbin:/bin:/sbin MAKEFLAGS=-j2\
+        \ /bin/bash /sources/nav-opus-inner.sh\nMOUNT\n"
+    - name: Always export original Opus full raw logs and prior Base evidence
+      if: always()
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT'\nimport subprocess,base64,gzip,hashlib,json,os\nfrom pathlib\
+        \ import Path\nA=Path('/mnt/nav-lfs/sources/nav-opus-evidence');files=subprocess.check_output(['sudo','find',str(A),'-type','f','-print0']).split(b'\\\
+        0');manifest={}\nfor p in sorted(x for x in files if x):\n f=Path(os.fsdecode(p));rel=str(f.relative_to(A));b=subprocess.check_output(['sudo','cat',str(f)]);key=rel.replace('/','-').replace('.','_').upper();assert\
+        \ key not in manifest;manifest[key]={'file':rel,'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()};z=gzip.compress(b,mtime=0)\n\
+        \ for i in range(0,len(z),3000):print('NAV_OPUS_'+key+'_GZB64 '+base64.b64encode(z[i:i+3000]).decode(),flush=True)\n\
+        print('NAV_OPUS_EXPORT_MANIFEST_JSON '+json.dumps(manifest,sort_keys=True),flush=True)\nEXPORT\n"
