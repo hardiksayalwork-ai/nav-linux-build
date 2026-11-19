@@ -139,8 +139,9 @@ jobs:
         \\nmeson introspect --tests build > \"$A/opus-discovery.json\"\\nmeson introspect --buildoptions build >\
         \ \"$A/opus-options.json\"\\npython3 - <<\\'SAME\\'\\nfrom pathlib import Path\\nimport json\\nA=Path(\\\
         '/sources/nav-opusbase-evidence\\');assert json.loads((A/\\'opus-discovery.json\\').read_text())==json.loads((A/\\\
-        'original-opus/discovery.json\\').read_text());assert json.loads((A/\\'opus-options.json\\').read_text())==json.loads((A/\\\
-        'original-opus/options.json\\').read_text());print(\\'NAV_OPUSBASE_OPUS_SAME_CONFIG_DISCOVERY_NO_REPLAY\\\
+        'original-opus/discovery.json\\').read_text());new=json.loads((A/\\'opus-options.json\\').read_text());old=json.loads((A/\\\
+        'original-opus/options.json\\').read_text());assert len(new)==len(old)==len({x[\\'name\\']for x in new})==len({x[\\\
+        'name\\']for x in old});assert {x[\\'name\\']:x for x in new}=={x[\\'name\\']:x for x in old};print(\\'NAV_OPUSBASE_OPUS_SAME_CONFIG_DISCOVERY_NO_REPLAY\\\
         ',flush=True)\\nSAME\\nninja -C build -j2 2>&1 | tee \"$A/opus-build.log\"\\nDESTDIR=\"$P\" ninja -C build\
         \ install 2>&1 | tee \"$A/opus-stage.log\"\\n# Install the exact staged Opus payload into this disposable\
         \ root for Base linking only.\\ncp -a \"$P/usr/.\" /usr/\\nldconfig\\npkg-config --modversion opus | tee\
