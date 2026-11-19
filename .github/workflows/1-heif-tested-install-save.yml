@@ -1,0 +1,267 @@
+name: NAV libheif original tested production install HEIC AVIF pixels TRANSITIONAL
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-heif-tested-production-save
+  cancel-in-progress: false
+jobs:
+  save:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
+        \ in /mnt/nav-aomrepair-root.tar.zst /mnt/nav-heif-tooling.tar.zst /mnt/nav-heif-root.tar.zst; do\n test\
+        \ ! -e \"$bundle\"\n sudo install -o \"$(id -u)\" -g \"$(id -g)\" -m 0600 /dev/null \"$bundle\"\n test -w\
+        \ \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n probe=$(mktemp\
+        \ -d /tmp/nav-aom-bundle-probe.XXXXXX)\n printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\n' > \"$probe/proof\"\n tar\
+        \ --zstd -cf \"$bundle\" -C \"$probe\" proof\n zstd -t \"$bundle\"\n tar --zstd -xOf \"$bundle\" proof >\
+        \ \"$probe/recovered\"\n cmp \"$probe/proof\" \"$probe/recovered\"\n # Match actions/cache extraction semantics,\
+        \ not only bundle writer access.\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n cp \"\
+        $bundle\" \"$probe/expected-bundle\"\n relative_bundle=$(realpath --relative-to=\"$PWD\" \"$bundle\")\n\
+        \ tar --zstd -cf \"$probe/cache.tzst\" -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n env -u TAR_OPTIONS\
+        \ /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program unzstd > \"$probe/default-restore.log\"\
+        \ 2>&1\n negative_rc=$?\n set -e\n test \"$negative_rc\" = 2\n test ! -s \"$bundle\"\n grep -F 'Cannot open:\
+        \ File exists' \"$probe/default-restore.log\"\n TAR_OPTIONS=--overwrite /usr/bin/tar -xf \"$probe/cache.tzst\"\
+        \ -P -C \"$PWD\" --use-compress-program unzstd\n cmp \"$probe/expected-bundle\" \"$bundle\"\n test \"$(stat\
+        \ -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n\
+        \ test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS %s\\n' \"$bundle\"\n : > \"\
+        $bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic\
+        \ failure evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"\
+        ><failure message=\"synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n\
+        \ f=p/name;f.write_bytes(data)\n subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\\
+        n    data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_HEIFSAVE_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing =\
+        \ []\\n    manifest['errors'].append({'area': str(p), 'error': repr(ex)})\\nfor item in sorted((x for x\
+        \ in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\n    rel = str(f.relative_to(p))\\n    wanted\
+        \ = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard'\
+        \ and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples'\
+        \ and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name,\
+        \ data)\\n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error':\
+        \ repr(ex)})\\nemit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\\
+        n    raise RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"\
+        '/mnt/nav-lfs/nav-build-metadata/aom-tooling'\",repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\n\
+        assert r.returncode==0,r.stderr\nparts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_HEIFSAVE_'):\n\
+        \  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\nm=json.loads(gzip.decompress(b''.join(parts['NAV_HEIFSAVE_EXPORT-MANIFEST_JSON_GZB64'])))\n\
+        assert not m['errors'] and len(m['files'])==len(expected)\nfor name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_HEIFSAVE_'+name+'_GZB64']))\n\
+        \ assert b==expected[v['source']] and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\n\
+        missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
+        assert r.returncode!=0 and 'NAV_HEIFSAVE_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_HEIFSAVE_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
+        EXPORT_SELFTEST\n"
+    - name: Restore independently verified corrected AOM root
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-aomrepair-root.tar.zst
+        key: nav-blfs13.1-x86_64-aom-static-repair-open-v1
+        fail-on-cache-miss: true
+    - name: Verify corrected root and extract
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf "d28cadb0d6b7014f6b83f57fa5d136ead9448456bd640d211a31fa676b37e129  /mnt/nav-aomrepair-root.tar.zst\n"
+        | sha256sum -c -
+
+        zstd -t /mnt/nav-aomrepair-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-aomrepair-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/aom-repair/AOMREPAIR-TRANSITIONAL-OPEN.json
+
+        '
+    - name: Restore exact original tested libheif compiled trees only
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-heif-tooling.tar.zst
+        key: nav-libheif-1.23.7-disposable-source-tests-v1
+        fail-on-cache-miss: true
+    - name: Verify source tooling bundle hash and extract
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf ''f0ae54e8624dd78035d72acb5cf5922fbf5af9d2742a799d5b74504a723a5e53  /mnt/nav-heif-tooling.tar.zst\n''
+        | sha256sum -c -
+
+        zstd -t /mnt/nav-heif-tooling.tar.zst
+
+        tar --zstd -xf /mnt/nav-heif-tooling.tar.zst -C /mnt/nav-lfs
+
+        '
+    - name: Original tested production install no reruns, version/linkage and installed HEIC AVIF lossless pixels
+      shell: bash
+      run: "python3 - <<'NAV_GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda :\
+        \ int(next((x.split()[1] for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\n\
+        assert os.cpu_count() >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024\
+        \ ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\np.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs\
+        \ LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\nmkdir -p \"$LFS/nav-build-metadata/libheif\"\\npython3\
+        \ - <<\\'INNER\\'\\nfrom pathlib import Path\\nimport gzip,base64\\nPath(\\'/mnt/nav-lfs/sources/heif-install-stage.sh\\\
+        ').write_text(\\'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport PATH=/usr/bin:/usr/sbin:/bin:/sbin\
+        \ LANG=C.UTF-8 MAKEFLAGS=-j2\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nP=/nav-build-metadata/libheif\\\
+        \\nmkdir -p \"$P\"\\\\npython3 - <<\\\\\\'GATE\\\\\\'\\\\nfrom pathlib import Path\\\\nimport json,hashlib,os\\\
+        \\ns=Path(\\\\\\'/sources/libheif-1.23.7\\\\\\');p=Path(\\\\\\'/nav-build-metadata/heif-tooling\\\\\\');original=json.loads((p/\\\
+        \\\\'original-source-files-sha256.json\\\\\\').read_text());compiled=json.loads((p/\\\\\\'tooling-files-sha256.json\\\
+        \\\\').read_text())\\\\nfor rel,x in original.items():\\\\n f=s/rel;assert f.is_file()and f.stat().st_size==x[\\\
+        \\\\'bytes\\\\\\']and hashlib.file_digest(f.open(\\\\\\'rb\\\\\\'),\\\\\\'sha256\\\\\\').hexdigest()==x[\\\
+        \\\\'sha256\\\\\\'],rel\\\\nfor rel,x in compiled.items():\\\\n f=Path(\\\\\\'/\\\\\\')/rel\\\\n if \\\\\
+        \\'symlink\\\\\\'in x:assert f.is_symlink()and os.readlink(f)==x[\\\\\\'symlink\\\\\\'],rel\\\\n else:assert\
+        \ f.is_file()and not f.is_symlink()and f.stat().st_size==x[\\\\\\'bytes\\\\\\']and hashlib.file_digest(f.open(\\\
+        \\\\'rb\\\\\\'),\\\\\\'sha256\\\\\\').hexdigest()==x[\\\\\\'sha256\\\\\\'],rel\\\\nfor mode,counts,units\
+        \ in [(\\\\\\'full\\\\\\',{\\\\\\'cases\\\\\\':391,\\\\\\'PASS\\\\\\':370,\\\\\\'FAIL\\\\\\':0,\\\\\\'SKIP\\\
+        \\\\':21,\\\\\\'XFAIL\\\\\\':0},89),(\\\\\\'production\\\\\\',{\\\\\\'cases\\\\\\':182,\\\\\\'PASS\\\\\\\
+        ':163,\\\\\\'FAIL\\\\\\':0,\\\\\\'SKIP\\\\\\':19,\\\\\\'XFAIL\\\\\\':0},52)]:\\\\n a=json.loads((p/mode/\\\
+        \\\\'recount-audit.json\\\\\\').read_text());assert a[\\\\\\'case_totals\\\\\\']==counts and a[\\\\\\'registered_CTest_units\\\
+        \\\\']==units and a[\\\\\\'default_execution_case_count_exact\\\\\\']and not a[\\\\\\'unknown\\\\\\']and\
+        \ a[\\\\\\'original_ctest_exit\\\\\\']==0\\\\ncache=(s/\\\\\\'build-production/CMakeCache.txt\\\\\\').read_text();assert\
+        \ \\\\\\'WITH_AOM_ENCODER:BOOL=ON\\\\\\'in cache and \\\\\\'WITH_AOM_DECODER:BOOL=ON\\\\\\'in cache and\
+        \ \\\\\\'WITH_REDUCED_VISIBILITY:BOOL=ON\\\\\\'in cache\\\\nPath(\\\\\\'/nav-build-metadata/libheif/restore-gate.json\\\
+        \\\\').write_text(json.dumps({\\\\\\'original_source_files_exact\\\\\\':len(original),\\\\\\'compiled_paths_exact\\\
+        \\\\':len(compiled),\\\\\\'recount_original_scopes_exact\\\\\\':True,\\\\\\'test_repeats\\\\\\':False,\\\
+        \\\\'source_patches\\\\\\':[]},indent=2));print(\\\\\\'NAV_HEIF_RESTORED_EXACT_SOURCE_FIXTURES_COMPILED_TREES_AND_ORIGINAL_SCOPE_GATE\\\
+        \\\\',len(original),len(compiled))\\\\nGATE\\\\ncmake --install /sources/libheif-1.23.7/build-production\
+        \ > \"$P/install.log\" 2>&1\\\\nldconfig\\\\npkg-config --modversion libheif > \"$P/installed-version.log\"\
+        \\\\ntest \"$(cat \"$P/installed-version.log\")\" = 1.23.7\\\\nldd /usr/lib/libheif.so /usr/bin/heif-enc\
+        \ /usr/bin/heif-dec > \"$P/installed-linkage.log\" 2>&1\\\\n! grep -q \\\\\\'not found\\\\\\' \"$P/installed-linkage.log\"\
+        \\\\ngrep -q \\\\\\'libaom.so.3\\\\\\' \"$P/installed-linkage.log\"\\\\ngrep -q \\\\\\'libde265.so\\\\\\\
+        ' \"$P/installed-linkage.log\"\\\\ngrep -q \\\\\\'libx265.so\\\\\\' \"$P/installed-linkage.log\"\\\\nmkdir\
+        \ /tmp/nav-heif-installed\\\\ncc /sources/heif-installed-smoke.c $(pkg-config --cflags --libs libheif) -o\
+        \ /tmp/nav-heif-installed/smoke > \"$P/smoke-build.log\" 2>&1\\\\n/tmp/nav-heif-installed/smoke heic /tmp/nav-heif-installed/out.heic\
+        \ > \"$P/installed-heic-lossless.log\" 2>&1\\\\n/tmp/nav-heif-installed/smoke avif /tmp/nav-heif-installed/out.avif\
+        \ > \"$P/installed-avif-lossless.log\" 2>&1\\\\npython3 - <<\\\\\\'AUDIT\\\\\\'\\\\nfrom pathlib import\
+        \ Path\\\\nimport json,hashlib\\\\np=Path(\\\\\\'/nav-build-metadata/libheif\\\\\\');d=Path(\\\\\\'/tmp/nav-heif-installed\\\
+        \\\\');a=json.loads((p/\\\\\\'verified-diagnostic-classification.json\\\\\\').read_text());assert \\\\\\\
+        'NAV_HEIF_INSTALLED_heic_LOSSLESS_PIXELS_EXACT 6144\\\\\\'in(p/\\\\\\'installed-heic-lossless.log\\\\\\\
+        ').read_text();assert \\\\\\'NAV_HEIF_INSTALLED_avif_LOSSLESS_PIXELS_EXACT 6144\\\\\\'in(p/\\\\\\'installed-avif-lossless.log\\\
+        \\\\').read_text()\\\\nfiles={f.name:{\\\\\\'bytes\\\\\\':f.stat().st_size,\\\\\\'sha256\\\\\\':hashlib.file_digest(f.open(\\\
+        \\\\'rb\\\\\\'),\\\\\\'sha256\\\\\\').hexdigest()}for f in d.iterdir()if f.is_file()and f.name.startswith(\\\
+        \\\\'out.\\\\\\')};a.update(installed=True,root_saved=False,installed_version=\\\\\\'1.23.7\\\\\\',installed_linkage=\\\
+        \\\\'PASS no missing, actualAOM/x265/libde265sharedlibraries\\\\\\',installed_roundtrips={\\\\\\'HEIC\\\\\
+        \\':{\\\\\\'pixel_exact\\\\\\':True,\\\\\\'bytes\\\\\\':6144},\\\\\\'AVIF\\\\\\':{\\\\\\'pixel_exact\\\\\
+        \\':True,\\\\\\'bytes\\\\\\':6144}},encoded_file_hashes=files,inherited_audit=\\\\\\'/nav-build-metadata/aom-repair/AOMREPAIR-TRANSITIONAL-OPEN.json\\\
+        \\\\');(p/\\\\\\'HEIF-TRANSITIONAL-OPEN.json\\\\\\').write_text(json.dumps(a,indent=2));(p/\\\\\\'installed-lossless-pixels.json\\\
+        \\\\').write_text(json.dumps(a[\\\\\\'installed_roundtrips\\\\\\'],indent=2));(p/\\\\\\'BUNDLE-NOTES.txt\\\
+        \\\\').write_text(\\\\\\'TRANSITIONAL ONLY. NOT OS acceptance. All inherited gaps OPEN. Originalfull89units391cases370PASS21SKIP;\
+        \ production52units182cases163PASS19SKIP; zeroFAIL/unknown. Upstream hidden~5GBcase OPEN above unchanged4GiBcap.\
+        \ Optionalcodecs OPEN. Installed1.23.7 linkage andHEIC/AVIF6144byte losslessYUVpixels exact. No source/test\
+        \ edits, reruns or reconfigure.\\\\\\\\n\\\\\\');print(\\\\\\'NAV_HEIF_INSTALLED_HEIC_AVIF_LOSSLESS6144_EXACT_TRANSITIONAL\\\
+        \\\\')\\\\nAUDIT\\\\nrm -rf /tmp/nav-heif-installed\\\\n\\')\\nPath(\\'/mnt/nav-lfs/sources/heif-installed-smoke.c\\\
+        ').write_text(\\'#include <libheif/heif.h>\\\\n#include <stdio.h>\\\\n#include <stdlib.h>\\\\n#include <string.h>\\\
+        \\nstatic void ok(struct heif_error e){if(e.code){fprintf(stderr,\"heif error %d/%d: %s\\\\\\\\n\",e.code,e.subcode,e.message);exit(2);}}\\\
+        \\nstatic unsigned char val(int c,int x,int y){return (unsigned char)((x*7+y*13+c*71)%256);}\\\\nint main(int\
+        \ argc,char **argv){if(argc!=3)return 3;enum heif_compression_format fmt=!strcmp(argv[1],\"avif\")?heif_compression_AV1:heif_compression_HEVC;struct\
+        \ heif_context *ctx=heif_context_alloc();struct heif_encoder *enc=0;struct heif_image *im=0,*decoded=0;struct\
+        \ heif_image_handle *handle=0;ok(heif_context_get_encoder_for_format(ctx,fmt,&enc));ok(heif_encoder_set_lossless(enc,1));printf(\"\
+        encoder=%s version=%s\\\\\\\\n\",heif_encoder_get_name(enc),heif_get_version());ok(heif_image_create(64,64,heif_colorspace_YCbCr,heif_chroma_420,&im));for(int\
+        \ c=0;c<3;c++){int w=c?32:64,h=w,stride;ok(heif_image_add_plane(im,(enum heif_channel)c,w,h,8));unsigned\
+        \ char *p=heif_image_get_plane(im,(enum heif_channel)c,&stride);if(!p)return 4;for(int y=0;y<h;y++)for(int\
+        \ x=0;x<w;x++)p[y*stride+x]=val(c,x,y);}ok(heif_context_encode_image(ctx,im,enc,0,&handle));ok(heif_context_write_to_file(ctx,argv[2]));heif_image_handle_release(handle);heif_encoder_release(enc);heif_image_release(im);heif_context_free(ctx);ctx=heif_context_alloc();ok(heif_context_read_from_file(ctx,argv[2],0));ok(heif_context_get_primary_image_handle(ctx,&handle));ok(heif_decode_image(handle,&decoded,heif_colorspace_YCbCr,heif_chroma_420,0));size_t\
+        \ bytes=0;for(int c=0;c<3;c++){int w=c?32:64,h=w,stride;if(heif_image_get_width(decoded,(enum heif_channel)c)!=w||heif_image_get_height(decoded,(enum\
+        \ heif_channel)c)!=h)return 5;const unsigned char *p=heif_image_get_plane_readonly(decoded,(enum heif_channel)c,&stride);if(!p)return\
+        \ 6;for(int y=0;y<h;y++)for(int x=0;x<w;x++){if(p[y*stride+x]!=val(c,x,y)){fprintf(stderr,\"pixel mismatch\
+        \ channel%d x%d y%d expected%d actual%d\\\\\\\\n\",c,x,y,val(c,x,y),p[y*stride+x]);return 7;}bytes++;}}printf(\"\
+        NAV_HEIF_INSTALLED_%s_LOSSLESS_PIXELS_EXACT %zu\\\\\\\\n\",argv[1],bytes);heif_image_release(decoded);heif_image_handle_release(handle);heif_context_free(ctx);return\
+        \ 0;}\\\\n\\')\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/libheif/verified-diagnostic-classification.json\\\
+        ').write_bytes(gzip.decompress(base64.b64decode(\\'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\\\
+        ')))\\nINNER\\nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env\
+        \ LFS=\"$LFS\" unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT\\'\\nset -euo pipefail\\nmount\
+        \ --bind \"$LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount\
+        \ -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs\
+        \ -o ro sysfs \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\"\
+        \ ];then install -d -m1777 \"$LFS$(realpath /dev/shm)\";else mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\
+        ;fi\\nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 LC_ALL=POSIX\
+        \ /bin/bash --noprofile --norc /sources/heif-install-stage.sh\\nNAV_MOUNT\\nsudo python3 - <<\\'CLEAN\\\
+        '\\nfrom pathlib import Path\\nimport shutil,json,os,hashlib\\nr=Path(\\'/mnt/nav-lfs\\');p=r/\\'nav-build-metadata\\\
+        ';s=r/\\'sources/libheif-1.23.7\\';original=json.loads((p/\\'heif-tooling/original-source-files-sha256.json\\\
+        ').read_text())\\nfor rel,x in original.items():\\n f=s/rel;assert f.is_file()and hashlib.file_digest(f.open(\\\
+        'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\'],rel\\n# Preserve original 730 source-grounded evidence\
+        \ payloads in root metadata, remove only huge disposable compiled manifest.\\nshutil.copytree(p/\\'heif-tooling\\\
+        ',p/\\'libheif/original-diagnostics\\');assert not s.is_symlink();shutil.rmtree(s);shutil.rmtree(p/\\'heif-tooling\\\
+        ')\\nfor n in [\\'heif-install-stage.sh\\',\\'heif-installed-smoke.c\\']:(r/\\'sources\\'/n).unlink()\\\
+        nassert not(r/\\'sources/numpy-tooling-prefix\\').exists()\\nCLEAN\\nsudo chown -hR \"$(id -u):$(id -g)\"\
+        \ \"$LFS\"\\nsudo chown root:root \"$LFS/usr/bin/fusermount3\"\\nsudo chmod 4755 \"$LFS/usr/bin/fusermount3\"\
+        \\ntest \"$(du -sb \"$LFS\"|cut -f1)\" -lt 5368709120\\n')\nstart = time.monotonic()\nlog = open('/tmp/nav-source-stage.log',\
+        \ 'w')\nproc = subprocess.Popen(['bash', str(p)], stdout=log, stderr=subprocess.STDOUT, start_new_session=True,\
+        \ preexec_fn=lambda : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll()\
+        \ is None:\n        free = shutil.disk_usage('/mnt').free\n        available = mem()\n        if free <\
+        \ 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start > 315 * 60:\n            raise\
+        \ RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds':\
+        \ round(time.monotonic() - start), 'free_disk_bytes': free, 'available_memory_kib': available}), flush=True)\n\
+        \        time.sleep(20)\n    if proc.returncode:\n        raise RuntimeError('source-build failed with status\
+        \ ' + str(proc.returncode))\nfinally:\n    if proc.poll() is None:\n        os.killpg(proc.pid, signal.SIGTERM)\n\
+        \        try:\n            proc.wait(timeout=10)\n        except subprocess.TimeoutExpired:\n          \
+        \  os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n    log.close()\n    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n\
+        \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
+        \ 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST',\
+        \ 'NAV_BISON', 'NAV_TESTER', 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect',\
+        \ 'NAV_GST', 'NAV_FUSE', 'NAV_PORTAL'])))))\n    import base64, gzip, subprocess, os, hashlib, json\n  \
+        \  mode = 'build'\n    p = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/libheif')\n    manifest = {'mode':\
+        \ mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\n\n    def emit(name, data):\n        data\
+        \ = gzip.compress(data, mtime=0)\n        for i in range(0, len(data), 3000):\n            print('NAV_HEIFSAVE_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n    try:\n        listing\
+        \ = subprocess.check_output(['sudo', 'find', str(p), '-type', 'f', '-print0']).split(b'\\x00')\n    except\
+        \ Exception as ex:\n        listing = []\n        manifest['errors'].append({'area': str(p), 'error': repr(ex)})\n\
+        \    for item in sorted((x for x in listing if x)):\n        f = pathlib.Path(os.fsdecode(item))\n     \
+        \   rel = str(f.relative_to(p))\n        wanted = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/')))\
+        \ or (mode == 'shard' and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list')))\
+        \ or (mode == 'examples' and rel.startswith('original-examples'))\n        if wanted:\n            try:\n\
+        \                data = subprocess.check_output(['sudo', 'cat', str(f)])\n                name = rel.replace('/',\
+        \ '-').replace('.', '_').upper()\n                manifest['files'][name] = {'source': rel, 'bytes': len(data),\
+        \ 'sha256': hashlib.sha256(data).hexdigest()}\n                emit(name, data)\n            except Exception\
+        \ as ex:\n                manifest['errors'].append({'file': rel, 'error': repr(ex)})\n    emit('EXPORT-MANIFEST_JSON',\
+        \ json.dumps(manifest, indent=2).encode())\n    if manifest['errors']:\n        raise RuntimeError('independent\
+        \ evidence export errors: ' + repr(manifest['errors']))\n\nNAV_GUARD\n"
+    - name: Build root candidate and independent full archive replay proof
+      shell: bash
+      run: "set -euo pipefail\nroot=$(du -sb /mnt/nav-lfs|cut -f1)\ntest \"$root\" -lt 5368709120\ntar --zstd -cf\
+        \ /mnt/nav-heif-root.tar.zst -C /mnt/nav-lfs .\nzstd -t /mnt/nav-heif-root.tar.zst\ntar --zstd -tf /mnt/nav-heif-root.tar.zst\
+        \ > /tmp/nav-heif-members\n! grep -Eq '^./sources/(numpy-tooling-prefix|libaom-3.15.3/|aom-testdata/|libde265-1.1.3/|x265_4.2/|libheif-1.23.7/)'\
+        \ /tmp/nav-heif-members\ngrep -qx './usr/include/libheif/heif.h' /tmp/nav-heif-members\nsudo mkdir /mnt/nav-heif-replay\n\
+        sudo tar --zstd -xf /mnt/nav-heif-root.tar.zst -C /mnt/nav-heif-replay\nsudo python3 - <<'INDEPENDENT'\n\
+        from pathlib import Path\nimport os,stat,hashlib,json\n\ndef manifest(root):\n root=Path(root);out={}\n\
+        \ for d,dirs,files in os.walk(root,followlinks=False):\n  for p in [Path(d)]+[Path(d)/n for n in files]+[Path(d)/n\
+        \ for n in dirs if (Path(d)/n).is_symlink()]:\n   s=p.lstat();x={'type':stat.S_IFMT(s.st_mode),'mode':stat.S_IMODE(s.st_mode),'uid':s.st_uid,'gid':s.st_gid,'mtime':int(s.st_mtime)}\n\
+        \   if stat.S_ISREG(s.st_mode):x.update(bytes=s.st_size,sha256=hashlib.file_digest(p.open('rb'),'sha256').hexdigest())\n\
+        \   elif stat.S_ISLNK(s.st_mode):x['link']=os.readlink(p)\n   elif not stat.S_ISDIR(s.st_mode):x['rdev']=s.st_rdev\n\
+        \   out[str(p.relative_to(root))]=x\n return out\nleft=manifest('/mnt/nav-lfs');right=manifest('/mnt/nav-heif-replay');assert\
+        \ left==right,{'only_left':list(set(left)-set(right))[:10],'different':[k for k in set(left)&set(right)if\
+        \ left[k]!=right[k]][:10]}\np=Path('/mnt/nav-heif-root.tar.zst');proof={'classification':'TRANSITIONAL only,\
+        \ not OS acceptance, inherited gaps OPEN','bundle_bytes':p.stat().st_size,'bundle_sha256':hashlib.file_digest(p.open('rb'),'sha256').hexdigest(),'independent_full_replay_manifest_equal':True,'paths':len(left),'manifest_sha256':hashlib.sha256(json.dumps(left,sort_keys=True).encode()).hexdigest(),'audit':json.loads(Path('/mnt/nav-lfs/nav-build-metadata/libheif/HEIF-TRANSITIONAL-OPEN.json').read_text()),'pixels':json.loads(Path('/mnt/nav-lfs/nav-build-metadata/libheif/installed-lossless-pixels.json').read_text())}\n\
+        Path('/tmp/heifsave-candidate-proof.json').write_text(json.dumps(proof,sort_keys=True));print('NAV_HEIFSAVE_CANDIDATE_PROOF_JSON\
+        \ '+json.dumps(proof,sort_keys=True),flush=True)\nINDEPENDENT\nsudo rm -rf /mnt/nav-heif-replay\n"
+    - name: Bounded approved rolling replacement budget gate
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'BUDGET'\nfrom pathlib import Path\nimport ctypes,ctypes.util,urllib.request,json,time,hashlib\n\
+        p=Path('/mnt/nav-heif-root.tar.zst');proof=json.loads(Path('/tmp/heifsave-candidate-proof.json').read_text());assert\
+        \ hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==proof['bundle_sha256']\nz=ctypes.CDLL(ctypes.util.find_library('zstd'));z.ZSTD_compressBound.argtypes=[ctypes.c_size_t];z.ZSTD_compressBound.restype=ctypes.c_size_t;worst=z.ZSTD_compressBound(p.stat().st_size+1024**2)+64*1024**2\n\
+        baseline={10787237244,10710908926,10700939007,10696846187,10516363617,10515953327,10511354384,10508735204,10480998516,10480209539}\n\
+        for attempt in range(25):\n req=urllib.request.Request('https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/actions/caches?per_page=100',headers={'Accept':'application/vnd.github+json'})\n\
+        \ with urllib.request.urlopen(req,timeout=60)as r:d=json.load(r)\n rows=d['actions_caches'];assert d['total_count']==len(rows)<=100;ids={x['id']for\
+        \ x in rows};assert (baseline-{10787237244})<=ids\n assert 10790873772 in ids and 10791630240 in ids\n assert\
+        \ 'nav-blfs13.1-x86_64-heif-open-v1'not in{x['key']for x in rows}\n existing=sum(x['size_in_bytes']for x\
+        \ in rows)\n if existing+worst<10*1024**3:\n  print('NAV_HEIFSAVE_ROOT_MEASURED_CACHE_GATE '+json.dumps({'existing':existing,'bundle_bytes':p.stat().st_size,'bundle_sha256':proof['bundle_sha256'],'new_cache_upper':worst,'worst_total':existing+worst,'limit':10*1024**3}),flush=True);break\n\
+        \ assert 10787237244 in ids,'Budget still insufficient after permitted new intermediate disappeared; refuse\
+        \ wider deletion'\n print('NAV_HEIFSAVE_AWAITING_APPROVED_ROLLING_CACHE_REMOVAL candidate verified, only\
+        \ superseded NEW x26510787237244 eligible, remaining9original+correctedAOM+toolingprotected',flush=True)\n\
+        \ if attempt==24:raise RuntimeError('bounded120minute budget wait exhausted, no save')\n time.sleep(300)\n\
+        BUDGET\n"
+    - name: Save libheif TRANSITIONAL root all inherited gaps OPEN
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-heif-root.tar.zst
+        key: nav-blfs13.1-x86_64-heif-open-v1
