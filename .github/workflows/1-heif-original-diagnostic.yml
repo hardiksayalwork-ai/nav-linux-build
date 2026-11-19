@@ -16,7 +16,7 @@ jobs:
     - name: Prepare owned isolated root and exact bundle files
       shell: bash
       run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
-        \ in /mnt/nav-x265-root.tar.zst /mnt/nav-heif-tooling.tar.zst; do\n test ! -e \"$bundle\"\n sudo install\
+        \ in /mnt/nav-aomrepair-root.tar.zst /mnt/nav-heif-tooling.tar.zst; do\n test ! -e \"$bundle\"\n sudo install\
         \ -o \"$(id -u)\" -g \"$(id -g)\" -m 0600 /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"$(stat -c\
         \ '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n\
         \ printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\n' > \"$probe/proof\"\n tar --zstd -cf \"$bundle\" -C \"$probe\"\
@@ -61,26 +61,26 @@ jobs:
         missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
         assert r.returncode!=0 and 'NAV_HEIF_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_HEIF_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
         EXPORT_SELFTEST\n"
-    - name: Restore verified x265 checkpoint
+    - name: Restore verified complete AOM package checkpoint
       uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
       env:
         TAR_OPTIONS: --overwrite
       with:
-        path: /mnt/nav-x265-root.tar.zst
-        key: nav-blfs13.1-x86_64-x265-open-v1
+        path: /mnt/nav-aomrepair-root.tar.zst
+        key: nav-blfs13.1-x86_64-aom-static-repair-open-v1
         fail-on-cache-miss: true
-    - name: Verify and extract exact x265 root
+    - name: Verify and extract exact repaired AOM root
       shell: bash
       run: 'set -euo pipefail
 
-        printf "0c96200fd51df490f89d080b7c6bdcf1b5593f962691a03b2ed007dd481a5ef0  /mnt/nav-x265-root.tar.zst\n"
+        printf "d28cadb0d6b7014f6b83f57fa5d136ead9448456bd640d211a31fa676b37e129  /mnt/nav-aomrepair-root.tar.zst\n"
         | sha256sum -c -
 
-        zstd -t /mnt/nav-x265-root.tar.zst
+        zstd -t /mnt/nav-aomrepair-root.tar.zst
 
-        tar --zstd -xf /mnt/nav-x265-root.tar.zst -C /mnt/nav-lfs
+        tar --zstd -xf /mnt/nav-aomrepair-root.tar.zst -C /mnt/nav-lfs
 
-        test -f /mnt/nav-lfs/nav-build-metadata/x265/X265-TRANSITIONAL-OPEN.json
+        test -f /mnt/nav-lfs/nav-build-metadata/aom-repair/AOMREPAIR-TRANSITIONAL-OPEN.json
 
         '
     - name: Fullvisibility and production original CTest diagnostics, no install or root save
@@ -120,8 +120,10 @@ jobs:
         \\\\',\\\\\\'lcms2\\\\\\',\\\\\\'fontconfig\\\\\\',\\\\\\'gtk4\\\\\\',\\\\\\'gdk-pixbuf-2.0\\\\\\',\\\\\\\
         'librsvg-2.0\\\\\\']:\\\\n r=subprocess.run([\\\\\\'pkg-config\\\\\\',\\\\\\'--modversion\\\\\\',name],capture_output=True,text=True);inspection[name]={\\\
         \\\\'exit\\\\\\':r.returncode,\\\\\\'version_or_error\\\\\\':(r.stdout+r.stderr).strip()}\\\\nfor name in\
-        \ [\\\\\\'rustc\\\\\\',\\\\\\'cargo\\\\\\']:\\\\n r=subprocess.run([name,\\\\\\'--version\\\\\\'],capture_output=True,text=True);inspection[name]={\\\
-        \\\\'exit\\\\\\':r.returncode,\\\\\\'version_or_error\\\\\\':(r.stdout+r.stderr).strip()}\\\\ninspection[\\\
+        \ [\\\\\\'/opt/rustc/bin/rustc\\\\\\',\\\\\\'/opt/rustc/bin/cargo\\\\\\']:\\\\n try:\\\\n  r=subprocess.run([name,\\\
+        \\\\'--version\\\\\\'],capture_output=True,text=True);inspection[name]={\\\\\\'exit\\\\\\':r.returncode,\\\
+        \\\\'version_or_error\\\\\\':(r.stdout+r.stderr).strip()}\\\\n except FileNotFoundError:inspection[name]={\\\
+        \\\\'exit\\\\\\':127,\\\\\\'version_or_error\\\\\\':\\\\\\'not installed at inspected path\\\\\\'}\\\\ninspection[\\\
         \\\\'matching_inherited_audit_paths\\\\\\']=[str(f) for f in Path(\\\\\\'/nav-build-metadata\\\\\\').rglob(\\\
         \\\\'*\\\\\\') if f.is_file()and any(k in f.name.lower()for k in [\\\\\\'cairo\\\\\\',\\\\\\'pango\\\\\\\
         '])]\\\\n(p/\\\\\\'inherited-inspection.json\\\\\\').write_text(json.dumps(inspection,indent=2))\\\\nout={\\\
@@ -297,10 +299,10 @@ jobs:
         with urllib.request.urlopen(req,timeout=60)as r:d=json.load(r)
 
         rows=d[''actions_caches''];assert d[''total_count'']==len(rows)<=100;ids={x[''id'']for x in rows};assert
-        {10734021888,10710908926,10700939007,10696846187,10516363617,10515953327,10511354384,10508735204,10480998516,10480209539}<=ids
+        {10710908926,10700939007,10696846187,10516363617,10515953327,10511354384,10508735204,10480998516,10480209539}<=ids
 
-        keys={x[''key'']for x in rows};assert ''nav-blfs13.1-x86_64-x265-open-v1''in keys and ''nav-libheif-1.23.7-disposable-source-tests-v1''not
-        in keys
+        keys={x[''key'']for x in rows};assert ''nav-blfs13.1-x86_64-aom-static-repair-open-v1''in keys and ''nav-blfs13.1-x86_64-x265-open-v1''in
+        keys and ''nav-libheif-1.23.7-disposable-source-tests-v1''not in keys
 
         existing=sum(x[''size_in_bytes'']for x in rows);print(''NAV_HEIF_TOOLING_CACHE_GATE ''+json.dumps({''bundle_bytes'':size,''bundle_sha256'':hashlib.file_digest(p.open(''rb''),''sha256'').hexdigest(),''existing'':existing,''new_cache_upper'':worst,''worst_total'':existing+worst,''limit'':10*1024**3}),flush=True);assert
         existing+worst<10*1024**3
