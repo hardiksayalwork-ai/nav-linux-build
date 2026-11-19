@@ -121,7 +121,8 @@ jobs:
         Path(''/mnt/nav-lfs/sources/rsvg-stage.sh'').write_text(''set -euo pipefail\numask 022\nulimit -v 4194304\nexport
         PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin LANG=C.UTF-8 MAKEFLAGS=-j2 CARGO_BUILD_JOBS=2 CARGO_HOME=/tmp/nav-librsvg-cargo-home
         PYTHONHASHSEED=4908\nunset LC_ALL LANGUAGE\nchmod 1777 /tmp /var/tmp\nS=/sources/librsvg-2.62.4\nP=/nav-build-metadata/librsvg\nmkdir
-        -p "$P" "$CARGO_HOME"\nchown -R tester:tester "$S" "$CARGO_HOME"\nsu tester -c \''export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin
+        -p "$P" "$CARGO_HOME"\npython3 /sources/rsvg-install-verify.py version-selftest > "$P/version-parser-selftest.log"\nchown
+        -R tester:tester "$S" "$CARGO_HOME"\nsu tester -c \''export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin
         CARGO_HOME=/tmp/nav-librsvg-cargo-home PYTHONHASHSEED=4908 CARGO_BUILD_JOBS=2;cd /sources/librsvg-2.62.4;meson
         setup --prefix=/usr --buildtype=release build\'' > "$P/install-only-configure.log" 2>&1\nsu tester -c \''export
         PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin CARGO_HOME=/tmp/nav-librsvg-cargo-home PYTHONHASHSEED=4908
@@ -146,7 +147,15 @@ jobs:
         manifest(root):\n out={}\n for f in Path(root).rglob(''*''):\n  s=f.lstat();x={''mode'':stat.S_IMODE(s.st_mode)}\n  if
         f.is_symlink():x[''symlink'']=os.readlink(f)\n  elif f.is_file():x.update(bytes=s.st_size,sha256=sha(f))\n  elif
         f.is_dir():continue\n  else:raise AssertionError(''unsupported stagedfile ''+str(f))\n  out[str(f.relative_to(root))]=x\n
-        return out\nif sys.argv[1]==''compiled'':\n n,l=source();old=json.loads((P/''original-repro/new-compiled-runtime-files-sha256.json'').read_text());names=[''build/rsvg/librsvg-2.so.2.62.4'',''build/rsvg_convert/rsvg-convert''];new={}\n
+        return out\ndef versions_check(text):\n expected=[''2.62.4'',''rsvg-convert version 2.62.4'','''',''libraries
+        used:'',''  cairo 1.18.4'',''  pango 1.58.2'',''  harfbuzz 14.3.1'',''  fontconfig 2.18.3'']\n assert text.splitlines()==expected,{''unexpected_upstream_version_block'':text.splitlines()}\ndef
+        versions_selftest():\n good=''\\n''.join([''2.62.4'',''rsvg-convert version 2.62.4'','''',''libraries used:'',''  cairo
+        1.18.4'',''  pango 1.58.2'',''  harfbuzz 14.3.1'',''  fontconfig 2.18.3''])+''\\n'';versions_check(good)\n
+        bad=[good.replace(''2.62.4'',''2.62.3'',1),good.replace(''rsvg-convert version 2.62.4'',''rsvg-convert version
+        2.62.3''),good.replace(''pango 1.58.2'',''pango 1.58.1''),good+''unexpected\\n'',good.replace(''  fontconfig
+        2.18.3\\n'',''''),good.replace(''libraries used:'',''library versions:'')]\n for text in bad:\n  try:versions_check(text)\n  except
+        AssertionError:continue\n  raise AssertionError(''bad version fixture accepted'')\n print(''NAV_RSVG_FULL_UPSTREAM_VERSION_BLOCK_POSITIVE_AND_SIX_NEGATIVE_SELFTESTS_PASS'')\nif
+        sys.argv[1]==''version-selftest'':versions_selftest()\nelif sys.argv[1]==''compiled'':\n n,l=source();old=json.loads((P/''original-repro/new-compiled-runtime-files-sha256.json'').read_text());names=[''build/rsvg/librsvg-2.so.2.62.4'',''build/rsvg_convert/rsvg-convert''];new={}\n
         for rel in names:\n  f=S/rel;x={''bytes'':f.stat().st_size,''sha256'':sha(f)};assert x==old[rel],{''runtime_hash_diff'':rel};new[rel]=x\n
         (P/''compiled-runtime-files-sha256.json'').write_text(json.dumps(new,indent=2));print(''NAV_RSVG_INSTALL_ORIGINAL_SOURCE_LINKS_AND_COMPILED_RUNTIME_HASHES_EXACT'',n,l)\nelif
         sys.argv[1]==''staged'':\n m=manifest(''/tmp/nav-rsvg-stage'');assert m and all(x.startswith(''usr/'')for
@@ -155,10 +164,10 @@ jobs:
         sys.argv[1]==''final'':\n n,l=source();m=json.loads((P/''staged-install-manifest.json'').read_text())\n
         for rel,x in m.items():\n  f=Path(''/'')/rel;assert stat.S_IMODE(f.lstat().st_mode)==x[''mode''],rel\n  if
         ''symlink''in x:assert f.is_symlink()and os.readlink(f)==x[''symlink''],rel\n  else:assert f.is_file()and
-        f.stat().st_size==x[''bytes'']and sha(f)==x[''sha256''],rel\n versions=(P/''installed-version.log'').read_text().splitlines();assert
-        len(versions)==2 and versions[0]==''2.62.4''and ''2.62.4''in versions[1],versions\n comparisons=(P/''installed-render-comparison.log'').read_text();assert
-        ''upstream_reference_only_fix changed_pixels=0 maximum_channel_difference=0''in comparisons;assert ''pinned_original_reference
-        changed_pixels=12 maximum_channel_difference=255 bounds=39,139,216,140''in comparisons\n assert sha(P/''installed-render.png'')==sha(P/''original-investigation/actual-target-render.png'')\n
+        f.stat().st_size==x[''bytes'']and sha(f)==x[''sha256''],rel\n versions_check((P/''installed-version.log'').read_text())\n
+        comparisons=(P/''installed-render-comparison.log'').read_text();assert ''upstream_reference_only_fix changed_pixels=0
+        maximum_channel_difference=0''in comparisons;assert ''pinned_original_reference changed_pixels=12 maximum_channel_difference=255
+        bounds=39,139,216,140''in comparisons\n assert sha(P/''installed-render.png'')==sha(P/''original-investigation/actual-target-render.png'')\n
         assert ''not found''not in(P/''installed-linkage.log'').read_text()\n a={''classification'':''TRANSITIONAL
         only, original canonical failure remains FAIL/OPEN, no canonical replay or reference edits, all inherited
         gaps OPEN, not OSacceptance'',''version'':''2.62.4'',''original_canonical_results'':{''harness_PASS'':1428,''FAIL'':1,''IGNORED'':0,''FILTERED'':0,''silent_upstream_early_returns_OPEN'':5,''compile_only_doctest'':1},''original_failure'':{''name'':''tests::svg1_1_text_text_03_b_svg'',''status'':''FAIL/OPEN'',''investigation'':''Known
