@@ -154,47 +154,22 @@ jobs:
         n\")\nprint('NAV_GSTBAD_SOURCE_LOCK_VERIFIED',len(b),flush=True)\nSETUP\n"
     - name: Full original configured Bad suite including GstPlay network tests ON under4GiB2jobs no install no save
       shell: bash
-      run: 'set -euo pipefail
-
-        sudo chown -hR root:root /mnt/nav-lfs
-
-        sudo env LFS=/mnt/nav-lfs unshare --mount --propagation private /bin/bash <<''MOUNT''
-
-        set -euo pipefail
-
-        mount --bind "$LFS" "$LFS"
-
-        # Resolver config is runtime-only within this namespace, never saved.
-
-        test -f /etc/resolv.conf
-
-        test ! -L "$LFS/etc/resolv.conf"
-
-        test -f "$LFS/etc/resolv.conf" || touch "$LFS/etc/resolv.conf"
-
-        mount --bind /etc/resolv.conf "$LFS/etc/resolv.conf"
-
-        mount -o remount,bind,ro "$LFS/etc/resolv.conf"
-
-        mount --bind /dev "$LFS/dev"
-
-        mount -t devpts devpts -o gid=5,mode=0620 "$LFS/dev/pts"
-
-        mount -t proc proc "$LFS/proc"
-
-        mount -t sysfs -o ro sysfs "$LFS/sys"
-
-        mount -t tmpfs -o nosuid,nodev tmpfs "$LFS/run"
-
-        if [ -h "$LFS/dev/shm" ];then install -d -m1777 "$LFS$(realpath /dev/shm)";else mount -t tmpfs -o nosuid,nodev
-        tmpfs "$LFS/dev/shm";fi
-
-        chroot "$LFS" /usr/bin/env -i HOME=/root LC_ALL=C PATH=/usr/bin:/usr/sbin:/bin:/sbin MAKEFLAGS=-j2 /bin/bash
-        /sources/nav-gstbad-inner.sh
-
-        MOUNT
-
-        '
+      run: "set -euo pipefail\nsudo chown -hR root:root /mnt/nav-lfs\nsudo env LFS=/mnt/nav-lfs unshare --mount\
+        \ --propagation private /bin/bash <<'MOUNT'\nset -euo pipefail\nmount --bind \"$LFS\" \"$LFS\"\nmount --bind\
+        \ /dev \"$LFS/dev\"\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\nmount -t proc proc \"$LFS/proc\"\
+        \nmount -t sysfs -o ro sysfs \"$LFS/sys\"\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\n# Resolver\
+        \ path is interpreted inside the target root, including absolute symlinks.\npython3 - <<'RESOLVER'\nfrom\
+        \ pathlib import Path\nimport os,posixpath,subprocess\nroot=Path('/mnt/nav-lfs');rel='/etc/resolv.conf';seen=[]\n\
+        for i in range(20):\n parts=rel.strip('/').split('/');changed=False\n for n in range(1,len(parts)+1):\n\
+        \  p=root.joinpath(*parts[:n])\n  if p.is_symlink():\n   link=os.readlink(p);tail='/'.join(parts[n:]);base=link\
+        \ if link.startswith('/')else posixpath.join('/'+'/'.join(parts[:n-1]),link);rel=posixpath.normpath(posixpath.join(base,tail));seen.append({'path':'/'+'/'.join(parts[:n]),'link':link});changed=True;break\n\
+        \ if not changed:break\nelse:raise RuntimeError('resolver symlink loop')\nassert rel.startswith('/')and\
+        \ rel not in ['/','/etc','/run'];target=root/rel.lstrip('/');target.parent.mkdir(parents=True,exist_ok=True);target.touch(exist_ok=True)\n\
+        subprocess.run(['mount','--bind','/etc/resolv.conf',str(target)],check=True);subprocess.run(['mount','-o','remount,bind,ro',str(target)],check=True)\n\
+        print('NAV_GSTBAD_RUNTIME_RESOLVER_MOUNT',rel,seen,flush=True)\nRESOLVER\nif [ -h \"$LFS/dev/shm\" ];then\
+        \ install -d -m1777 \"$LFS$(realpath /dev/shm)\";else mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\"\
+        ;fi\nchroot \"$LFS\" /usr/bin/env -i HOME=/root LC_ALL=C PATH=/usr/bin:/usr/sbin:/bin:/sbin MAKEFLAGS=-j2\
+        \ /bin/bash /sources/nav-gstbad-inner.sh\nMOUNT\n"
     - name: Always export original diagnostic raw logs discovery XML source lock and coverage
       if: always()
       shell: bash
