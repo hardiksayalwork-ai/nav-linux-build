@@ -1,0 +1,212 @@
+name: NAV kernel exact USER_NS UDMABUF sourcebuild smallbundle only OPEN VM
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: nav-kernel-userns-udmabuf
+  cancel-in-progress: false
+jobs:
+  kernel:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 125
+    steps:
+    - name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
+        \ in /mnt/nav-rsvg-root.tar.zst /mnt/nav-kernel-userns-udmabuf.tar.zst; do\n test ! -e \"$bundle\"\n sudo\
+        \ install -o \"$(id -u)\" -g \"$(id -g)\" -m 0600 /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"\
+        $(stat -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n\
+        \ printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\n' > \"$probe/proof\"\n tar --zstd -cf \"$bundle\" -C \"$probe\"\
+        \ proof\n zstd -t \"$bundle\"\n tar --zstd -xOf \"$bundle\" proof > \"$probe/recovered\"\n cmp \"$probe/proof\"\
+        \ \"$probe/recovered\"\n # Match actions/cache extraction semantics, not only bundle writer access.\n test\
+        \ \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n cp \"$bundle\" \"$probe/expected-bundle\"\n\
+        \ relative_bundle=$(realpath --relative-to=\"$PWD\" \"$bundle\")\n tar --zstd -cf \"$probe/cache.tzst\"\
+        \ -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n env -u TAR_OPTIONS /usr/bin/tar -xf \"$probe/cache.tzst\"\
+        \ -P -C \"$PWD\" --use-compress-program unzstd > \"$probe/default-restore.log\" 2>&1\n negative_rc=$?\n\
+        \ set -e\n test \"$negative_rc\" = 2\n test ! -s \"$bundle\"\n grep -F 'Cannot open: File exists' \"$probe/default-restore.log\"\
+        \n TAR_OPTIONS=--overwrite /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program\
+        \ unzstd\n cmp \"$probe/expected-bundle\" \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"\
+        $(id -u):$(id -g):600\"\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS\
+        \ %s\\n' \"$bundle\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic\
+        \ failure evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"\
+        ><failure message=\"synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n\
+        \ f=p/name;f.write_bytes(data)\n subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\\
+        n    data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_RSVG_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing =\
+        \ []\\n    manifest['errors'].append({'area': str(p), 'error': repr(ex)})\\nfor item in sorted((x for x\
+        \ in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\n    rel = str(f.relative_to(p))\\n    wanted\
+        \ = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard'\
+        \ and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples'\
+        \ and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name,\
+        \ data)\\n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error':\
+        \ repr(ex)})\\nemit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\\
+        n    raise RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"\
+        '/mnt/nav-lfs/nav-build-metadata/aom-tooling'\",repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\n\
+        assert r.returncode==0,r.stderr\nparts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_RSVG_'):\n\
+        \  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\nm=json.loads(gzip.decompress(b''.join(parts['NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64'])))\n\
+        assert not m['errors'] and len(m['files'])==len(expected)\nfor name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_RSVG_'+name+'_GZB64']))\n\
+        \ assert b==expected[v['source']] and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\n\
+        missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
+        assert r.returncode!=0 and 'NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_RSVG_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
+        EXPORT_SELFTEST\n"
+    - name: Restore newest verified librsvg TRANSITIONAL root
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-rsvg-root.tar.zst
+        key: nav-blfs13.1-x86_64-librsvg-transitional-open-v1
+        fail-on-cache-miss: true
+    - name: Verify newest saved root archive
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf ''b18303bde2a0da1f126fd595f21fd56ae353e1f2561adc0616337c380f21d2de  /mnt/nav-rsvg-root.tar.zst
+
+        '' | sha256sum -c -
+
+        zstd -t /mnt/nav-rsvg-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-rsvg-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/librsvg/RSVG-TRANSITIONAL-OPEN.json
+
+        '
+    - name: Prepare approved exact two-option kernel configuration leg
+      run: 'set -euo pipefail
+
+        python3 - <<''HELPERS''
+
+        from pathlib import Path
+
+        Path(''/mnt/nav-lfs/sources/nav-kernel-inner.sh'').write_text(''set -euo pipefail\numask 022\nulimit -v
+        4194304\ncd /sources/linux-7.1.8\nP=/sources/nav-kernel-payload\nA=/sources/nav-kernel-evidence\nmkdir -p
+        "$P/boot" "$P/nav-build-metadata/kernel-userns-udmabuf" "$A"\ncp /boot/config-7.1.8-nav1 "$A/old.config"\ncp
+        "$A/old.config" .config\nscripts/config --enable USER_NS --enable UDMABUF\nmake olddefconfig\npython3 -
+        <<\''CONFIG\''\nfrom pathlib import Path\nimport json\nA=Path(\''/sources/nav-kernel-evidence\'')\ndef parse(s):\n
+        d={}\n for l in s.splitlines():\n  if l.startswith(\''CONFIG_\''):k,v=l.split(\''=\'',1);d[k]=v\n  elif
+        l.startswith(\''# CONFIG_\'')and l.endswith(\'' is not set\''):d[l[2:-11]]=\''n\''\n return d\nold=parse((A/\''old.config\'').read_text());new=parse(Path(\''.config\'').read_text());diff={k:[old.get(k),new.get(k)]for
+        k in sorted(old.keys()|new.keys())if old.get(k)!=new.get(k)}\nassert set(diff)=={\''CONFIG_USER_NS\'',\''CONFIG_UDMABUF\''},diff\nassert
+        all(v==[\''n\'',\''y\'']for v in diff.values()),diff\nassert new[\''CONFIG_LOCALVERSION\'']==\''"-nav1"\''\n(A/\''config-diff.json\'').write_text(json.dumps(diff,sort_keys=True));print(\''NAV_KERNEL_CONFIG_EXACT_TWO_CHANGES
+        \''+json.dumps(diff),flush=True)\nCONFIG\nmake -j2 2>&1 | tee "$A/build.log"\ntest "$(make -s kernelrelease)"
+        = 7.1.8-nav1\nmake INSTALL_MOD_PATH="$P" modules_install 2>&1 | tee "$A/modules-install.log"\ninstall -m644
+        arch/x86/boot/bzImage "$P/boot/vmlinuz-7.1.8-nav1"\ninstall -m644 System.map "$P/boot/System.map-7.1.8-nav1"\ninstall
+        -m644 .config "$P/boot/config-7.1.8-nav1"\ncp .config "$A/new.config"\ncp "$A/config-diff.json" "$P/nav-build-metadata/kernel-userns-udmabuf/"\ncp
+        "$A/new.config" "$P/nav-build-metadata/kernel-userns-udmabuf/config"\nfile "$P/boot/vmlinuz-7.1.8-nav1"
+        | tee "$A/kernel-file.txt"\nreadelf -h vmlinux > "$A/vmlinux-header.txt"\npython3 - <<\''VERIFY\''\nfrom
+        pathlib import Path\nimport tarfile,hashlib,json,os,subprocess\nroot=Path(\''/sources/linux-7.1.8\'');A=Path(\''/sources/nav-kernel-evidence\'');P=Path(\''/sources/nav-kernel-payload\'');checked=links=0\nwith
+        tarfile.open(\''/sources/linux-7.1.8.tar.xz\'')as t:\n for m in t:\n  rel=Path(m.name).relative_to(\''linux-7.1.8\'');p=root/rel\n  if
+        m.isfile():\n   assert p.is_file()and not p.is_symlink(),str(rel)\n   assert hashlib.sha256(p.read_bytes()).digest()==hashlib.sha256(t.extractfile(m).read()).digest(),str(rel)\n   checked+=1\n  elif
+        m.issym():assert os.readlink(p)==m.linkname;links+=1\nmods=P/\''lib/modules/7.1.8-nav1\''\nif not mods.exists():mods=P/\''usr/lib/modules/7.1.8-nav1\''\nassert
+        mods.is_dir()\nfor name in [\''build\'',\''source\'']:\n f=mods/name\n if f.is_symlink():\n  assert os.readlink(f).startswith(\''/sources/linux-7.1.8\''),(name,os.readlink(f))\n  f.unlink()\nsubprocess.run([\''depmod\'',\''-b\'',str(P),\''-a\'',\''7.1.8-nav1\''],check=True)\nassert
+        (mods/\''modules.dep\'').is_file()\na={\''classification\'':\''COMPILED ONLY. Sandbox and dmabuf acceptance
+        OPEN until booted real NAV VM. All inherited gaps OPEN. No tests altered or skipped to pass.\'',\''source_files_exact\'':checked,\''source_symlinks_exact\'':links,\''source_sha256\'':\''ff01dcb449279d5b4cfccdb01fee639cf5ff1803f1749a77844dd33915422c49\'',\''release\'':\''7.1.8-nav1\'',\''config_diff\'':json.loads((A/\''config-diff.json\'').read_text()),\''kernel_sha256\'':hashlib.file_digest((P/\''boot/vmlinuz-7.1.8-nav1\'').open(\''rb\''),\''sha256\'').hexdigest(),\''original_nav_root_unmodified\'':True,\''module_build_source_links_removed_only_if_point_to_disposable_sources\'':True}\nfor
+        name in [\''kernel-file.txt\'',\''vmlinux-header.txt\'']:a[name]=(A/name).read_text()\n(A/\''audit.json\'').write_text(json.dumps(a,sort_keys=True));(P/\''nav-build-metadata/kernel-userns-udmabuf/audit.json\'').write_text(json.dumps(a,sort_keys=True));print(\''NAV_KERNEL_BUILD_AUDIT_JSON
+        \''+json.dumps(a,sort_keys=True),flush=True)\nVERIFY\n'')
+
+        HELPERS
+
+        '
+      shell: bash
+    - name: Build original Linux7.1.8 under4GiB2jobs no source edits no NAV root installation
+      run: "set -euo pipefail\npython3 - <<'DOWNLOAD'\nimport urllib.request,hashlib,tarfile,pathlib\np=pathlib.Path('/mnt/nav-lfs/sources');p.mkdir(exist_ok=True)\n\
+        f=p/'linux-7.1.8.tar.xz'\nwith urllib.request.urlopen('https://www.kernel.org/pub/linux/kernel/v7.x/linux-7.1.8.tar.xz',timeout=120)as\
+        \ r:b=r.read(158434925)\nassert len(b)==158434924 and hashlib.sha256(b).hexdigest()=='ff01dcb449279d5b4cfccdb01fee639cf5ff1803f1749a77844dd33915422c49';f.write_bytes(b)\n\
+        with tarfile.open(f)as t:\n for m in t:assert not m.name.startswith('/')and '..'not in pathlib.Path(m.name).parts\n\
+        \ t.extractall(p)\nprint('NAV_KERNEL_SOURCE_LOCK_VERIFIED',len(b),flush=True)\nDOWNLOAD\nsudo chown -hR\
+        \ root:root /mnt/nav-lfs\nsudo env LFS=/mnt/nav-lfs unshare --mount --propagation private /bin/bash <<'MOUNT'\n\
+        set -euo pipefail\nmount --bind \"$LFS\" \"$LFS\"\nmount --bind /dev \"$LFS/dev\"\nmount -t devpts devpts\
+        \ -o gid=5,mode=0620 \"$LFS/dev/pts\"\nmount -t proc proc \"$LFS/proc\"\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\
+        \nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\nif [ -h \"$LFS/dev/shm\" ];then install -d -m1777 \"\
+        $LFS$(realpath /dev/shm)\";else mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\";fi\nchroot \"$LFS\"\
+        \ /usr/bin/env -i HOME=/root LC_ALL=C PATH=/usr/bin:/usr/sbin:/bin:/sbin MAKEFLAGS=-j2 /bin/bash /sources/nav-kernel-inner.sh\n\
+        MOUNT\n"
+      shell: bash
+    - name: Package only new kernel payload independently replay all paths metadata and hashes
+      run: "set -euo pipefail\nsudo tar --format=pax --zstd -cf /mnt/nav-kernel-userns-udmabuf.tar.zst -C /mnt/nav-lfs/sources/nav-kernel-payload\
+        \ .\nzstd -t /mnt/nav-kernel-userns-udmabuf.tar.zst\nsudo mkdir -p /mnt/nav-kernel-replay\nsudo tar --zstd\
+        \ -xf /mnt/nav-kernel-userns-udmabuf.tar.zst -C /mnt/nav-kernel-replay\nsudo python3 - <<'REPLAY'\nfrom\
+        \ pathlib import Path\nimport os,hashlib,stat,json\np=Path('/mnt/nav-kernel-userns-udmabuf.tar.zst')\ndef\
+        \ manifest(root):\n root=Path(root);d={}\n for f in [root]+sorted(root.rglob('*')):\n  st=f.lstat();a={'mode':stat.S_IMODE(st.st_mode),'uid':st.st_uid,'gid':st.st_gid,'mtime':st.st_mtime_ns,'type':stat.S_IFMT(st.st_mode)}\n\
+        \  if stat.S_ISREG(st.st_mode):a.update(bytes=st.st_size,sha256=hashlib.file_digest(f.open('rb'),'sha256').hexdigest())\n\
+        \  elif stat.S_ISLNK(st.st_mode):a['link']=os.readlink(f)\n  else:assert stat.S_ISDIR(st.st_mode),str(f)\n\
+        \  d[str(f.relative_to(root))]=a\n return d\nx=manifest('/mnt/nav-lfs/sources/nav-kernel-payload');y=manifest('/mnt/nav-kernel-replay');assert\
+        \ x==y,'Full kernel replay differs'\na={'bundle_sha256':hashlib.file_digest(p.open('rb'),'sha256').hexdigest(),'bundle_bytes':p.stat().st_size,'all_paths_exact':len(x),'manifest':x,'build_audit':json.loads(Path('/mnt/nav-lfs/sources/nav-kernel-evidence/audit.json').read_text())}\n\
+        Path('/tmp/nav-kernel-bundle-proof.json').write_text(json.dumps(a,sort_keys=True));print('NAV_KERNEL_BUNDLE_PROOF_JSON\
+        \ '+json.dumps(a,sort_keys=True),flush=True)\nREPLAY\n"
+      shell: bash
+    - name: Authenticated health budget all11protected exact NOdelete failclosed gate
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'GATE'\nimport os,json,urllib.request,hashlib,ctypes,ctypes.util,time\n\
+        from pathlib import Path\nTOKEN=os.environ['GH_TOKEN'];assert TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\n\
+        def get(url):\n req=urllib.request.Request(url,headers={'Authorization':'Bearer '+TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \ with urllib.request.urlopen(req,timeout=90)as r:return json.load(r)\ndef inventory():\n d=get(BASE+'actions/caches?per_page=100');assert\
+        \ d['total_count']==len(d['actions_caches']);return {str(x['id']):{k:x[k]for k in ['key','ref','version','size_in_bytes']}for\
+        \ x in d['actions_caches']}\nEXPECTED={'10480209539': {'key': 'nav-lfs13.1-x86_64-final-math-v1', 'ref':\
+        \ 'refs/heads/main', 'size_in_bytes': 901878016, 'version': '14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5'},\
+        \ '10480998516': {'key': 'nav-lfs13.1-x86_64-access-tools-v1', 'ref': 'refs/heads/main', 'size_in_bytes':\
+        \ 909038418, 'version': '14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5'}, '10508735204':\
+        \ {'key': 'nav-lfs13.1-x86_64-gcc-test-c-v1', 'ref': 'refs/heads/main', 'size_in_bytes': 1021068, 'version':\
+        \ 'e15aff5375d0e86d1aaef9fe181e558b39f1a1f784dccea28a3079ab10645ef8'}, '10511354384': {'key': 'nav-lfs13.1-x86_64-gcc-test-cxx-v1',\
+        \ 'ref': 'refs/heads/main', 'size_in_bytes': 1030391, 'version': 'e15aff5375d0e86d1aaef9fe181e558b39f1a1f784dccea28a3079ab10645ef8'},\
+        \ '10515953327': {'key': 'nav-lfs13.1-x86_64-gcc-test-runtime-v1', 'ref': 'refs/heads/main', 'size_in_bytes':\
+        \ 148732, 'version': 'e15aff5375d0e86d1aaef9fe181e558b39f1a1f784dccea28a3079ab10645ef8'}, '10516363617':\
+        \ {'key': 'nav-lfs13.1-x86_64-final-gcc-v1', 'ref': 'refs/heads/main', 'size_in_bytes': 1413472049, 'version':\
+        \ '14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5'}, '10696846187': {'key': 'nav-blfs13.1-x86_64-git-open-v1',\
+        \ 'ref': 'refs/heads/main', 'size_in_bytes': 1374122764, 'version': '14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5'},\
+        \ '10700939007': {'key': 'nav-blfs13.1-x86_64-giflib-open-v1', 'ref': 'refs/heads/main', 'size_in_bytes':\
+        \ 1374812746, 'version': '14acf6db514597b2f82ceda42a47a939f1bd119af73d5ded953f7d51f3e580b5'}, '10710908926':\
+        \ {'key': 'nav-blfs13.1-x86_64-jxl-open-v1', 'ref': 'refs/heads/main', 'size_in_bytes': 1404400214, 'version':\
+        \ '554507abaeca91255ad1a6f15da321ec0e5bfea6c40ae80755a6e2b33b37debe'}, '10790873772': {'key': 'nav-blfs13.1-x86_64-aom-static-repair-open-v1',\
+        \ 'ref': 'refs/heads/main', 'size_in_bytes': 1414253410, 'version': '69e54c818e6d1830d476051f7c8862dd31fd9fdd162e849ebefc672993823dee'},\
+        \ '10803318199': {'key': 'nav-blfs13.1-x86_64-librsvg-transitional-open-v1', 'ref': 'refs/heads/main', 'size_in_bytes':\
+        \ 1477765679, 'version': '8d333d49a8f4916a9c92ad0c11bd049e8b23c56e739635178878f341b0359d6f'}}\npre=inventory();assert\
+        \ pre==EXPECTED,'Protected inventory changed, no save'\na=json.loads(Path('/tmp/nav-kernel-bundle-proof.json').read_text());p=Path('/mnt/nav-kernel-userns-udmabuf.tar.zst');assert\
+        \ hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==a['bundle_sha256']\nz=ctypes.CDLL(ctypes.util.find_library('zstd'));z.ZSTD_compressBound.argtypes=[ctypes.c_size_t];z.ZSTD_compressBound.restype=ctypes.c_size_t\n\
+        upper=z.ZSTD_compressBound(p.stat().st_size+1024**2)+16*1024**2\nassert sum(x['size_in_bytes']for x in pre.values())+upper<10*1024**3,'No\
+        \ room, STOP no deletions'\ncore=get('https://api.github.com/rate_limit')['resources']['core'];assert core['limit']>=1000\
+        \ and core['remaining']>=250 and core['reset']>time.time()\nout={'before':pre,'upper_bytes':upper,'bundle_sha256':a['bundle_sha256'],'health':core,'no_deletions':True}\n\
+        Path('/tmp/nav-kernel-presave.json').write_text(json.dumps(out,sort_keys=True));print('NAV_KERNEL_PRESAVE_JSON\
+        \ '+json.dumps(out,sort_keys=True),flush=True)\n\nGATE\n"
+    - name: Save small compiledkernel bundle only sandbox dmabuf OPEN no root checkpoint mutation
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-kernel-userns-udmabuf.tar.zst
+        key: nav-linux7.1.8-userns-udmabuf-compiled-open-v1
+    - name: Verify onlysmallnewcache saved all11protected exact and budget
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'POST'\nimport os,json,urllib.request,hashlib,ctypes,ctypes.util,time\n\
+        from pathlib import Path\nTOKEN=os.environ['GH_TOKEN'];assert TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\n\
+        def get(url):\n req=urllib.request.Request(url,headers={'Authorization':'Bearer '+TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \ with urllib.request.urlopen(req,timeout=90)as r:return json.load(r)\ndef inventory():\n d=get(BASE+'actions/caches?per_page=100');assert\
+        \ d['total_count']==len(d['actions_caches']);return {str(x['id']):{k:x[k]for k in ['key','ref','version','size_in_bytes']}for\
+        \ x in d['actions_caches']}\nbefore=json.loads(Path('/tmp/nav-kernel-presave.json').read_text());now=inventory();assert\
+        \ all(now.get(k)==v for k,v in before['before'].items());new={k:v for k,v in now.items()if k not in before['before']};assert\
+        \ len(new)==1\nid,row=next(iter(new.items()));assert row['key']=='nav-linux7.1.8-userns-udmabuf-compiled-open-v1'and\
+        \ row['ref']=='refs/heads/main'and 0<row['size_in_bytes']<=before['upper_bytes'];assert sum(x['size_in_bytes']for\
+        \ x in now.values())<10*1024**3\nout={'cache_id':id,'cache':row,'all11protected_exact':True,'no_deletions':True,'after_save':now,'presave':before,'proof':json.loads(Path('/tmp/nav-kernel-bundle-proof.json').read_text())};print('NAV_KERNEL_SAVED_VERIFIED_AUDIT_JSON\
+        \ '+json.dumps(out,sort_keys=True),flush=True)\n\nPOST\n"
+    - name: Always export kernel diagnostic evidence even on failure no credentials
+      if: always()
+      shell: bash
+      run: "set -euo pipefail\nsudo python3 - <<'EXPORT'\nfrom pathlib import Path\nimport base64,gzip,json,hashlib\n\
+        A=Path('/mnt/nav-lfs/sources/nav-kernel-evidence');m={}\nif A.exists():\n for f in sorted(A.iterdir()):\n\
+        \  if not f.is_file():continue\n  b=f.read_bytes();name=f.name.replace('.','_').upper();m[name]={'file':f.name,'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()};z=gzip.compress(b,mtime=0)\n\
+        \  for i in range(0,len(z),3000):print('NAV_KERNEL_'+name+'_GZB64 '+base64.b64encode(z[i:i+3000]).decode(),flush=True)\n\
+        print('NAV_KERNEL_EXPORT_MANIFEST_JSON '+json.dumps(m,sort_keys=True),flush=True)\nEXPORT\n"
