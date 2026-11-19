@@ -103,7 +103,7 @@ jobs:
         \   print('NAV_AUTHENTICATED_API_RETRY',attempt+1,'delay_seconds',delay,flush=True);time.sleep(delay)\n\
         \ raise RuntimeError('API bounded retries exhausted')\n\nfrom pathlib import Path,PurePosixPath\nimport\
         \ base64,gzip,re,hashlib,collections,json\nr=Path('/mnt/nav-lfs');p=r/'nav-build-metadata/librsvg';p.mkdir(parents=True)\n\
-        for job,prefix,dest,pin in [(135706647838,'NAV_RSVG_',r/'nav-build-metadata/librsvg/original-diagnostic','e917021fb3d684dcb0d0b6ad1625eabf078ac63869e27b56af09fe7eba1e1132'),(135719543445,'NAV_RSVG_',r/'nav-build-metadata/librsvg/original-investigation','66373a43dde38b63cf88ec6df43b356fde3cfe7670f0e2932ade5a882e0ace24')]:\n\
+        for job,prefix,dest,pin in [(135706647838,'NAV_RSVG_',r/'nav-build-metadata/librsvg/original-diagnostic','e917021fb3d684dcb0d0b6ad1625eabf078ac63869e27b56af09fe7eba1e1132'),(135719543445,'NAV_RSVG_',r/'nav-build-metadata/librsvg/original-investigation','66373a43dde38b63cf88ec6df43b356fde3cfe7670f0e2932ade5a882e0ace24'),(135743915160,'NAV_RSVG_REPRO_',r/'nav-build-metadata/librsvg/original-repro','45ad3312257a3ce1c250d88614b71eca4ea87a67fbb30c57bce226cccf9fdf68')]:\n\
         \ raw=api('actions/jobs/'+str(job)+'/logs');text=raw.decode();parts=collections.defaultdict(list)\n for\
         \ line in text.splitlines():\n  m=re.search(r'\\b'+prefix+r'([A-Z0-9_-]+)_GZB64 ([A-Za-z0-9+/=]+)\\s*$',line)\n\
         \  if m:parts[m[1]].append(base64.b64decode(m[2],validate=True))\n manifest=gzip.decompress(b''.join(parts['EXPORT-MANIFEST_JSON']));assert\
@@ -119,16 +119,17 @@ jobs:
         from pathlib import Path
 
         Path(''/mnt/nav-lfs/sources/rsvg-stage.sh'').write_text(''set -euo pipefail\numask 022\nulimit -v 4194304\nexport
-        PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin LANG=C.UTF-8 MAKEFLAGS=-j2 CARGO_BUILD_JOBS=2 CARGO_HOME=/tmp/nav-librsvg-cargo-home\nunset
-        LC_ALL LANGUAGE\nchmod 1777 /tmp /var/tmp\nS=/sources/librsvg-2.62.4\nP=/nav-build-metadata/librsvg\nmkdir
+        PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin LANG=C.UTF-8 MAKEFLAGS=-j2 CARGO_BUILD_JOBS=2 CARGO_HOME=/tmp/nav-librsvg-cargo-home
+        PYTHONHASHSEED=4908\nunset LC_ALL LANGUAGE\nchmod 1777 /tmp /var/tmp\nS=/sources/librsvg-2.62.4\nP=/nav-build-metadata/librsvg\nmkdir
         -p "$P" "$CARGO_HOME"\nchown -R tester:tester "$S" "$CARGO_HOME"\nsu tester -c \''export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin
-        CARGO_HOME=/tmp/nav-librsvg-cargo-home CARGO_BUILD_JOBS=2;cd /sources/librsvg-2.62.4;meson setup --prefix=/usr
-        --buildtype=release build\'' > "$P/install-only-configure.log" 2>&1\nsu tester -c \''export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin
-        CARGO_HOME=/tmp/nav-librsvg-cargo-home CARGO_BUILD_JOBS=2;cd /sources/librsvg-2.62.4;ninja -C build -j2\''
-        > "$P/install-only-build.log" 2>&1\npython3 /sources/rsvg-install-verify.py compiled\nDESTDIR=/tmp/nav-rsvg-stage
-        meson install -C "$S/build" --no-rebuild > "$P/staged-install.log" 2>&1\npython3 /sources/rsvg-install-verify.py
-        staged\ncp -a /tmp/nav-rsvg-stage/usr/. /usr/\nldconfig\npkg-config --modversion librsvg-2.0 > "$P/installed-version.log"\nrsvg-convert
-        --version >> "$P/installed-version.log"\nldd /usr/lib/librsvg-2.so /usr/bin/rsvg-convert > "$P/installed-linkage.log"
+        CARGO_HOME=/tmp/nav-librsvg-cargo-home PYTHONHASHSEED=4908 CARGO_BUILD_JOBS=2;cd /sources/librsvg-2.62.4;meson
+        setup --prefix=/usr --buildtype=release build\'' > "$P/install-only-configure.log" 2>&1\nsu tester -c \''export
+        PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin CARGO_HOME=/tmp/nav-librsvg-cargo-home PYTHONHASHSEED=4908
+        CARGO_BUILD_JOBS=2;cd /sources/librsvg-2.62.4;ninja -C build -j2\'' > "$P/install-only-build.log" 2>&1\npython3
+        /sources/rsvg-install-verify.py compiled\nDESTDIR=/tmp/nav-rsvg-stage meson install -C "$S/build" --no-rebuild
+        > "$P/staged-install.log" 2>&1\npython3 /sources/rsvg-install-verify.py staged\ncp -a /tmp/nav-rsvg-stage/usr/.
+        /usr/\nldconfig\npkg-config --modversion librsvg-2.0 > "$P/installed-version.log"\nrsvg-convert --version
+        >> "$P/installed-version.log"\nldd /usr/lib/librsvg-2.so /usr/bin/rsvg-convert > "$P/installed-linkage.log"
         2>&1\n! grep -q \''not found\'' "$P/installed-linkage.log"\ncc /sources/rsvg-render-investigation.c $(pkg-config
         --cflags --libs librsvg-2.0 pangocairo pangoft2 fontconfig) -o /tmp/rsvg-installed-render > "$P/installed-render-build.log"
         2>&1\n/tmp/rsvg-installed-render "$S/rsvg/tests/fixtures/reftests/svg1.1/text-text-03-b.svg" "$S/rsvg/tests/resources"
@@ -145,7 +146,7 @@ jobs:
         manifest(root):\n out={}\n for f in Path(root).rglob(''*''):\n  s=f.lstat();x={''mode'':stat.S_IMODE(s.st_mode)}\n  if
         f.is_symlink():x[''symlink'']=os.readlink(f)\n  elif f.is_file():x.update(bytes=s.st_size,sha256=sha(f))\n  elif
         f.is_dir():continue\n  else:raise AssertionError(''unsupported stagedfile ''+str(f))\n  out[str(f.relative_to(root))]=x\n
-        return out\nif sys.argv[1]==''compiled'':\n n,l=source();old=json.loads((P/''original-investigation/compiled-runtime-files-sha256.json'').read_text());names=[''build/rsvg/librsvg-2.so.2.62.4'',''build/rsvg_convert/rsvg-convert''];new={}\n
+        return out\nif sys.argv[1]==''compiled'':\n n,l=source();old=json.loads((P/''original-repro/new-compiled-runtime-files-sha256.json'').read_text());names=[''build/rsvg/librsvg-2.so.2.62.4'',''build/rsvg_convert/rsvg-convert''];new={}\n
         for rel in names:\n  f=S/rel;x={''bytes'':f.stat().st_size,''sha256'':sha(f)};assert x==old[rel],{''runtime_hash_diff'':rel};new[rel]=x\n
         (P/''compiled-runtime-files-sha256.json'').write_text(json.dumps(new,indent=2));print(''NAV_RSVG_INSTALL_ORIGINAL_SOURCE_LINKS_AND_COMPILED_RUNTIME_HASHES_EXACT'',n,l)\nelif
         sys.argv[1]==''staged'':\n m=manifest(''/tmp/nav-rsvg-stage'');assert m and all(x.startswith(''usr/'')for
