@@ -117,17 +117,17 @@ jobs:
         \ manifest['BUNDLE-PROOF_JSON']==EXPECTED\nparts=[]\nfor l in raw.splitlines():\n l=re.sub(r'^\\S+Z ','',l)\n\
         \ if l.startswith('NAV_GTKPRE_BUNDLE-PROOF_JSON_GZB64 '):parts.append(base64.b64decode(l.split(' ',1)[1]))\n\
         b=gzip.decompress(b''.join(parts));assert len(b)==EXPECTED['bytes']and hashlib.sha256(b).hexdigest()==EXPECTED['sha256'];Path('/tmp/nav-gtk-prerequisite-proof.json').write_bytes(b)\n\
-        \nPROOFRECOVER\nset -euo pipefail\nsudo python3 - <<'VERIFY'\nfrom pathlib import Path\nimport json,hashlib,subprocess,stat,os\n\
-        P=json.loads(Path('/tmp/nav-gtk-prerequisite-proof.json').read_text())\nf=Path('/mnt/nav-gtk-prerequisites.tar.zst');assert\
-        \ f.stat().st_size==P['bundle_bytes']and hashlib.file_digest(f.open('rb'),'sha256').hexdigest()==P['bundle_sha256']\n\
+        \nPROOFRECOVER\nset -euo pipefail\nsudo mkdir -p /mnt/nav-lfs/sources/nav-gtk-evidence\nsudo python3 - <<'VERIFY'\n\
+        from pathlib import Path\nimport json,hashlib,subprocess,stat,os\nP=json.loads(Path('/tmp/nav-gtk-prerequisite-proof.json').read_text())\n\
+        f=Path('/mnt/nav-gtk-prerequisites.tar.zst');assert f.stat().st_size==P['bundle_bytes']and hashlib.file_digest(f.open('rb'),'sha256').hexdigest()==P['bundle_sha256']\n\
         root=Path('/mnt/nav-gtk-prerequisite-replay');root.mkdir();subprocess.run(['tar','--zstd','--same-owner','--same-permissions','-xpf',str(f),'-C',str(root)],check=True)\n\
         def manifest(root):\n out={}\n for p in [root]+sorted(root.rglob('*')):\n  s=p.lstat();v={'type':stat.S_IFMT(s.st_mode),'mode':stat.S_IMODE(s.st_mode),'uid':s.st_uid,'gid':s.st_gid,'mtime':s.st_mtime_ns}\n\
-        \  if p.is_symlink():v['symlink']=os.readlink(p)\n  elif p.is_file():v['bytes']=s.st_size;v['sha256']=hashlib.file_digest(p.open('rb'),'sha256').hexdigest()\n\
+        \  if p.is_symlink():v['link']=os.readlink(p)\n  elif p.is_file():v['bytes']=s.st_size;v['sha256']=hashlib.file_digest(p.open('rb'),'sha256').hexdigest()\n\
         \  out[str(p.relative_to(root))]=v\n return out\nactual=manifest(root);assert actual==P['manifest'],[(k,actual.get(k),v)for\
         \ k,v in P['manifest'].items()if actual.get(k)!=v][:3]\nsubprocess.run(['tar','--zstd','--same-owner','--same-permissions','-xpf',str(f),'-C','/mnt/nav-lfs'],check=True)\n\
         for name,v in P['manifest'].items():\n p=Path('/mnt/nav-lfs')/name\n if v['type']==stat.S_IFREG:assert p.is_file()and\
         \ hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==v['sha256'],name\n if v['type']==stat.S_IFLNK:assert\
-        \ p.is_symlink()and os.readlink(p)==v['symlink'],name\nA=Path('/mnt/nav-lfs/sources/nav-gtk-evidence');A.mkdir(parents=True,exist_ok=True);(A/'prerequisite-replay.json').write_text(json.dumps({'paths_exact':len(actual),'bundle_sha256':P['bundle_sha256'],'bundle_bytes':P['bundle_bytes'],'all_inherited_gaps':'OPEN','original_tests_replayed':False},sort_keys=True));print('NAV_GTK_PREREQUISITE_REPLAY_EXACT',len(actual),flush=True)\n\
+        \ p.is_symlink()and os.readlink(p)==v['link'],name\nA=Path('/mnt/nav-lfs/sources/nav-gtk-evidence');A.mkdir(parents=True,exist_ok=True);(A/'prerequisite-replay.json').write_text(json.dumps({'paths_exact':len(actual),'bundle_sha256':P['bundle_sha256'],'bundle_bytes':P['bundle_bytes'],'all_inherited_gaps':'OPEN','original_tests_replayed':False},sort_keys=True));print('NAV_GTK_PREREQUISITE_REPLAY_EXACT',len(actual),flush=True)\n\
         VERIFY\n"
     - name: Authenticated recover and strict recount original32Shaderc exports no canonical replay
       env:
