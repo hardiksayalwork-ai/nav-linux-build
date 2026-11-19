@@ -176,10 +176,11 @@ jobs:
         # The previous original install log is the authoritative installed pathname list.\\n original_paths=re.findall(r\\\''^--
         Installing: (/usr/.*)$\\\'',(H/\\\''install.log\\\'').read_text(),re.M)\\n actual={str(f.relative_to(stage))for
         f in stage.rglob(\\\''*\\\'')if f.is_file()or f.is_symlink()}\\n expected_paths={x.lstrip(\\\''/\\\'')for
-        x in original_paths if not x.endswith(\\\''/usr/lib/libheif\\\'')}\\n assert actual==expected_paths,{\\\''only_actual\\\'':sorted(actual-expected_paths),\\\''only_expected\\\'':sorted(expected_paths-actual)}\\n
+        x in original_paths if not x.endswith(\\\''/usr/lib/libheif\\\'')}\\n expected_paths.add(\\\''usr/bin/heif-convert\\\'')\\n
+        assert actual==expected_paths,{\\\''only_actual\\\'':sorted(actual-expected_paths),\\\''only_expected\\\'':sorted(expected_paths-actual)}\\n
         known_hashes={x[\\\''sha256\\\'']for x in archived.values()if \\\''sha256\\\''in x}|{x[\\\''sha256\\\'']for
         x in original.values()}\\n for rel in sorted(actual):\\n  f=stage/rel\\n  if f.is_symlink():\\n   assert
-        rel in [\\\''usr/lib/libheif.so\\\'',\\\''usr/lib/libheif.so.1\\\'']and os.readlink(f)in [\\\''libheif.so.1\\\'',\\\''libheif.so.1.23.7\\\''],rel\\n   records[rel]={\\\''symlink\\\'':os.readlink(f)};continue\\n  digest=sha(f)\\n  if
+        os.readlink(f)=={\\\''usr/lib/libheif.so\\\'':\\\''libheif.so.1\\\'',\\\''usr/lib/libheif.so.1\\\'':\\\''libheif.so.1.23.7\\\'',\\\''usr/bin/heif-convert\\\'':\\\''heif-dec\\\''}[rel],rel\\n   records[rel]={\\\''symlink\\\'':os.readlink(f)};continue\\n  digest=sha(f)\\n  if
         rel.startswith(\\\''usr/bin/\\\''):\\n   src=s/\\\''build-production/examples\\\''/f.name;dst=expected/f.name;shutil.copy2(src,dst)\\n   dynamic=subprocess.check_output([\\\''readelf\\\'',\\\''-d\\\'',str(src)],text=True)\\n   paths=re.findall(r\\\''\\\\((?:RUNPATH|RPATH)\\\\).*?\\\\[(.*?)\\\\]\\\'',dynamic);assert
         len(paths)==1 and paths[0].startswith(\\\''/sources/libheif-1.23.7/build-production/libheif\\\''),paths\\n   script=expected/(f.name+\\\''.cmake\\\'');script.write_text(\\\''file(RPATH_CHANGE
         FILE "\\\''+str(dst)+\\\''" OLD_RPATH "\\\''+paths[0]+\\\''" NEW_RPATH "")\\\\n\\\'')\\n   subprocess.run([\\\''cmake\\\'',\\\''-P\\\'',str(script)],check=True,capture_output=True,text=True)\\n   assert
