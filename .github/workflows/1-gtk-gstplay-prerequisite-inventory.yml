@@ -162,19 +162,39 @@ jobs:
         'NAV_OPUSBASE_NEW_COVERAGE_DELTA_JSON \\'+json.dumps(delta,sort_keys=True),flush=True)\\nDELTA\\nninja -C\
         \ build -j2 2>&1 | tee \"$A/base-build.log\"\\npython3 /sources/nav-opusbase-source-verify.py\\npython3\
         \ - <<\\'COVERAGE\\'\\nfrom pathlib import Path\\nimport json\\nA=Path(\\'/sources/nav-opusbase-evidence\\\
-        ');assert json.loads((A/\\'base-discovery.json\\').read_text())==json.loads((A/\\'original-delta/base-discovery.json\\\
-        ').read_text());assert json.loads((A/\\'base-delta-discovery.json\\').read_text())==json.loads((A/\\'original-delta/base-delta-discovery.json\\\
-        ').read_text());c=json.loads((A/\\'original-delta/coverage.json\\').read_text());(A/\\'coverage.json\\').write_text(json.dumps(c,sort_keys=True));print(\\\
-        'NAV_OPUSBASE_INSTALL_DISCOVERY_EXACT135_AND_DELTA1_NO_REPLAY\\',flush=True)\\nCOVERAGE\\n# Stage only newly\
-        \ required Base Opus plugin, not a full replacement Base payload.\\ninstall -m0755 build/ext/opus/libgstopus.so\
-        \ \"$P/usr/lib/gstreamer-1.0/\"\\npython3 - <<\\'AUDIT\\'\\nfrom pathlib import Path\\nimport json,hashlib,os\\\
-        nA=Path(\\'/sources/nav-opusbase-evidence\\');P=Path(\\'/sources/nav-opusbase-payload\\');files={}\\nfor\
-        \ p in P.rglob(\\'*\\'):\\n if p.is_symlink():files[str(p.relative_to(P))]={\\'link\\':os.readlink(p)}\\\
-        n elif p.is_file():files[str(p.relative_to(P))]={\\'bytes\\':p.stat().st_size,\\'sha256\\':hashlib.file_digest(p.open(\\\
-        'rb\\'),\\'sha256\\').hexdigest()}\\nassert (P/\\'usr/lib/gstreamer-1.0/libgstopus.so\\').is_file();out={\\\
-        'payload\\':files,\\'source_integrity\\':json.loads((A/\\'source-integrity.json\\').read_text()),\\'canonical\\\
-        ':json.loads((A/\\'canonical-ledger.json\\').read_text()),\\'delta\\':json.loads((A/\\'coverage.json\\').read_text())};(A/\\\
-        'audit.json\\').write_text(json.dumps(out,sort_keys=True));print(\\'NAV_OPUSBASE_INSTALL_PAYLOAD_AUDIT_JSON\
+        ')\\nimport collections,subprocess,re,copy,hashlib\\nallpaths=set();permuted=0\\nfor name in [\\'base-discovery.json\\\
+        ',\\'base-delta-discovery.json\\']:\\n new=json.loads((A/name).read_text());old=json.loads((A/\\'original-delta\\\
+        '/name).read_text());assert len(new)==len(old)\\n for x,y in zip(new,old):\\n  xx=copy.deepcopy(x);yy=copy.deepcopy(y);xe=xx[\\\
+        'env\\'];ye=yy[\\'env\\'];assert set(xe)==set(ye)\\n  if \\'LD_LIBRARY_PATH\\'in xe:\\n   xp=xe.pop(\\'LD_LIBRARY_PATH\\\
+        ').split(\\':\\');yp=ye.pop(\\'LD_LIBRARY_PATH\\').split(\\':\\');assert collections.Counter(xp)==collections.Counter(yp);assert\
+        \ len(xp)==len(set(xp));allpaths.update(xp);permuted+=xp!=yp\\n  assert xx==yy,(name,x[\\'name\\'],\\'non-order\
+        \ difference\\')\\nseen={};basenames={};rows=[]\\nfor directory in sorted(allpaths):\\n root=Path(directory);assert\
+        \ root.is_dir()and root.is_relative_to(\\'/sources/gst-plugins-base-1.28.6/build/gst-libs/gst\\');files=sorted(root.glob(\\\
+        '*.so*\\'));assert files,directory;resolved=set()\\n for f in files:\\n  target=f.resolve(strict=True);assert\
+        \ target.parent==root\\n  if f.name in basenames:assert basenames[f.name]==directory,(\\'CROSS_DIRECTORY_BASENAME_COLLISION\\\
+        ',f.name)\\n  basenames[f.name]=directory\\n  if target in resolved:continue\\n  resolved.add(target);out=subprocess.check_output([\\\
+        'readelf\\',\\'-d\\',str(target)],text=True);sonames=re.findall(r\\'\\\\(SONAME\\\\).*?\\\\[([^\\\\]]+)\\\
+        \\]\\',out);assert len(sonames)==1,str(target);soname=sonames[0]\\n  if soname in seen:assert seen[soname]==directory,(\\\
+        'CROSS_DIRECTORY_SONAME_COLLISION\\',soname)\\n  seen[soname]=directory;rows.append({\\'file\\':str(target),\\\
+        'SONAME\\':soname,\\'sha256\\':hashlib.file_digest(target.open(\\'rb\\'),\\'sha256\\').hexdigest()})\\nproof={\\\
+        'classification\\':\\'Both raw discoveries retained. All other fields exact, identical LD path multisets.\
+        \ No cross-directory SONAME or loadable basename collisions. Search-order permutation cannot change library\
+        \ selection within these paths. NO original binary-equivalence claim.\\',\\'directories\\':sorted(allpaths),\\\
+        'permuted_records_including_delta\\':permuted,\\'libraries\\':rows,\\'basename_owners\\':basenames,\\'SONAME_owners\\\
+        ':seen};(A/\\'library-search-order-proof.json\\').write_text(json.dumps(proof,sort_keys=True));ledger=json.loads((A/\\\
+        'canonical-ledger.json\\').read_text());ledger[\\'library_search_order_proof\\']=proof;(A/\\'canonical-ledger.json\\\
+        ').write_text(json.dumps(ledger,sort_keys=True));print(\\'NAV_OPUSBASE_INSTALL_SEARCH_ORDER_PROOF_JSON \\\
+        '+json.dumps(proof,sort_keys=True),flush=True)\\nc=json.loads((A/\\'original-delta/coverage.json\\').read_text());(A/\\\
+        'coverage.json\\').write_text(json.dumps(c,sort_keys=True));print(\\'NAV_OPUSBASE_INSTALL_DISCOVERY_EXACT135_AND_DELTA1_NO_REPLAY\\\
+        ',flush=True)\\nCOVERAGE\\n# Stage only newly required Base Opus plugin, not a full replacement Base payload.\\\
+        ninstall -m0755 build/ext/opus/libgstopus.so \"$P/usr/lib/gstreamer-1.0/\"\\npython3 - <<\\'AUDIT\\'\\nfrom\
+        \ pathlib import Path\\nimport json,hashlib,os\\nA=Path(\\'/sources/nav-opusbase-evidence\\');P=Path(\\\
+        '/sources/nav-opusbase-payload\\');files={}\\nfor p in P.rglob(\\'*\\'):\\n if p.is_symlink():files[str(p.relative_to(P))]={\\\
+        'link\\':os.readlink(p)}\\n elif p.is_file():files[str(p.relative_to(P))]={\\'bytes\\':p.stat().st_size,\\\
+        'sha256\\':hashlib.file_digest(p.open(\\'rb\\'),\\'sha256\\').hexdigest()}\\nassert (P/\\'usr/lib/gstreamer-1.0/libgstopus.so\\\
+        ').is_file();out={\\'payload\\':files,\\'source_integrity\\':json.loads((A/\\'source-integrity.json\\').read_text()),\\\
+        'canonical\\':json.loads((A/\\'canonical-ledger.json\\').read_text()),\\'delta\\':json.loads((A/\\'coverage.json\\\
+        ').read_text())};(A/\\'audit.json\\').write_text(json.dumps(out,sort_keys=True));print(\\'NAV_OPUSBASE_INSTALL_PAYLOAD_AUDIT_JSON\
         \ \\'+json.dumps(out,sort_keys=True),flush=True)\\nAUDIT\\n# Separate staged plugin API smoke, not a replay\
         \ of original unit tests.\\nLD_LIBRARY_PATH=\"$P/usr/lib\" GST_PLUGIN_PATH_1_0=\"$P/usr/lib/gstreamer-1.0\"\
         \ GST_REGISTRY=/tmp/nav-opusbase-api.registry python3 - <<\\'SMOKE\\' | tee \"$A/staged-api-smoke.log\"\\\
