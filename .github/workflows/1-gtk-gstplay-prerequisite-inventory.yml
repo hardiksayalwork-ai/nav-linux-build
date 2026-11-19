@@ -1,4 +1,4 @@
-name: NAV GTK GstPlay remaining full prerequisite READ ONLY inventory
+name: NAV GstBad missing elements and tester permissions READ ONLY inventory
 'on':
   workflow_dispatch: {}
 permissions:
@@ -84,16 +84,19 @@ jobs:
         test -f /mnt/nav-lfs/nav-build-metadata/librsvg/RSVG-TRANSITIONAL-OPEN.json
 
         '
-    - name: READ ONLY remaining explicit GTK dependencies GstPlay full-test requirements installed plugins
+    - name: READ ONLY exact native element and tester permissions inventory no tests registry updates disabled
       shell: bash
       run: "set -euo pipefail\nsudo chroot /mnt/nav-lfs /usr/bin/env -i HOME=/root PATH=/usr/bin:/usr/sbin:/bin:/sbin\
-        \ LC_ALL=C /usr/bin/python3 - <<'INVENTORY'\nfrom pathlib import Path\nimport subprocess,json,glob,os\n\
-        names=['gstreamer-play-1.0','gstreamer-gl-1.0','gstreamer-allocators-1.0','gstreamer-pbutils-1.0','gstreamer-check-1.0','gstreamer-video-1.0','gstreamer-audio-1.0','gstreamer-tag-1.0','gstreamer-base-1.0','gstreamer-rtsp-1.0','gstreamer-rtp-1.0','libsoup-3.0','wayland-client','wayland-egl','wayland-protocols','xrandr','x11','xrender','xi','xext','xcursor','xdamage','xfixes','xinerama','fontconfig','vulkan','libdrm','cups','cairo-script-interpreter','json-glib-1.0','libxml-2.0','libexif','orc-0.4','gstreamer-validate-1.0','gudev-1.0','libva','libv4l2']\n\
-        out={'classification':'READ ONLY all remaining explicit GTK and GstPlay full-test prerequisite inventory.\
-        \ No build install test save delete','pkgconfig':{},'paths':{},'installed_bad_metadata':{}}\nfor name in\
-        \ names:\n p=subprocess.run(['pkg-config','--modversion',name],capture_output=True,text=True);out['pkgconfig'][name]={'exit':p.returncode,'stdout':p.stdout.strip(),'stderr':p.stderr.strip()}\n\
-        for pattern in ['/usr/lib/libgstplay*','/usr/lib/pkgconfig/gstreamer*','/usr/lib/gstreamer-1.0/*','/usr/bin/wayland-scanner','/usr/bin/gdbus-codegen','/usr/bin/glib-compile-resources','/usr/bin/msgfmt','/usr/bin/xdpyinfo','/usr/lib64/gstreamer-1.0/*']:\n\
-        \ for name in glob.glob(pattern):\n  p=Path(name);out['paths'][name]={'symlink':os.readlink(p)if p.is_symlink()else\
-        \ None,'bytes':p.stat().st_size}\nfor pattern in ['/nav-build-metadata/*gstream*/*','/nav-build-metadata/*gst*/*']:\n\
-        \ for name in glob.glob(pattern):\n  p=Path(name)\n  if p.is_file()and p.suffix in ['.json','.txt']and p.stat().st_size<5000:out['installed_bad_metadata'][name]=p.read_text(errors='replace')\n\
-        print('NAV_GTK_GSTPLAY_REMAINING_INVENTORY_JSON '+json.dumps(out,sort_keys=True),flush=True)\nINVENTORY\n"
+        \ LC_ALL=C /usr/bin/python3 - <<'INVENTORY'\nfrom pathlib import Path\nimport subprocess,json,os,pwd,stat,hashlib\n\
+        names=['scaletempo','audiofx','rtpbin','rtpmanager','udpsrc','udpsink','dynudpsink','funnel','audiotestsrc','opusenc','opusdec','vorbisdec','oggdemux','theoradec','playbin','souphttpsrc','cvtracker','x264enc']\n\
+        out={'classification':'READ ONLY native element and permissions inventory. No build install tests save or\
+        \ deletion. Registry updates disabled.','elements':{},'paths':{},'tester':{},'pkgconfig':{}}\nfor n in names:\n\
+        \ p=subprocess.run(['gst-inspect-1.0','--gst-disable-registry-update',n],capture_output=True,text=True);out['elements'][n]={'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr}\n\
+        for n in ['/home','/home/tester','/home/tester/.config','/home/tester/.cache','/var/cache/fontconfig','/usr/lib/gstreamer-1.0/libgstaudiofx.so','/usr/lib/gstreamer-1.0/libgstrtpmanager.so','/usr/lib/gstreamer-1.0/libgstudp.so','/usr/lib/gstreamer-1.0/libgstopus.so']:\n\
+        \ p=Path(n)\n if p.exists():\n  s=p.stat();out['paths'][n]={'uid':s.st_uid,'gid':s.st_gid,'mode':oct(stat.S_IMODE(s.st_mode)),'symlink':os.readlink(p)if\
+        \ p.is_symlink()else None,'bytes':s.st_size}\n else:out['paths'][n]={'exists':False}\nfor n in ['opus','gstreamer-plugins-good-1.0','gstreamer-plugins-base-1.0','orc-0.4']:\n\
+        \ p=subprocess.run(['pkg-config','--modversion',n],capture_output=True,text=True);out['pkgconfig'][n]={'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr}\n\
+        p=pwd.getpwnam('tester');out['tester']={'uid':p.pw_uid,'gid':p.pw_gid,'home':p.pw_dir}\np=subprocess.run(['su','tester','-c',\"\
+        python3 -c 'import os,json;print(json.dumps({p:os.access(p,os.W_OK)for p in [\\\"/home/tester\\\",\\\"/home/tester/.config\\\
+        \",\\\"/home/tester/.cache\\\",\\\"/tmp\\\"]}))'\"],capture_output=True,text=True);out['tester']['access_probe']={'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr}\n\
+        print('NAV_GSTBAD_NATIVE_INVENTORY_JSON '+json.dumps(out,sort_keys=True),flush=True)\nINVENTORY\n"
