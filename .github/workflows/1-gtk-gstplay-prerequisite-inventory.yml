@@ -202,41 +202,41 @@ jobs:
         \ --config | tee \"$A/theora-config-args.log\"\\ncp tests/Makefile \"$A/theora-tests-Makefile\"\\npython3\
         \ - <<\\'SAME\\'\\nfrom pathlib import Path\\nimport re\\nA=Path(\\'/sources/nav-theorabase-evidence\\');a=(A/\\\
         'original-theora/tests-Makefile\\').read_text();b=(A/\\'theora-tests-Makefile\\').read_text();assert a==b,\\\
-        'Theora original generated test Makefile differs\\';assert (A/\\'theora-config-args.log\\').read_text().strip()==\"\
-        \\'--prefix=/usr\\'\"\\nprint(\\'NAV_THEORABASE_ORIGINAL_TEST_MAKEFILE_EXACT_NO_REPLAY\\',flush=True)\\\
-        nSAME\\nmake -j2 2>&1 | tee \"$A/theora-build.log\"\\nmake DESTDIR=\"$P\" install 2>&1 | tee \"$A/theora-stage.log\"\
-        \\ncp -a \"$P/usr/.\" /usr/\\nldconfig\\ncd /sources/gst-plugins-base-1.28.6\\nmeson setup build --prefix=/usr\
-        \ --buildtype=release --wrap-mode=nodownload -Dtests=enabled -Ddoc=disabled -Dopus=enabled -Dtheora=enabled\
-        \ 2>&1 | tee \"$A/base-configure.log\"\\nmeson introspect --tests build > \"$A/base-discovery.json\"\\nmeson\
-        \ introspect --buildoptions build > \"$A/base-options.json\"\\npython3 - <<\\'DELTA\\'\\nfrom pathlib import\
-        \ Path\\nimport json\\nA=Path(\\'/sources/nav-theorabase-evidence\\');old=json.loads((A/\\'prior-base-opus/base-discovery.json\\\
-        ').read_text());new=json.loads((A/\\'base-discovery.json\\').read_text());names={x[\\'name\\']for x in old};assert\
-        \ len(names)==135 and names<={x[\\'name\\']for x in new};delta=[x for x in new if x[\\'name\\']not in names];assert\
-        \ {x[\\'name\\']for x in delta}=={\\'elements_encodebin\\',\\'pipelines_theoraenc\\',\\'elements_theoradec\\\
-        '},[x[\\'name\\']for x in delta];(A/\\'base-delta-discovery.json\\').write_text(json.dumps(delta,sort_keys=True));print(\\\
-        'NAV_THEORABASE_NEW_DELTA_JSON \\'+json.dumps(delta,sort_keys=True),flush=True)\\nDELTA\\nninja -C build\
-        \ -j2 2>&1 | tee \"$A/base-build.log\"\\npython3 /sources/nav-theorabase-source-verify.py\\nmkdir -p /tmp/nav-theorabase-home/.config\
-        \ /tmp/nav-theorabase-home/.cache/fontconfig\\nchmod 1777 /tmp /var/tmp\\nchown -R tester:tester /sources/gst-plugins-base-1.28.6\
-        \ \"$A\" /tmp/nav-theorabase-home\\nset +e\\nsu tester -c \\'ulimit -v 4194304;ulimit -c 0;env -u LC_ALL\
-        \ -u LANGUAGE -u GST_CHECKS -u GST_CHECKS_IGNORE HOME=/tmp/nav-theorabase-home XDG_CONFIG_HOME=/tmp/nav-theorabase-home/.config\
-        \ XDG_CACHE_HOME=/tmp/nav-theorabase-home/.cache LANG=C.UTF-8 GST_CHECK_XML=1 meson test -C /sources/gst-plugins-base-1.28.6/build\
-        \ --no-rebuild --num-processes 2 --print-errorlogs elements_encodebin pipelines_theoraenc elements_theoradec\\\
-        ' 2>&1 | tee \"$A/base-delta-test.log\"\\nrc=${PIPESTATUS[0]}\\nset -e\\nprintf \\'%s\\\\n\\' \"$rc\" >\
-        \ \"$A/base-delta-test-exit.txt\"\\ncp build/meson-logs/testlog.json \"$A/base-delta-testlog.json\"\\ncp\
-        \ build/meson-logs/testlog.txt \"$A/base-delta-testlog.txt\"\\npython3 /sources/nav-theorabase-source-verify.py\\\
-        npython3 - <<\\'RECOUNT\\'\\nfrom pathlib import Path\\nimport json,collections,re,xml.etree.ElementTree\
-        \ as E,shutil\\nA=Path(\\'/sources/nav-theorabase-evidence\\');r=[json.loads(l)for l in(A/\\'base-delta-testlog.json\\\
-        ').read_text().splitlines()if l.strip()];d=json.loads((A/\\'base-delta-discovery.json\\').read_text());assert\
-        \ len(r)==3 and collections.Counter((x[\\'name\\'].removeprefix(\\'gst-plugins-base:\\'),tuple(x[\\'command\\\
-        ']))for x in r)==collections.Counter((x[\\'name\\'],tuple(x[\\'cmd\\']))for x in d);xml=[]\\nfor folder,n\
-        \ in [(\\'elements\\',\\'encodebin\\'),(\\'pipelines\\',\\'theoraenc\\'),(\\'elements\\',\\'theoradec\\\
-        ')]:\\n p=Path(\\'/sources/gst-plugins-base-1.28.6/tests/check\\')/folder/(n+\\'.check.xml\\');c=E.parse(p).getroot().findall(\\\
-        './/{*}test\\');assert c;shutil.copyfile(p,A/(n+\\'.check.xml\\'));xml.append({\\'name\\':n,\\'cases\\':len(c),\\\
-        'results\\':dict(collections.Counter(x.get(\\'result\\')for x in c))})\\nout={\\'classification\\':\\'ONLY\
-        \ newly enabled original Base Theora coverage, prior135 not replayed. Theora9PASS immutable. All inherited\
-        \ records/gaps OPEN. No save.\\',\\'new_programs\\':len(r),\\'results\\':dict(collections.Counter(x[\\'result\\\
-        ']for x in r)),\\'XML\\':xml,\\'nested_warning_lines\\':[l for x in r for l in(x.get(\\'stdout\\',\\'\\\
-        ')+\\'\\\\n\\'+x.get(\\'stderr\\',\\'\\')).splitlines()if re.search(r\\'\\\\b(?:skip(?:ped)?|todo|disabled)\\\
+        'Theora original generated test Makefile differs\\';import shlex;assert shlex.split((A/\\'theora-config-args.log\\\
+        ').read_text())==[\\'--prefix=/usr\\']\\nprint(\\'NAV_THEORABASE_ORIGINAL_TEST_MAKEFILE_EXACT_NO_REPLAY\\\
+        ',flush=True)\\nSAME\\nmake -j2 2>&1 | tee \"$A/theora-build.log\"\\nmake DESTDIR=\"$P\" install 2>&1 |\
+        \ tee \"$A/theora-stage.log\"\\ncp -a \"$P/usr/.\" /usr/\\nldconfig\\ncd /sources/gst-plugins-base-1.28.6\\\
+        nmeson setup build --prefix=/usr --buildtype=release --wrap-mode=nodownload -Dtests=enabled -Ddoc=disabled\
+        \ -Dopus=enabled -Dtheora=enabled 2>&1 | tee \"$A/base-configure.log\"\\nmeson introspect --tests build\
+        \ > \"$A/base-discovery.json\"\\nmeson introspect --buildoptions build > \"$A/base-options.json\"\\npython3\
+        \ - <<\\'DELTA\\'\\nfrom pathlib import Path\\nimport json\\nA=Path(\\'/sources/nav-theorabase-evidence\\\
+        ');old=json.loads((A/\\'prior-base-opus/base-discovery.json\\').read_text());new=json.loads((A/\\'base-discovery.json\\\
+        ').read_text());names={x[\\'name\\']for x in old};assert len(names)==135 and names<={x[\\'name\\']for x\
+        \ in new};delta=[x for x in new if x[\\'name\\']not in names];assert {x[\\'name\\']for x in delta}=={\\\
+        'elements_encodebin\\',\\'pipelines_theoraenc\\',\\'elements_theoradec\\'},[x[\\'name\\']for x in delta];(A/\\\
+        'base-delta-discovery.json\\').write_text(json.dumps(delta,sort_keys=True));print(\\'NAV_THEORABASE_NEW_DELTA_JSON\
+        \ \\'+json.dumps(delta,sort_keys=True),flush=True)\\nDELTA\\nninja -C build -j2 2>&1 | tee \"$A/base-build.log\"\
+        \\npython3 /sources/nav-theorabase-source-verify.py\\nmkdir -p /tmp/nav-theorabase-home/.config /tmp/nav-theorabase-home/.cache/fontconfig\\\
+        nchmod 1777 /tmp /var/tmp\\nchown -R tester:tester /sources/gst-plugins-base-1.28.6 \"$A\" /tmp/nav-theorabase-home\\\
+        nset +e\\nsu tester -c \\'ulimit -v 4194304;ulimit -c 0;env -u LC_ALL -u LANGUAGE -u GST_CHECKS -u GST_CHECKS_IGNORE\
+        \ HOME=/tmp/nav-theorabase-home XDG_CONFIG_HOME=/tmp/nav-theorabase-home/.config XDG_CACHE_HOME=/tmp/nav-theorabase-home/.cache\
+        \ LANG=C.UTF-8 GST_CHECK_XML=1 meson test -C /sources/gst-plugins-base-1.28.6/build --no-rebuild --num-processes\
+        \ 2 --print-errorlogs elements_encodebin pipelines_theoraenc elements_theoradec\\' 2>&1 | tee \"$A/base-delta-test.log\"\
+        \\nrc=${PIPESTATUS[0]}\\nset -e\\nprintf \\'%s\\\\n\\' \"$rc\" > \"$A/base-delta-test-exit.txt\"\\ncp build/meson-logs/testlog.json\
+        \ \"$A/base-delta-testlog.json\"\\ncp build/meson-logs/testlog.txt \"$A/base-delta-testlog.txt\"\\npython3\
+        \ /sources/nav-theorabase-source-verify.py\\npython3 - <<\\'RECOUNT\\'\\nfrom pathlib import Path\\nimport\
+        \ json,collections,re,xml.etree.ElementTree as E,shutil\\nA=Path(\\'/sources/nav-theorabase-evidence\\');r=[json.loads(l)for\
+        \ l in(A/\\'base-delta-testlog.json\\').read_text().splitlines()if l.strip()];d=json.loads((A/\\'base-delta-discovery.json\\\
+        ').read_text());assert len(r)==3 and collections.Counter((x[\\'name\\'].removeprefix(\\'gst-plugins-base:\\\
+        '),tuple(x[\\'command\\']))for x in r)==collections.Counter((x[\\'name\\'],tuple(x[\\'cmd\\']))for x in\
+        \ d);xml=[]\\nfor folder,n in [(\\'elements\\',\\'encodebin\\'),(\\'pipelines\\',\\'theoraenc\\'),(\\'elements\\\
+        ',\\'theoradec\\')]:\\n p=Path(\\'/sources/gst-plugins-base-1.28.6/tests/check\\')/folder/(n+\\'.check.xml\\\
+        ');c=E.parse(p).getroot().findall(\\'.//{*}test\\');assert c;shutil.copyfile(p,A/(n+\\'.check.xml\\'));xml.append({\\\
+        'name\\':n,\\'cases\\':len(c),\\'results\\':dict(collections.Counter(x.get(\\'result\\')for x in c))})\\\
+        nout={\\'classification\\':\\'ONLY newly enabled original Base Theora coverage, prior135 not replayed. Theora9PASS\
+        \ immutable. All inherited records/gaps OPEN. No save.\\',\\'new_programs\\':len(r),\\'results\\':dict(collections.Counter(x[\\\
+        'result\\']for x in r)),\\'XML\\':xml,\\'nested_warning_lines\\':[l for x in r for l in(x.get(\\'stdout\\\
+        ',\\'\\')+\\'\\\\n\\'+x.get(\\'stderr\\',\\'\\')).splitlines()if re.search(r\\'\\\\b(?:skip(?:ped)?|todo|disabled)\\\
         \\b\\',l,re.I)]};(A/\\'coverage.json\\').write_text(json.dumps(out,sort_keys=True));print(\\'NAV_THEORABASE_DELTA_COVERAGE_JSON\
         \ \\'+json.dumps(out,sort_keys=True),flush=True)\\nRECOUNT\\ninstall -m0755 build/ext/theora/libgsttheora.so\
         \ \"$P/usr/lib/gstreamer-1.0/\"\\nexit \"$rc\"\\n')\nPath('/mnt/nav-lfs/sources/nav-theorabase-source-verify.py').write_text(\"\
