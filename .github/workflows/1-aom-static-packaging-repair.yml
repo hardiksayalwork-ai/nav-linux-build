@@ -104,15 +104,17 @@ jobs:
         \ MAKEFLAGS=-j2\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nP=/nav-build-metadata/aom-repair\\\
         \\nmkdir -p \"$P\"\\\\n{ for package in cairo pango pangocairo libssh2 sqlite3 openssl libgit2; do if pkg-config\
         \ --exists \"$package\";then printf \\\\\\'%s \\\\\\' \"$package\";pkg-config --modversion \"$package\"\
-        ;else printf \\\\\\'%s NOT_INSTALLED\\\\\\\\n\\\\\\' \"$package\";fi;done;rustc --version;cargo --version;\
-        \ } > \"$P/actual-root-rust-cairo-pango-inspection.log\" 2>&1\\\\ncd /sources/libaom-3.15.3\\\\ncmake -S\
-        \ . -B aom-build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=1 -DENABLE_DOCS=no\
-        \ > \"$P/configure.log\" 2>&1\\\\ncp aom-build/CMakeCache.txt \"$P/CMakeCache.txt\"\\\\ncmake --build aom-build\
-        \ --parallel 2 > \"$P/build.log\" 2>&1\\\\nDESTDIR=/tmp/nav-aom-repair-stage cmake --install aom-build >\
-        \ \"$P/stage-install.log\" 2>&1\\\\npython3 - <<\\\\\\'COMPARE\\\\\\'\\\\nfrom pathlib import Path\\\\nimport\
-        \ os,json,hashlib,shutil\\\\nroot=Path(\\\\\\'/tmp/nav-aom-repair-stage\\\\\\');common=[];differences=[];missing=[]\\\
-        \\nfor f in sorted(root.rglob(\\\\\\'*\\\\\\')):\\\\n if f.is_dir():continue\\\\n rel=f.relative_to(root);target=Path(\\\
-        \\\\'/\\\\\\')/rel\\\\n if not target.exists()and not target.is_symlink():missing.append(str(target));continue\\\
+        ;else printf \\\\\\'%s NOT_INSTALLED\\\\\\\\n\\\\\\' \"$package\";fi;done;for executable in /usr/bin/rustc\
+        \ /usr/bin/cargo /opt/rustc/bin/rustc /opt/rustc/bin/cargo;do if [ -x \"$executable\" ];then \"$executable\"\
+        \ --version;else printf \\\\\\'%s NOT_ON_PATH\\\\\\\\n\\\\\\' \"$executable\";fi;done;find /opt -maxdepth\
+        \ 4 -type f -name rustc -o -name cargo; } > \"$P/actual-root-rust-cairo-pango-inspection.log\" 2>&1\\\\\
+        ncd /sources/libaom-3.15.3\\\\ncmake -S . -B aom-build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release\
+        \ -DBUILD_SHARED_LIBS=1 -DENABLE_DOCS=no > \"$P/configure.log\" 2>&1\\\\ncp aom-build/CMakeCache.txt \"\
+        $P/CMakeCache.txt\"\\\\ncmake --build aom-build --parallel 2 > \"$P/build.log\" 2>&1\\\\nDESTDIR=/tmp/nav-aom-repair-stage\
+        \ cmake --install aom-build > \"$P/stage-install.log\" 2>&1\\\\npython3 - <<\\\\\\'COMPARE\\\\\\'\\\\nfrom\
+        \ pathlib import Path\\\\nimport os,json,hashlib,shutil\\\\nroot=Path(\\\\\\'/tmp/nav-aom-repair-stage\\\
+        \\\\');common=[];differences=[];missing=[]\\\\nfor f in sorted(root.rglob(\\\\\\'*\\\\\\')):\\\\n if f.is_dir():continue\\\
+        \\n rel=f.relative_to(root);target=Path(\\\\\\'/\\\\\\')/rel\\\\n if not target.exists()and not target.is_symlink():missing.append(str(target));continue\\\
         \\n if f.is_symlink():\\\\n  if not target.is_symlink()or os.readlink(f)!=os.readlink(target):differences.append(str(target))\\\
         \\n else:\\\\n  a=hashlib.file_digest(f.open(\\\\\\'rb\\\\\\'),\\\\\\'sha256\\\\\\').hexdigest();z=hashlib.file_digest(target.open(\\\
         \\\\'rb\\\\\\'),\\\\\\'sha256\\\\\\').hexdigest()\\\\n  if a!=z:differences.append(str(target))\\\\n  common.append({\\\
