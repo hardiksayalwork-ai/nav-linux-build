@@ -1,0 +1,194 @@
+name: NAV GstBad original full configured suites GstPlay network ON diagnostic noinstall
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-gstbad-original-full-diagnostic
+  cancel-in-progress: false
+jobs:
+  diagnostic:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+    - name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
+        \ in /mnt/nav-rsvg-root.tar.zst; do\n test ! -e \"$bundle\"\n sudo install -o \"$(id -u)\" -g \"$(id -g)\"\
+        \ -m 0600 /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"\
+        $(id -u):$(id -g):600\"\n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\\
+        n' > \"$probe/proof\"\n tar --zstd -cf \"$bundle\" -C \"$probe\" proof\n zstd -t \"$bundle\"\n tar --zstd\
+        \ -xOf \"$bundle\" proof > \"$probe/recovered\"\n cmp \"$probe/proof\" \"$probe/recovered\"\n # Match actions/cache\
+        \ extraction semantics, not only bundle writer access.\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test\
+        \ ! -w /mnt\n cp \"$bundle\" \"$probe/expected-bundle\"\n relative_bundle=$(realpath --relative-to=\"$PWD\"\
+        \ \"$bundle\")\n tar --zstd -cf \"$probe/cache.tzst\" -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n\
+        \ env -u TAR_OPTIONS /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program unzstd\
+        \ > \"$probe/default-restore.log\" 2>&1\n negative_rc=$?\n set -e\n test \"$negative_rc\" = 2\n test ! -s\
+        \ \"$bundle\"\n grep -F 'Cannot open: File exists' \"$probe/default-restore.log\"\n TAR_OPTIONS=--overwrite\
+        \ /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program unzstd\n cmp \"$probe/expected-bundle\"\
+        \ \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n test \"$(stat -c\
+        \ '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS\
+        \ %s\\n' \"$bundle\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic\
+        \ failure evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"\
+        ><failure message=\"synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n\
+        \ f=p/name;f.write_bytes(data)\n subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\\
+        n    data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_RSVG_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing =\
+        \ []\\n    manifest['errors'].append({'area': str(p), 'error': repr(ex)})\\nfor item in sorted((x for x\
+        \ in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\n    rel = str(f.relative_to(p))\\n    wanted\
+        \ = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard'\
+        \ and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples'\
+        \ and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name,\
+        \ data)\\n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error':\
+        \ repr(ex)})\\nemit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\\
+        n    raise RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"\
+        '/mnt/nav-lfs/nav-build-metadata/aom-tooling'\",repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\n\
+        assert r.returncode==0,r.stderr\nparts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_RSVG_'):\n\
+        \  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\nm=json.loads(gzip.decompress(b''.join(parts['NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64'])))\n\
+        assert not m['errors'] and len(m['files'])==len(expected)\nfor name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_RSVG_'+name+'_GZB64']))\n\
+        \ assert b==expected[v['source']] and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\n\
+        missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
+        assert r.returncode!=0 and 'NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_RSVG_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
+        EXPORT_SELFTEST\n"
+    - name: Restore newest verified librsvg TRANSITIONAL root
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-rsvg-root.tar.zst
+        key: nav-blfs13.1-x86_64-librsvg-transitional-open-v1
+        fail-on-cache-miss: true
+    - name: Verify newest saved root archive
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf ''b18303bde2a0da1f126fd595f21fd56ae353e1f2561adc0616337c380f21d2de  /mnt/nav-rsvg-root.tar.zst
+
+        '' | sha256sum -c -
+
+        zstd -t /mnt/nav-rsvg-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-rsvg-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/librsvg/RSVG-TRANSITIONAL-OPEN.json
+
+        '
+    - name: Pin original GstBad1.28.6 and all6upstream media fixture hashes no source changes
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'SETUP'\nfrom pathlib import Path\nimport urllib.request,tarfile,hashlib,json\n\
+        x={'filename': 'gst-plugins-bad-1.28.6.tar.xz', 'url': 'https://gstreamer.freedesktop.org/src/gst-plugins-bad/gst-plugins-bad-1.28.6.tar.xz',\
+        \ 'sha256': '6636f2c2289ceda52c4aba971338c81e2b5780d3381bd3673c1c116ec87587c3', 'top': 'gst-plugins-bad-1.28.6'}\n\
+        A=Path('/mnt/nav-lfs/sources/nav-gstbad-evidence');A.mkdir(parents=True,exist_ok=True)\n(A/'source-lock.json').write_text(json.dumps(x,sort_keys=True))\n\
+        (A/'fixture-lock.json').write_text(json.dumps([{'bytes': 82764, 'filename': 'audio.ogg', 'sha256': '8c8da16277dad52580709cb3428a54d591b7a8735dbad8773818c79b1959f45b',\
+        \ 'url': 'https://gstreamer.freedesktop.org/data/media/small/audio.ogg'}, {'bytes': 97691, 'filename': 'audio-video.ogg',\
+        \ 'sha256': '10a124058f5dc25461a67f898da0f7647c0d39e35000ddf7ad5382c3be1ba2da', 'url': 'https://gstreamer.freedesktop.org/data/media/small/audio-video.ogg'},\
+        \ {'bytes': 4387, 'filename': 'audio-short.ogg', 'sha256': 'f3d3ba4443923a4441705a3621bd77495fbef575bd67ab17f5c1ba2586f54a89',\
+        \ 'url': 'https://gstreamer.freedesktop.org/data/media/small/audio-short.ogg'}, {'bytes': 7350, 'filename':\
+        \ 'audio-video-short.ogg', 'sha256': 'ab9a1446877a9446d168a2b717ffcfca73477b116a7a981c632532d3be585929',\
+        \ 'url': 'https://gstreamer.freedesktop.org/data/media/small/audio-video-short.ogg'}, {'bytes': 4053220,\
+        \ 'filename': 'sintel.mkv', 'sha256': '781f00f7815b6cec7eab5ee5e56e5022822bbd88595c4a74ba9f389a2443c19c',\
+        \ 'url': 'https://gstreamer.freedesktop.org/data/media/small/sintel.mkv'}, {'bytes': 197, 'filename': 'test_sub.srt',\
+        \ 'sha256': 'be358ae462b9c32ee6e00af9d31793dbe7c1abf0662253b484845a6f480bcf46', 'url': 'https://gstreamer.freedesktop.org/data/media/small/test_sub.srt'}],sort_keys=True))\n\
+        with urllib.request.urlopen(x['url'],timeout=120)as r:b=r.read()\nassert hashlib.sha256(b).hexdigest()==x['sha256']\n\
+        p=Path('/mnt/nav-lfs/sources')/x['filename'];p.write_bytes(b)\nwith tarfile.open(p)as t:\n for m in t:assert\
+        \ not m.name.startswith('/')and '..'not in Path(m.name).parts\n t.extractall(p.parent)\nPath('/mnt/nav-lfs/sources/nav-gstbad-inner.sh').write_text('set\
+        \ -euo pipefail\\numask 022\\nulimit -v 4194304\\nulimit -c 0\\nexport MAKEFLAGS=-j2 CMAKE_BUILD_PARALLEL_LEVEL=2\\\
+        nA=/sources/nav-gstbad-evidence\\ncd /sources/gst-plugins-bad-1.28.6\\nmeson setup build --prefix=/usr --buildtype=release\
+        \ --wrap-mode=nodownload -Dtests=enabled -Dgst_play_tests=true -Ddoc=disabled 2>&1 | tee \"$A/configure.log\"\
+        \\nmeson introspect --tests build > \"$A/discovery.json\"\\nmeson introspect --buildoptions build > \"$A/options.json\"\
+        \\nmeson introspect --dependencies build > \"$A/dependencies.json\"\\nmeson introspect --installed build\
+        \ > \"$A/installed-map.json\"\\npython3 - <<\\'DISCOVERY\\'\\nfrom pathlib import Path\\nimport json\\nA=Path(\\\
+        '/sources/nav-gstbad-evidence\\');d=json.loads((A/\\'discovery.json\\').read_text());assert d and len({x[\\\
+        'name\\']for x in d})==len(d);assert any(\\'play\\'in x[\\'name\\']and\\'player\\'not in x[\\'name\\']for\
+        \ x in d),[x[\\'name\\']for x in d];options={x[\\'name\\']:x[\\'value\\']for x in json.loads((A/\\'options.json\\\
+        ').read_text())};assert options[\\'gst_play_tests\\']is True and options[\\'tests\\']==\\'enabled\\';print(\\\
+        'NAV_GSTBAD_FULL_DISCOVERY_JSON \\'+json.dumps({\\'count\\':len(d),\\'names\\':[x[\\'name\\']for x in d]}),flush=True)\\\
+        nDISCOVERY\\nninja -C build -j2 2>&1 | tee \"$A/build.log\"\\npython3 /sources/nav-gstbad-source-verify.py\\\
+        npython3 - <<\\'FIXTURES\\'\\nfrom pathlib import Path\\nimport json,hashlib\\nA=Path(\\'/sources/nav-gstbad-evidence\\\
+        ');rows=json.loads((A/\\'fixture-lock.json\\').read_text())\\nfor x in rows:\\n p=Path(\\'/sources/gst-plugins-bad-1.28.6/build/tests/check/media\\\
+        ')/x[\\'filename\\'];assert p.is_file()and p.stat().st_size==x[\\'bytes\\']and hashlib.file_digest(p.open(\\\
+        'rb\\'),\\'sha256\\').hexdigest()==x[\\'sha256\\'],x[\\'filename\\']\\nprint(\\'NAV_GSTBAD_ALL6_ORIGINAL_MEDIA_FIXTURES_LOCKED_PASS\\\
+        ',flush=True)\\nFIXTURES\\nmkdir -p /tmp/nav-gstbad-runtime\\nchmod 1777 /tmp /var/tmp\\nchown -R tester:tester\
+        \ /sources/gst-plugins-bad-1.28.6 \"$A\" /tmp/nav-gstbad-runtime\\nchmod 700 /tmp/nav-gstbad-runtime\\nXvfb\
+        \ :98 -screen 0 1280x800x24 -nolisten tcp -ac -noreset > \"$A/xvfb.log\" 2>&1 &\\nxv=$!\\ntrap \\'kill \"\
+        $xv\" 2>/dev/null || true\\' EXIT\\nfor i in $(seq 1 100);do test -S /tmp/.X11-unix/X98 && break; sleep\
+        \ 0.1;done\\ntest -S /tmp/.X11-unix/X98\\nset +e\\nsu tester -c \\'ulimit -v 4194304;ulimit -c 0;dbus-run-session\
+        \ -- env -u LC_ALL -u LANGUAGE -u GST_CHECKS -u GST_CHECKS_IGNORE LANG=C.UTF-8 DISPLAY=:98 XDG_RUNTIME_DIR=/tmp/nav-gstbad-runtime\
+        \ LIBGL_ALWAYS_SOFTWARE=1 GST_CHECK_XML=1 meson test -C /sources/gst-plugins-bad-1.28.6/build --no-rebuild\
+        \ --num-processes 2 --print-errorlogs\\' 2>&1 | tee \"$A/test.log\"\\nrc=${PIPESTATUS[0]}\\nset -e\\nprintf\
+        \ \\'%s\\\\n\\' \"$rc\" > \"$A/test-exit.txt\"\\ncp build/meson-logs/testlog.{json,txt} \"$A/\"\\nif [ -f\
+        \ build/meson-logs/testlog.junit.xml ];then cp build/meson-logs/testlog.junit.xml \"$A/\";fi\\npython3 /sources/nav-gstbad-source-verify.py\\\
+        npython3 - <<\\'RECOUNT\\'\\nfrom pathlib import Path\\nimport json,collections,xml.etree.ElementTree as\
+        \ E,shutil,re\\nA=Path(\\'/sources/nav-gstbad-evidence\\');rows=[json.loads(l)for l in(A/\\'testlog.json\\\
+        ').read_text().splitlines()if l.strip()];d=json.loads((A/\\'discovery.json\\').read_text());assert len(rows)==len(d);xml=[]\\\
+        nfor p in Path(\\'/sources/gst-plugins-bad-1.28.6\\').rglob(\\'*check.xml\\'):\\n root=E.parse(p).getroot();cases=root.findall(\\\
+        './/{*}test\\');xml.append({\\'file\\':str(p),\\'cases\\':len(cases),\\'results\\':dict(collections.Counter(x.get(\\\
+        'result\\')for x in cases))});target=A/\\'check-xml\\'/p.relative_to(\\'/sources/gst-plugins-bad-1.28.6\\\
+        ');target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,target)\\nassert xml and sum(x[\\'cases\\\
+        ']for x in xml)>0\\nout={\\'classification\\':\\'Full original configured GstBad diagnostic once, GstPlay\
+        \ network tests ON, no test-source edits/waivers. Optional undetected codecs/platform/hardware coverage\
+        \ OPEN, inherited gaps OPEN. No runtime installation or checkpoint.\\',\\'discovered\\':len(d),\\'records\\\
+        ':len(rows),\\'results\\':dict(collections.Counter(x[\\'result\\']for x in rows)),\\'non_OK\\':[{\\'name\\\
+        ':x[\\'name\\'],\\'result\\':x[\\'result\\']}for x in rows if x[\\'result\\']!=\\'OK\\'],\\'Check_XML\\\
+        ':xml,\\'nested_warning_lines\\':[{ \\'name\\':x[\\'name\\'],\\'lines\\':re.findall(r\\'^.*(?:#\\\\s*(?:SKIP|TODO)|status:\
+        \ (?:SKIP|FAIL|ERROR)).*$\\',x.get(\\'stdout\\',\\'\\')+\\'\\\\n\\'+x.get(\\'stderr\\',\\'\\'),re.M|re.I)}for\
+        \ x in rows if re.search(r\\'#\\\\s*(?:SKIP|TODO)|status: (?:SKIP|FAIL|ERROR)\\',x.get(\\'stdout\\',\\'\\\
+        ')+\\'\\\\n\\'+x.get(\\'stderr\\',\\'\\'),re.I)]}\\n(A/\\'coverage.json\\').write_text(json.dumps(out,sort_keys=True));print(\\\
+        'NAV_GSTBAD_FULL_ORIGINAL_COVERAGE_JSON \\'+json.dumps(out,sort_keys=True),flush=True)\\nRECOUNT\\nexit\
+        \ \"$rc\"\\n')\nPath('/mnt/nav-lfs/sources/nav-gstbad-source-verify.py').write_text(\"from pathlib import\
+        \ Path\\nimport tarfile,hashlib,json\\nA=Path('/sources/nav-gstbad-evidence');x=json.loads((A/'source-lock.json').read_text());n=0\\\
+        nwith tarfile.open('/sources/'+x['filename'])as t:\\n for m in t:\\n  if m.isfile():\\n   p=Path('/sources')/m.name;assert\
+        \ p.is_file()and not p.is_symlink()and hashlib.file_digest(p.open('rb'),'sha256').digest()==hashlib.sha256(t.extractfile(m).read()).digest(),m.name;n+=1\\\
+        n(A/'source-integrity.json').write_text(json.dumps({'files_exact':n,'source_sha256':x['sha256']},sort_keys=True));print('NAV_GSTBAD_SOURCE_EXACT',n,flush=True)\\\
+        n\")\nprint('NAV_GSTBAD_SOURCE_LOCK_VERIFIED',len(b),flush=True)\nSETUP\n"
+    - name: Full original configured Bad suite including GstPlay network tests ON under4GiB2jobs no install no save
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo chown -hR root:root /mnt/nav-lfs
+
+        sudo env LFS=/mnt/nav-lfs unshare --mount --propagation private /bin/bash <<''MOUNT''
+
+        set -euo pipefail
+
+        mount --bind "$LFS" "$LFS"
+
+        mount --bind /dev "$LFS/dev"
+
+        mount -t devpts devpts -o gid=5,mode=0620 "$LFS/dev/pts"
+
+        mount -t proc proc "$LFS/proc"
+
+        mount -t sysfs -o ro sysfs "$LFS/sys"
+
+        mount -t tmpfs -o nosuid,nodev tmpfs "$LFS/run"
+
+        if [ -h "$LFS/dev/shm" ];then install -d -m1777 "$LFS$(realpath /dev/shm)";else mount -t tmpfs -o nosuid,nodev
+        tmpfs "$LFS/dev/shm";fi
+
+        chroot "$LFS" /usr/bin/env -i HOME=/root LC_ALL=C PATH=/usr/bin:/usr/sbin:/bin:/sbin MAKEFLAGS=-j2 /bin/bash
+        /sources/nav-gstbad-inner.sh
+
+        MOUNT
+
+        '
+    - name: Always export original diagnostic raw logs discovery XML source lock and coverage
+      if: always()
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT'\nimport subprocess,base64,gzip,hashlib,json,os\nfrom pathlib\
+        \ import Path\nA=Path('/mnt/nav-lfs/sources/nav-gstbad-evidence');files=subprocess.check_output(['sudo','find',str(A),'-type','f','-print0']).split(b'\\\
+        0');manifest={}\nfor p in sorted(x for x in files if x):\n f=Path(os.fsdecode(p));rel=str(f.relative_to(A));b=subprocess.check_output(['sudo','cat',str(f)]);key=rel.replace('/','-').replace('.','_').upper();assert\
+        \ key not in manifest;manifest[key]={'file':rel,'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()};z=gzip.compress(b,mtime=0)\n\
+        \ for i in range(0,len(z),3000):print('NAV_GSTBAD_'+key+'_GZB64 '+base64.b64encode(z[i:i+3000]).decode(),flush=True)\n\
+        print('NAV_GSTBAD_EXPORT_MANIFEST_JSON '+json.dumps(manifest,sort_keys=True),flush=True)\nEXPORT\n"
