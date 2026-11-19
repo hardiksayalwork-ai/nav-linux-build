@@ -1,0 +1,294 @@
+name: NAV librsvg2.62.4 original full native tests diagnostic no install
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-rsvg-original-diagnostic
+  cancel-in-progress: false
+jobs:
+  rsvg:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
+        \ in /mnt/nav-recovery-root.tar.zst; do\n test ! -e \"$bundle\"\n sudo install -o \"$(id -u)\" -g \"$(id\
+        \ -g)\" -m 0600 /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\"\
+        \ = \"$(id -u):$(id -g):600\"\n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\\
+        n' > \"$probe/proof\"\n tar --zstd -cf \"$bundle\" -C \"$probe\" proof\n zstd -t \"$bundle\"\n tar --zstd\
+        \ -xOf \"$bundle\" proof > \"$probe/recovered\"\n cmp \"$probe/proof\" \"$probe/recovered\"\n # Match actions/cache\
+        \ extraction semantics, not only bundle writer access.\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test\
+        \ ! -w /mnt\n cp \"$bundle\" \"$probe/expected-bundle\"\n relative_bundle=$(realpath --relative-to=\"$PWD\"\
+        \ \"$bundle\")\n tar --zstd -cf \"$probe/cache.tzst\" -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n\
+        \ env -u TAR_OPTIONS /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program unzstd\
+        \ > \"$probe/default-restore.log\" 2>&1\n negative_rc=$?\n set -e\n test \"$negative_rc\" = 2\n test ! -s\
+        \ \"$bundle\"\n grep -F 'Cannot open: File exists' \"$probe/default-restore.log\"\n TAR_OPTIONS=--overwrite\
+        \ /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program unzstd\n cmp \"$probe/expected-bundle\"\
+        \ \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n test \"$(stat -c\
+        \ '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS\
+        \ %s\\n' \"$bundle\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic\
+        \ failure evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"\
+        ><failure message=\"synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n\
+        \ f=p/name;f.write_bytes(data)\n subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\\
+        n    data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_RSVG_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing =\
+        \ []\\n    manifest['errors'].append({'area': str(p), 'error': repr(ex)})\\nfor item in sorted((x for x\
+        \ in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\n    rel = str(f.relative_to(p))\\n    wanted\
+        \ = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard'\
+        \ and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples'\
+        \ and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name,\
+        \ data)\\n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error':\
+        \ repr(ex)})\\nemit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\\
+        n    raise RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"\
+        '/mnt/nav-lfs/nav-build-metadata/aom-tooling'\",repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\n\
+        assert r.returncode==0,r.stderr\nparts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_RSVG_'):\n\
+        \  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\nm=json.loads(gzip.decompress(b''.join(parts['NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64'])))\n\
+        assert not m['errors'] and len(m['files'])==len(expected)\nfor name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_RSVG_'+name+'_GZB64']))\n\
+        \ assert b==expected[v['source']] and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\n\
+        missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
+        assert r.returncode!=0 and 'NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_RSVG_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
+        EXPORT_SELFTEST\n"
+    - name: Restore verified combined heif cargo-c checkpoint
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-recovery-root.tar.zst
+        key: nav-blfs13.1-x86_64-heif-cargoc-recovery-open-v1
+        fail-on-cache-miss: true
+    - name: Verify exact combined checkpoint
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf "b9d323687756afb4ba55c3147eeef988b69b4e8bf9f3455893cb9a25f694b25c  /mnt/nav-recovery-root.tar.zst\n"
+        | sha256sum -c -
+
+        zstd -t /mnt/nav-recovery-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-recovery-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/recovery/RECOVERY-TRANSITIONAL-OPEN.json
+
+        '
+    - name: Prepare original listing and evidence helpers
+      shell: bash
+      run: 'python3 - <<''HELPERS''
+
+        from pathlib import Path
+
+        Path(''/mnt/nav-lfs/sources/rsvg-stage.sh'').write_text(''set -euo pipefail\numask 022\nulimit -v 4194304\nexport
+        PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin LANG=C.UTF-8 MAKEFLAGS=-j2 CARGO_BUILD_JOBS=2\nexport
+        CARGO_HOME=/tmp/nav-librsvg-cargo-home\nunset LC_ALL LANGUAGE\nchmod 1777 /tmp /var/tmp\nS=/sources/librsvg-2.62.4\nP=/nav-build-metadata/librsvg\nmkdir
+        -p "$CARGO_HOME" "$P"\npkg-config --modversion cairo cairo-gobject cairo-png pango pangocairo pangoft2 >
+        "$P/required-versions.log"\nrustc --version > "$P/rustc-version.log"\ncargo --version > "$P/cargo-version.log"\ncargo-cbuild
+        --version > "$P/cargo-cbuild-version.log"\n# Required inspection before any decision to rebuild inherited
+        Cairo or Pango.\nfind /nav-build-metadata -type f \\( -iname \''*cairo*\'' -o -iname \''*pango*\'' \\) -print
+        > "$P/inherited-cairo-pango-evidence-paths.log"\npython3 - <<\''INHERITED\''\nfrom pathlib import Path\nimport
+        shutil\np=Path(\''/nav-build-metadata/librsvg/inherited-cairo-pango\'');p.mkdir()\nfor f in Path(\''/nav-build-metadata\'').rglob(\''*\''):\n
+        if f.is_file()and f.parent!=p and any(k in f.name.lower()for k in [\''cairo\'',\''pango\''])and f.suffix
+        in [\''.log\'',\''.exit\'']:\n  target=p/str(f.relative_to(\''/nav-build-metadata\'')).replace(\''/\'',\''--\'');shutil.copy2(f,target)\nINHERITED\npython3
+        /sources/rsvg-recount.py selftest > "$P/recount-selftest.log"\nchown -R tester:tester "$S" "$CARGO_HOME"
+        "$P"\nsu tester -c \''export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin CARGO_HOME=/tmp/nav-librsvg-cargo-home
+        CARGO_BUILD_JOBS=2;cd /sources/librsvg-2.62.4;meson setup --prefix=/usr --buildtype=release build\'' > "$P/configure.log"
+        2>&1\nsu tester -c \''export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin CARGO_HOME=/tmp/nav-librsvg-cargo-home
+        CARGO_BUILD_JOBS=2;cd /sources/librsvg-2.62.4;ninja -C build -j2\'' > "$P/build.log" 2>&1\nsu tester -c
+        \''cd /sources/librsvg-2.62.4;meson introspect --tests build\'' > "$P/meson-tests-discovery.json"\nsu tester
+        -c \''cd /sources/librsvg-2.62.4;meson introspect --buildoptions build\'' > "$P/meson-buildoptions.json"\n#
+        Discovery tooling only lists the exact original cases, including ignored Rust cases.\n# It never modifies
+        the upstream source, fixtures, test binaries, or execution driver.\nsu tester -c \''export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin
+        CARGO_HOME=/tmp/nav-librsvg-cargo-home CARGO_BUILD_JOBS=2;python3 /sources/rsvg-discover.py /sources/librsvg-2.62.4
+        /nav-build-metadata/librsvg\''\nset +e\nsu tester -c \''export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin
+        CARGO_HOME=/tmp/nav-librsvg-cargo-home CARGO_BUILD_JOBS=2;cd /sources/librsvg-2.62.4;meson test -C build
+        -v --num-processes 1\'' > "$P/original-meson-test.log" 2>&1\nrc=$?\nset -e\nprintf \''%s\\n\'' "$rc" > "$P/original-meson-test.exit"\ncp
+        "$S/build/meson-logs/testlog.json" "$P/original-meson-testlog.json"\ncp "$S/build/meson-logs/testlog.txt"
+        "$P/original-meson-testlog.txt"\npython3 /sources/rsvg-recount.py recount "$P"\npython3 /sources/rsvg-source-audit.py
+        "$S" "$P"\n# DIAGNOSTIC stage only. No automatic install following a known/unknown original failure.\n'')
+
+        Path(''/mnt/nav-lfs/sources/rsvg-recount.py'').write_text("from pathlib import Path\nimport json,re,collections,sys\n\nHEADER=re.compile(r''^\\s*(Running
+        (?:unittests|tests/)|Doc-tests\\s+)(.*)$'')\ndef groups(text):\n out=[];current=None\n for line in text.splitlines():\n  if
+        HEADER.match(line):\n   if current is not None:out.append(current)\n   current={''header'':line.strip(),''identity'':line.strip().split(''
+        ('',1)[0],''lines'':[]}\n  elif current is not None:current[''lines''].append(line)\n if current is not
+        None:out.append(current)\n return out\n\ndef discover(text):\n out=[];unknown=[]\n for g in groups(text):\n  t=''\\n''.join(g.pop(''lines''));names=re.findall(r''^(.+?):
+        (test|benchmark)$'',t,re.M);summaries=re.findall(r''^(\\d+) tests?, (\\d+) benchmarks?$'',t,re.M)\n  if
+        len(summaries)!=1:unknown.append({''header'':g[''header''],''reason'':''missing or duplicate discovery summary''});continue\n  tests,benches=map(int,summaries[0]);n=[x[0]for
+        x in names if x[1]==''test''];b=[x[0]for x in names if x[1]==''benchmark'']\n  if len(n)!=len(set(n))or
+        len(b)!=len(set(b))or len(n)!=tests or len(b)!=benches:unknown.append({''header'':g[''header''],''reason'':''discovery
+        name/count mismatch''})\n  if benches:unknown.append({''header'':g[''header''],''reason'':''benchmarks not
+        classified''})\n  out.append(dict(g,names=n,benchmarks=b,tests=tests))\n return {''groups'':out,''unknown'':unknown}\n\ndef
+        parse(text):\n out=[];tot=collections.Counter();unknown=[];gg=groups(text)\n for g in gg:\n  t=''\\n''.join(g.pop(''lines''));s=re.findall(r''^test
+        result: (ok|FAILED)\\. (\\d+) passed; (\\d+) failed; (\\d+) ignored; (\\d+) measured; (\\d+) filtered out;?'',t,re.M)\n  if
+        len(s)!=1:unknown.append({''header'':g[''header''],''reason'':''missing/duplicate execution summary''});continue\n  status,*ns=s[0];counts=dict(zip([''PASS'',''FAIL'',''IGNORED'',''MEASURED'',''FILTERED''],map(int,ns)));names=re.findall(r''^test
+        (.+?) \\.\\.\\. (ok|FAILED|ignored(?:, .*)?)\\s*$'',t,re.M)\n  named=collections.Counter(''PASS''if s==''ok''else''FAIL''if
+        s==''FAILED''else''IGNORED''for _,s in names)\n  exact=len(names)==len(set(n for n,_ in names)) and all(named[k]==counts[k]for
+        k in [''PASS'',''FAIL'',''IGNORED''])\n  g.update(status=status,counts=counts,case_lines=names,case_lines_count=len(names),named_case_counts_exact=exact)\n  if
+        not exact:unknown.append({''header'':g[''header''],''reason'':''individual named-case statuses differ from
+        summary'',''named'':dict(named),''summary'':counts})\n  if counts[''FILTERED'']or counts[''MEASURED'']:unknown.append({''header'':g[''header''],''reason'':''unexpected
+        filtered/measured cases''})\n  tot.update(counts);out.append(g)\n return {''groups'':out,''totals'':dict(tot),''unknown'':unknown,''group_count'':len(gg)}\n\ndef
+        reconcile(discovery,execution):\n a=discover(discovery);b=parse(execution);unknown=a[''unknown'']+b[''unknown''];left={g[''identity'']:g
+        for g in a[''groups'']};right={g[''identity'']:g for g in b[''groups'']}\n if len(left)!=len(a[''groups''])or
+        len(right)!=len(b[''groups'']):unknown.append({''reason'':''duplicate harness identity''})\n if left.keys()!=right.keys():unknown.append({''reason'':''harness
+        discovery/execution differ'',''only_discovery'':sorted(left.keys()-right.keys()),''only_execution'':sorted(right.keys()-left.keys())})\n
+        for k in left.keys()&right.keys():\n  if set(left[k][''names''])!=set(n for n,_ in right[k][''case_lines'']):unknown.append({''header'':k,''reason'':''exact
+        discovered/executed names differ''})\n return {''discovery'':a,''execution'':b,''unknown'':unknown,''exact_scope_reconciled'':not
+        unknown}\n\n\ndef cargo_streams(stdout,stderr):\n # Meson JSON may keep cargo''s harness headers on stderr
+        and case output on stdout.\n # Rejoin only when native sequential harness counts and summaries are one-to-one.\n
+        headers=[g[''header'']for g in groups(stderr)]\n if not headers:return stdout+''\\n''+stderr\n blocks=re.split(r''(?=^running
+        \\d+ tests?\\s*$)'',stdout,flags=re.M)\n blocks=[b for b in blocks if re.match(r''^running \\d+ tests?\\s*$'',b.splitlines()[0]if
+        b.splitlines()else'''')]\n assert len(blocks)==len(headers),(len(blocks),len(headers))\n for b in blocks:assert
+        len(re.findall(r''^test result:'',b,re.M))==1\n return ''\\n''.join(h+''\\n''+b for h,b in zip(headers,blocks))\n\ndef
+        tap(discovery,execution):\n names=re.findall(r''^(/[^\\n]+)$'',discovery,re.M);assert len(names)==len(set(names))and
+        names\n rows=[];unknown=[]\n for line in execution.splitlines():\n  m=re.match(r''^(not ok|ok)\\s+(\\d+)\\s+(/.*?)(?:\\s+#\\s*(SKIP|TODO)\\b(.*))?$'',line)\n  if
+        m:rows.append({''status'':''FAIL''if m[1]==''not ok''else''SKIP''if m[4]==''SKIP''else''XFAIL''if m[4]==''TODO''else''PASS'',''number'':int(m[2]),''name'':m[3],''directive'':m[4],''reason'':m[5]})\n
+        if set(names)!={x[''name'']for x in rows}or len(rows)!=len(names):unknown.append({''reason'':''exact CAPI
+        discovered/executed names mismatch''})\n plans=re.findall(r''^1\\.\\.(\\d+)\\s*$'',execution,re.M)\n if
+        len(plans)!=1 or int(plans[0])!=len(rows):unknown.append({''reason'':''missing or inconsistent original
+        TAP plan''})\n if len({x[''number'']for x in rows})!=len(rows):unknown.append({''reason'':''duplicate TAP
+        case number''})\n return {''discovered_names'':names,''executed_rows'':rows,''counts'':dict(collections.Counter(x[''status'']for
+        x in rows)),''unknown'':unknown}\n\ndef selftest():\n h=''Running unittests src/lib.rs (target/release/deps/foo)\\n'';d=h+''x:
+        test\\n1 test, 0 benchmarks\\n'';e=h+''test x ... ok\\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0
+        measured; 0 filtered out; finished in 0.00s\\n'';assert reconcile(d,e)[''exact_scope_reconciled'']\n assert
+        not reconcile(d,e.replace(''test x ... ok'',''test y ... ok''))[''exact_scope_reconciled'']\n assert reconcile(d,cargo_streams(''running
+        1 test\\n''+e.split(''\\n'',1)[1],h))[''exact_scope_reconciled'']\n a=tap(''/a\\n/b\\n/c\\n'',''1..3\\nok
+        1 /a\\nok 2 /b # SKIP unavailable\\nnot ok 3 /c\\n'');assert not a[''unknown'']and a[''counts'']=={''PASS'':1,''SKIP'':1,''FAIL'':1}\n
+        assert tap(''/a\\n'',''1..1\\nok 1 /wrong\\n'')[''unknown'']\n print(''RSVG_RECOUNT_SYNTHETIC_SCOPE_PASS_FAIL_SKIP_UNKNOWN_SELFTEST_PASS'')\n\nif
+        __name__==''__main__'':\n if sys.argv[1]==''selftest'':selftest()\n elif sys.argv[1]==''recount'':\n  p=Path(sys.argv[2]);records=[json.loads(x)for
+        x in(p/''original-meson-testlog.json'').read_text().splitlines()if x.strip()];assert len(records)==4 and
+        len({x[''name'']for x in records})==4\n  out={};unknown=[]\n  for x in records:\n   name=x[''name''];raw=re.sub(r''\\x1b\\[[0-9;]*m'','''',x.get(''stdout'','''')+''\\n''+x.get(''stderr'',''''))\n   if
+        ''C API tests''in name:a=tap((p/''discovery-capi.log'').read_text(),raw)\n   else:\n    key={''Rust tests
+        (rsvg)'':''rsvg'',''Rust tests (librsvg)'':''librsvg'',''Rust tests (rsvg_convert)'':''rsvg_convert''}\n    matches=[v
+        for k,v in key.items()if k in name];assert len(matches)==1,name;raw=cargo_streams(re.sub(r''\\x1b\\[[0-9;]*m'','''',x.get(''stdout'','''')),re.sub(r''\\x1b\\[[0-9;]*m'','''',x.get(''stderr'','''')));a=reconcile(re.sub(r''\\x1b\\[[0-9;]*m'','''',(p/(''discovery-''+matches[0]+''.log'')).read_text()),raw)\n   a.update(original_meson_result=x[''result''],original_exit=x[''returncode'']);out[name]=a\n   unknown.extend([{''suite'':name,''detail'':z}for
+        z in a[''unknown'']])\n  a={''classification'':''DIAGNOSTIC ONLY, inheritedgaps OPEN, no install approval'',''original_meson_exit'':int((p/''original-meson-test.exit'').read_text()),''original_suites'':out,''unknown'':unknown,''source_patches'':[],''test_filters'':[],''canonical_test_replays'':False}\n  (p/''test-recount-audit.json'').write_text(json.dumps(a,indent=2));print(json.dumps({''suite_results'':{k:v[''original_meson_result'']for
+        k,v in out.items()},''unknown'':unknown}))\n else:raise SystemExit(2)\n")
+
+        Path(''/mnt/nav-lfs/sources/rsvg-discover.py'').write_text(''from pathlib import Path\nimport os,sys,json,subprocess,hashlib,re\ns=Path(sys.argv[1]);p=Path(sys.argv[2]);tests=json.loads((p/\''meson-tests-discovery.json\'').read_text());assert
+        len(tests)==4 and len({t[\''name\'']for t in tests})==4\nwrapper=s/\''meson/cargo_wrapper.py\'';data=wrapper.read_text();assert
+        hashlib.sha256(wrapper.read_bytes()).hexdigest()==\''3ecc239a5a9880459927d6dc0178cba29ac2700694660d9b93c6e0e7fe72ba43\''\nold=\''cargo_cmd.extend(["--",
+        "--include-ignored"])\'';new=\''cargo_cmd.extend(["--", "--include-ignored", "--list"])\'';assert data.count(old)==1\ncopy=Path(\''/tmp/nav-librsvg-list-only.py\'');copy.write_text(data.replace(old,new));copy.chmod(0o755)\nrecords=[]\nfor
+        t in tests:\n cmd=t[\''cmd\''].copy();env=os.environ.copy();extra=t.get(\''env\'',{});assert isinstance(extra,dict),extra;env.update(extra);cwd=t.get(\''workdir\'')or
+        str(s/\''build\'')\n if \''C API tests\''in t[\''name\'']:\n  cmd+=[\''-l\''];key=\''capi\''\n else:\n  hit=[i
+        for i,x in enumerate(cmd)if x==str(wrapper)];assert len(hit)==1,(t[\''name\''],cmd);cmd[hit[0]]=str(copy)\n  keys={\''Rust
+        tests (rsvg)\'':\''rsvg\'',\''Rust tests (librsvg)\'':\''librsvg\'',\''Rust tests (rsvg_convert)\'':\''rsvg_convert\''};matches=[v
+        for k,v in keys.items()if k in t[\''name\'']];assert len(matches)==1,t[\''name\''];key=matches[0]\n with(p/(\''discovery-\''+key+\''.log\'')).open(\''w\'')as
+        f:r=subprocess.run(cmd,cwd=cwd,env=env,stdout=f,stderr=subprocess.STDOUT)\n assert r.returncode==0,(t[\''name\''],r.returncode)\n
+        records.append({\''suite\'':t[\''name\''],\''original_cmd\'':t[\''cmd\''],\''listing_only_cmd\'':cmd,\''cwd\'':cwd,\''exit\'':r.returncode})\n(p/\''discovery-tooling-audit.json\'').write_text(json.dumps({\''original_wrapper_sha256\'':hashlib.sha256(wrapper.read_bytes()).hexdigest(),\''listing_copy_sha256\'':hashlib.sha256(copy.read_bytes()).hexdigest(),\''only_copy_difference\'':\''append
+        --list after the original --include-ignored, no test bodies executed by discovery\'',\''suites\'':records},indent=2));print(\''NAV_RSVG_ALL4_ORIGINAL_SUITE_DISCOVERY_COMPLETE\'')\n'')
+
+        Path(''/mnt/nav-lfs/sources/rsvg-source-audit.py'').write_text(''from pathlib import Path\nimport json,re,sys,hashlib,collections\ns=Path(sys.argv[1]);p=Path(sys.argv[2]);original=json.loads((p/\''original-source-files-sha256.json\'').read_text())\nfor
+        rel,x in original.items():\n f=s/rel;assert f.is_file()and not f.is_symlink()and f.stat().st_size==x[\''bytes\'']and
+        hashlib.file_digest(f.open(\''rb\''),\''sha256\'').hexdigest()==x[\''sha256\''],rel\nref=(s/\''rsvg/tests/reference.rs\'').read_text();assert
+        \''if path_base_name.starts_with("ignore") {\\n        return;\\n    }\''in ref\nsilent=[{\''name\'':\''tests::\''+n,\''fixture\'':v,\''classification\'':\''OPEN,
+        upstream returns before rendering fixture, not coverage even if harness reports ok\''}for n,v in re.findall(r\''t!\\(\\s*(\\w+)\\s*,\\s*"([^"]+)"\\s*\\);\'',ref)if
+        Path(v).name.startswith(\''ignore\'')];assert len(silent)==5\nr=json.loads((p/\''test-recount-audit.json\'').read_text());found={}\nfor
+        suite,a in r[\''original_suites\''].items():\n for g in a.get(\''execution\'',{}).get(\''groups\'',[]):\n  if
+        g[\''identity\''].startswith(\''Running tests/reference.rs\''):\n   statuses=dict(g[\''case_lines\''])\n   for
+        item in silent:\n    assert item[\''name\'']in statuses,item;found[item[\''name\'']]=statuses[item[\''name\'']]\nassert
+        len(found)==5,found\nout={\''classification\'':\''DIAGNOSTIC ONLY, not installapproval or OSacceptance,
+        inheritedgapsOPEN\'',\''version\'':\''2.62.4\'',\''original_source_and_fixture_files_exact\'':len(original),\''source_patches\'':[],\''canonical_tests_replayed\'':False,\''upstream_silent_early_return_cases\'':silent,\''early_return_original_statuses\'':found,\''test_recount\'':r,\''known_BLFS_Pango1581_or_newer_failure_candidate\'':\''tests::svg1_1_text_text_03_b_svg,
+        preserve actual original outcome not presupposed\'',\''memory_cap_KiB\'':4194304,\''jobs\'':2}\n(p/\''RSVG-DIAGNOSTIC-OPEN.json\'').write_text(json.dumps(out,indent=2));print(\''NAV_RSVG_ORIGINAL_SOURCE_EXACT_AND_5_SILENT_EARLY_RETURNS_OPEN\'',len(original))\n'')
+
+        HELPERS
+
+        '
+    - name: Prepare untouched librsvg original full test diagnostic
+      shell: bash
+      run: 'python3 - <<''PREPARE_STAGE''
+
+        from pathlib import Path
+
+        Path(''/tmp/nav-source-stage.sh'').write_text(''set -euo pipefail\nexport LFS=/mnt/nav-lfs LC_ALL=POSIX\nulimit
+        -v 4194304\numask 022\nmkdir -p "$LFS/nav-build-metadata/librsvg"\npython3 - <<\''DOWNLOAD\''\nfrom pathlib
+        import Path,PurePosixPath\nimport urllib.request,hashlib,tarfile,json\np=Path(\''/mnt/nav-lfs/sources/librsvg-2.62.4.tar.xz\'')\nwith
+        urllib.request.urlopen(\''https://download.gnome.org/sources/librsvg/2.62/librsvg-2.62.4.tar.xz\'',timeout=120)as
+        r:p.write_bytes(r.read())\nassert hashlib.file_digest(p.open(\''rb\''),\''sha256\'').hexdigest()==\''c982b8157a054b803493bf994d31e50105eb948dd8da6b4ab9734e8d392712a3\''\nwith
+        tarfile.open(p)as t:\n for m in t.getmembers():\n  q=PurePosixPath(m.name);assert not q.is_absolute()and
+        \''..\''not in q.parts and q.parts[0]==\''librsvg-2.62.4\'';assert m.isfile()or m.isdir(),m.name\n t.extractall(p.parent,filter=\''data\'')\ns=p.parent/\''librsvg-2.62.4\'';original={str(f.relative_to(s)):{\''bytes\'':f.stat().st_size,\''sha256\'':hashlib.file_digest(f.open(\''rb\''),\''sha256\'').hexdigest()}for
+        f in s.rglob(\''*\'')if f.is_file()and not f.is_symlink()};Path(\''/mnt/nav-lfs/nav-build-metadata/librsvg/original-source-files-sha256.json\'').write_text(json.dumps(original,indent=2));print(\''NAV_RSVG_SOURCE_SHA256_OK\'',len(original))\nDOWNLOAD\npython3
+        - <<\''PREPARE\''\nfrom pathlib import Path\nPREPARE\nsudo chown -hR root:root "$LFS"\nsudo chown -R 101:101
+        "$LFS/home/tester"\npython3 - <<\''RESOLVER_HELPER\''\nfrom pathlib import Path\nPath(\''/tmp/nav-aom-resolver-proof.py\'').write_text("import
+        pathlib,stat,os,hashlib,json,sys\\np=pathlib.Path(\''/mnt/nav-lfs/etc/resolv.conf\'')\\ndef state():\\n
+        try:s=p.lstat()\\n except FileNotFoundError:return {\''kind\'':\''absent\''}\\n if stat.S_ISLNK(s.st_mode):return
+        {\''kind\'':\''symlink\'',\''target\'':os.readlink(p),\''mode\'':stat.S_IMODE(s.st_mode),\''uid\'':s.st_uid,\''gid\'':s.st_gid,\''inode\'':s.st_ino,\''mtime_ns\'':s.st_mtime_ns}\\n
+        if not stat.S_ISREG(s.st_mode):return {\''kind\'':\''unsupported\'',\''mode\'':s.st_mode}\\n return {\''kind\'':\''regular\'',\''sha256\'':hashlib.sha256(p.read_bytes()).hexdigest(),\''bytes\'':s.st_size,\''mode\'':stat.S_IMODE(s.st_mode),\''uid\'':s.st_uid,\''gid\'':s.st_gid,\''inode\'':s.st_ino,\''mtime_ns\'':s.st_mtime_ns}\\nf=pathlib.Path(\''/mnt/nav-lfs/nav-build-metadata/librsvg/resolver-original-state.json\'')\\nif
+        sys.argv[1]==\''snapshot\'':\\n x=state();f.write_text(json.dumps(x,indent=2));assert x[\''kind\'']in(\''absent\'',\''regular\'')
+        or (x[\''kind\'']==\''symlink\'' and x[\''target\'']==\''/run/systemd/resolve/stub-resolv.conf\''), \''resolver
+        type requires separate review: \''+repr(x)\\nelse:\\n assert state()==json.loads(f.read_text()),\''target
+        resolver changed after namespace\'';print(\''NAV_AOM_TARGET_RESOLVER_ORIGINAL_STATE_UNCHANGED\'')\\n")\nRESOLVER_HELPER\nsudo
+        python3 /tmp/nav-aom-resolver-proof.py snapshot\nHOST_RESOLVER=$(readlink -f /etc/resolv.conf)\ntest -s
+        "$HOST_RESOLVER"\nsudo env LFS="$LFS" HOST_RESOLVER="$HOST_RESOLVER" unshare --mount --propagation private
+        /bin/bash <<\''NAV_MOUNT\''\nset -euo pipefail\nmount --bind "$LFS" "$LFS"\nmkdir -p "$LFS"/{dev,proc,sys,run}\nmount
+        --bind /dev "$LFS/dev"\nmount -t devpts devpts -o gid=5,mode=0620 "$LFS/dev/pts"\nmount -t proc proc "$LFS/proc"\nmount
+        -t sysfs -o ro sysfs "$LFS/sys"\nmount -t tmpfs -o nosuid,nodev tmpfs "$LFS/run"\nif [ -h "$LFS/dev/shm"
+        ];then install -d -m1777 "$LFS$(realpath /dev/shm)";else mount -t tmpfs -o nosuid,nodev tmpfs "$LFS/dev/shm";fi\n#
+        Disposable resolver binding exists only in this namespace and this build stage.\nresolver="$LFS/etc/resolv.conf"\nsymlink_resolver=0\nif
+        [ -L "$resolver" ]; then\n test "$(readlink "$resolver")" = /run/systemd/resolve/stub-resolv.conf\n test
+        "$(findmnt -n -o FSTYPE --target "$LFS/run")" = tmpfs\n mkdir -p "$LFS/run/systemd/resolve"\n resolver="$LFS/run/systemd/resolve/stub-resolv.conf"\n
+        symlink_resolver=1\nfi\ncreated_resolver=0\nbound_resolver=0\ncleanup_resolver() {\n rc=$?\n trap - EXIT\n
+        if [ "$bound_resolver" = 1 ]; then umount "$resolver" || exit 1; fi\n if [ "$created_resolver" = 1 ]; then\n  test
+        ! -L "$resolver" && test -f "$resolver" && test ! -s "$resolver" && test "$(stat -c \''%i\'' "$resolver")"
+        = "$created_inode" || exit 1\n  python3 -c \''import os,sys;os.unlink(sys.argv[1])\'' "$resolver" || exit
+        1\n fi\n python3 /tmp/nav-aom-resolver-proof.py verify || exit 1\n exit "$rc"\n}\ntrap cleanup_resolver
+        EXIT\nif [ ! -e "$resolver" ] && [ ! -L "$resolver" ]; then\n install -m0600 /dev/null "$resolver"\n created_resolver=1\n
+        created_inode=$(stat -c \''%i\'' "$resolver")\nfi\ntest ! -L "$resolver" && test -f "$resolver"\nmount --bind
+        "$HOST_RESOLVER" "$resolver"\nbound_resolver=1\nmount -o remount,bind,ro "$resolver"\nfindmnt -no OPTIONS
+        --target "$resolver" | tr \'',\'' \''\\n\'' | grep -Fx ro\ncmp "$HOST_RESOLVER" "$resolver"\ntimeout 90
+        chroot "$LFS" /usr/bin/env -i HOME=/root PATH=/usr/bin:/usr/sbin LC_ALL=POSIX /usr/bin/python3 - <<\''NETWORK_PROBE\''
+        > "$LFS/nav-build-metadata/librsvg/resolver-https-probe.log" 2>&1\nimport socket,urllib.request\nhost=\''index.crates.io\''\nassert
+        socket.getaddrinfo(host,443,type=socket.SOCK_STREAM)\nurl=\''https://index.crates.io/config.json\''\nwith
+        urllib.request.urlopen(url,timeout=60)as r:\n assert r.status==200 and r.read(1)\nprint(\''NAV_CARGOC_CRATES_DNS_HTTPS_PROBE_PASS\'')\nNETWORK_PROBE\ncat
+        "$LFS/nav-build-metadata/librsvg/resolver-https-probe.log"\nchroot "$LFS" /usr/bin/env -i HOME=/root TERM=dumb
+        PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 LC_ALL=POSIX /bin/bash --noprofile --norc /sources/rsvg-stage.sh\nNAV_MOUNT\nsudo
+        python3 /tmp/nav-aom-resolver-proof.py verify\n\n'')
+
+        PREPARE_STAGE
+
+        '
+    - name: Original native full Meson tests and exact source case status reconciliation no install
+      shell: bash
+      run: "python3 - <<'GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda : int(next((x.split()[1]\
+        \ for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\n\
+        assert os.cpu_count() >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024\
+        \ ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\nassert p.is_file() and p.stat().st_size>0\nstart =\
+        \ time.monotonic()\nlog = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash', str(p)],\
+        \ stdout=log, stderr=subprocess.STDOUT, start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0,\
+        \ sorted(os.sched_getaffinity(0))[:2]))\ntry:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n\
+        \        available = mem()\n        if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic()\
+        \ - start > 315 * 60:\n            raise RuntimeError('resource or stage-time safety floor reached')\n \
+        \       print(json.dumps({'elapsed_seconds': round(time.monotonic() - start), 'free_disk_bytes': free, 'available_memory_kib':\
+        \ available}), flush=True)\n        time.sleep(20)\n    if proc.returncode:\n        raise RuntimeError('source-build\
+        \ failed with status ' + str(proc.returncode))\nfinally:\n    if proc.poll() is None:\n        os.killpg(proc.pid,\
+        \ signal.SIGTERM)\n        try:\n            proc.wait(timeout=10)\n        except subprocess.TimeoutExpired:\n\
+        \            os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n    log.close()\n    lines =\
+        \ pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n    print('\\n'.join(lines[-80:]))\n\
+        \    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK', 'BEGIN_FINAL_PACKAGE',\
+        \ 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST', 'NAV_BISON', 'NAV_TESTER',\
+        \ 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect', 'NAV_GST', 'NAV_FUSE',\
+        \ 'NAV_PORTAL'])))))\n    import base64, gzip, subprocess, os, hashlib, json\n    mode = 'build'\n    p\
+        \ = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/librsvg')\n    manifest = {'mode': mode, 'files': {},\
+        \ 'errors': [], 'runner_uid': os.getuid()}\n\n    def emit(name, data):\n        data = gzip.compress(data,\
+        \ mtime=0)\n        for i in range(0, len(data), 3000):\n            print('NAV_RSVG_' + name + '_GZB64',\
+        \ base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n    try:\n        listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\x00')\n    except Exception as ex:\n        listing\
+        \ = []\n        manifest['errors'].append({'area': str(p), 'error': repr(ex)})\n    for item in sorted((x\
+        \ for x in listing if x)):\n        f = pathlib.Path(os.fsdecode(item))\n        rel = str(f.relative_to(p))\n\
+        \        wanted = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode\
+        \ == 'shard' and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode\
+        \ == 'examples' and rel.startswith('original-examples'))\n        if wanted:\n            try:\n       \
+        \         data = subprocess.check_output(['sudo', 'cat', str(f)])\n                name = rel.replace('/',\
+        \ '-').replace('.', '_').upper()\n                manifest['files'][name] = {'source': rel, 'bytes': len(data),\
+        \ 'sha256': hashlib.sha256(data).hexdigest()}\n                emit(name, data)\n            except Exception\
+        \ as ex:\n                manifest['errors'].append({'file': rel, 'error': repr(ex)})\n    emit('EXPORT-MANIFEST_JSON',\
+        \ json.dumps(manifest, indent=2).encode())\n    if manifest['errors']:\n        raise RuntimeError('independent\
+        \ evidence export errors: ' + repr(manifest['errors']))\n\nGUARD\n"
