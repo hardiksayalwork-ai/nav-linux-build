@@ -146,53 +146,52 @@ jobs:
         \ install 2>&1 | tee \"$A/opus-stage.log\"\\n# Install the exact staged Opus payload into this disposable\
         \ root for Base linking only.\\ncp -a \"$P/usr/.\" /usr/\\nldconfig\\npkg-config --modversion opus | tee\
         \ \"$A/opus-installed-version.log\"\\ncd /sources/gst-plugins-base-1.28.6\\nmeson setup build --prefix=/usr\
-        \ --buildtype=release --wrap-mode=nodownload -Dtests=enabled -Dcheck=enabled -Ddoc=disabled -Dopus=enabled\
-        \ 2>&1 | tee \"$A/base-configure.log\"\\nmeson introspect --tests build > \"$A/base-discovery.json\"\\nmeson\
-        \ introspect --buildoptions build > \"$A/base-options.json\"\\npython3 - <<\\'DELTA\\'\\nfrom pathlib import\
-        \ Path\\nimport json,collections\\nA=Path(\\'/sources/nav-opusbase-evidence\\');old=[json.loads(l)for l\
-        \ in(A/\\'original-opus/base-prior-testlog.json\\').read_text().splitlines()if l.strip()];new=json.loads((A/\\\
-        'base-discovery.json\\').read_text());names={x[\\'name\\'].removeprefix(\\'gst-plugins-base:\\')for x in\
-        \ old};assert len(names)==134;assert names<={x[\\'name\\']for x in new};delta=[x for x in new if x[\\'name\\\
-        ']not in names];assert len(delta)==1 and delta[0][\\'name\\']==\\'elements_opus\\',[(x[\\'name\\'],x[\\\
-        'cmd\\'])for x in delta];(A/\\'base-delta-discovery.json\\').write_text(json.dumps(delta,sort_keys=True));print(\\\
-        'NAV_OPUSBASE_NEW_COVERAGE_DELTA_JSON \\'+json.dumps(delta,sort_keys=True),flush=True)\\nDELTA\\nninja -C\
-        \ build -j2 2>&1 | tee \"$A/base-build.log\"\\npython3 /sources/nav-opusbase-source-verify.py\\nmkdir -p\
-        \ /tmp/nav-opusbase-runtime /tmp/nav-opusbase-home/.config /tmp/nav-opusbase-home/.cache/fontconfig /tmp/nav-opusbase-home/.fontconfig\\\
-        nchmod 1777 /tmp /var/tmp\\nchown -R tester:tester /sources/gst-plugins-base-1.28.6 \"$A\" /tmp/nav-opusbase-runtime\
-        \ /tmp/nav-opusbase-home\\nchmod 700 /tmp/nav-opusbase-runtime\\nsu tester -c \\'test -w /tmp/nav-opusbase-home/.config\
-        \ && touch /tmp/nav-opusbase-home/.config/write-probe && rm /tmp/nav-opusbase-home/.config/write-probe\\\
-        '\\nXvfb :98 -screen 0 1280x800x24 -nolisten tcp -ac -noreset > \"$A/xvfb.log\" 2>&1 &\\nxv=$!\\ntrap \\\
-        'kill \"$xv\" 2>/dev/null || true\\' EXIT\\nfor i in $(seq 1 100);do test -S /tmp/.X11-unix/X98 && break;sleep\
-        \ 0.1;done\\ntest -S /tmp/.X11-unix/X98\\nset +e\\nsu tester -c \\'ulimit -v 4194304;ulimit -c 0;dbus-run-session\
-        \ -- env -u LC_ALL -u LANGUAGE -u GST_CHECKS -u GST_CHECKS_IGNORE HOME=/tmp/nav-opusbase-home XDG_CONFIG_HOME=/tmp/nav-opusbase-home/.config\
-        \ XDG_CACHE_HOME=/tmp/nav-opusbase-home/.cache LANG=C.UTF-8 DISPLAY=:98 XDG_RUNTIME_DIR=/tmp/nav-opusbase-runtime\
-        \ LIBGL_ALWAYS_SOFTWARE=1 GST_CHECK_XML=1 meson test -C /sources/gst-plugins-base-1.28.6/build --no-rebuild\
-        \ --num-processes 2 --print-errorlogs elements_opus\\' 2>&1 | tee \"$A/base-delta-test.log\"\\nrc=${PIPESTATUS[0]}\\\
-        nset -e\\nprintf \\'%s\\\\n\\' \"$rc\" > \"$A/base-delta-test-exit.txt\"\\ncp build/meson-logs/testlog.json\
-        \ \"$A/base-delta-testlog.json\"\\ncp build/meson-logs/testlog.txt \"$A/base-delta-testlog.txt\"\\npython3\
-        \ /sources/nav-opusbase-source-verify.py\\npython3 - <<\\'RECOUNT\\'\\nfrom pathlib import Path\\nimport\
-        \ json,collections,re,xml.etree.ElementTree as E,shutil\\nA=Path(\\'/sources/nav-opusbase-evidence\\');r=[json.loads(l)for\
-        \ l in(A/\\'base-delta-testlog.json\\').read_text().splitlines()if l.strip()];d=json.loads((A/\\'base-delta-discovery.json\\\
-        ').read_text());assert len(r)==1 and collections.Counter((x[\\'name\\'].removeprefix(\\'gst-plugins-base:\\\
-        '),tuple(x[\\'command\\']))for x in r)==collections.Counter((x[\\'name\\'],tuple(x[\\'cmd\\']))for x in\
-        \ d);p=Path(\\'/sources/gst-plugins-base-1.28.6/tests/check/elements/opus.check.xml\\');root=E.parse(p).getroot();cases=root.findall(\\\
-        './/{*}test\\');assert cases;shutil.copyfile(p,A/\\'base-opus.check.xml\\');out={\\'classification\\':\\\
-        'Added Base original Opus coverage only, prior134OK canonical not replayed or relabelled. Opus original15OK\
-        \ with5malloc nested skips OPEN. All inherited gaps OPEN. No save in this diagnostic.\\',\\'new_programs\\\
-        ':len(r),\\'results\\':dict(collections.Counter(x[\\'result\\']for x in r)),\\'Check_cases\\':len(cases),\\\
-        'Check_results\\':dict(collections.Counter(x.get(\\'result\\')for x in cases)),\\'nested_warning_lines\\\
-        ':[l for x in r for l in(x.get(\\'stdout\\',\\'\\')+\\'\\\\n\\'+x.get(\\'stderr\\',\\'\\')).splitlines()if\
-        \ re.search(r\\'\\\\b(?:skip(?:ped)?|todo|disabled)\\\\b\\',l,re.I)]};(A/\\'coverage.json\\').write_text(json.dumps(out,sort_keys=True));print(\\\
-        'NAV_OPUSBASE_DELTA_COVERAGE_JSON \\'+json.dumps(out,sort_keys=True),flush=True)\\nRECOUNT\\n# Stage only\
-        \ newly required Base Opus plugin, not a full replacement Base payload.\\ninstall -m0755 build/ext/opus/libgstopus.so\
-        \ \"$P/usr/lib/gstreamer-1.0/\"\\npython3 - <<\\'AUDIT\\'\\nfrom pathlib import Path\\nimport json,hashlib,os\\\
-        nA=Path(\\'/sources/nav-opusbase-evidence\\');P=Path(\\'/sources/nav-opusbase-payload\\');files={}\\nfor\
-        \ p in P.rglob(\\'*\\'):\\n if p.is_symlink():files[str(p.relative_to(P))]={\\'link\\':os.readlink(p)}\\\
-        n elif p.is_file():files[str(p.relative_to(P))]={\\'bytes\\':p.stat().st_size,\\'sha256\\':hashlib.file_digest(p.open(\\\
-        'rb\\'),\\'sha256\\').hexdigest()}\\nassert (P/\\'usr/lib/gstreamer-1.0/libgstopus.so\\').is_file();out={\\\
-        'payload\\':files,\\'source_integrity\\':json.loads((A/\\'source-integrity.json\\').read_text()),\\'canonical\\\
-        ':json.loads((A/\\'canonical-ledger.json\\').read_text()),\\'delta\\':json.loads((A/\\'coverage.json\\').read_text())};(A/\\\
-        'audit.json\\').write_text(json.dumps(out,sort_keys=True));print(\\'NAV_OPUSBASE_INSTALL_PAYLOAD_AUDIT_JSON\
+        \ --buildtype=release --wrap-mode=nodownload -Dtests=enabled -Ddoc=disabled -Dopus=enabled 2>&1 | tee \"\
+        $A/base-configure.log\"\\nmeson introspect --tests build > \"$A/base-discovery.json\"\\nmeson introspect\
+        \ --buildoptions build > \"$A/base-options.json\"\\npython3 - <<\\'DELTA\\'\\nfrom pathlib import Path\\\
+        nimport json,collections\\nA=Path(\\'/sources/nav-opusbase-evidence\\');old=[json.loads(l)for l in(A/\\\
+        'original-opus/base-prior-testlog.json\\').read_text().splitlines()if l.strip()];new=json.loads((A/\\'base-discovery.json\\\
+        ').read_text());names={x[\\'name\\'].removeprefix(\\'gst-plugins-base:\\')for x in old};assert len(names)==134;assert\
+        \ names<={x[\\'name\\']for x in new};delta=[x for x in new if x[\\'name\\']not in names];assert len(delta)==1\
+        \ and delta[0][\\'name\\']==\\'elements_opus\\',[(x[\\'name\\'],x[\\'cmd\\'])for x in delta];(A/\\'base-delta-discovery.json\\\
+        ').write_text(json.dumps(delta,sort_keys=True));print(\\'NAV_OPUSBASE_NEW_COVERAGE_DELTA_JSON \\'+json.dumps(delta,sort_keys=True),flush=True)\\\
+        nDELTA\\nninja -C build -j2 2>&1 | tee \"$A/base-build.log\"\\npython3 /sources/nav-opusbase-source-verify.py\\\
+        nmkdir -p /tmp/nav-opusbase-runtime /tmp/nav-opusbase-home/.config /tmp/nav-opusbase-home/.cache/fontconfig\
+        \ /tmp/nav-opusbase-home/.fontconfig\\nchmod 1777 /tmp /var/tmp\\nchown -R tester:tester /sources/gst-plugins-base-1.28.6\
+        \ \"$A\" /tmp/nav-opusbase-runtime /tmp/nav-opusbase-home\\nchmod 700 /tmp/nav-opusbase-runtime\\nsu tester\
+        \ -c \\'test -w /tmp/nav-opusbase-home/.config && touch /tmp/nav-opusbase-home/.config/write-probe && rm\
+        \ /tmp/nav-opusbase-home/.config/write-probe\\'\\nXvfb :98 -screen 0 1280x800x24 -nolisten tcp -ac -noreset\
+        \ > \"$A/xvfb.log\" 2>&1 &\\nxv=$!\\ntrap \\'kill \"$xv\" 2>/dev/null || true\\' EXIT\\nfor i in $(seq 1\
+        \ 100);do test -S /tmp/.X11-unix/X98 && break;sleep 0.1;done\\ntest -S /tmp/.X11-unix/X98\\nset +e\\nsu\
+        \ tester -c \\'ulimit -v 4194304;ulimit -c 0;dbus-run-session -- env -u LC_ALL -u LANGUAGE -u GST_CHECKS\
+        \ -u GST_CHECKS_IGNORE HOME=/tmp/nav-opusbase-home XDG_CONFIG_HOME=/tmp/nav-opusbase-home/.config XDG_CACHE_HOME=/tmp/nav-opusbase-home/.cache\
+        \ LANG=C.UTF-8 DISPLAY=:98 XDG_RUNTIME_DIR=/tmp/nav-opusbase-runtime LIBGL_ALWAYS_SOFTWARE=1 GST_CHECK_XML=1\
+        \ meson test -C /sources/gst-plugins-base-1.28.6/build --no-rebuild --num-processes 2 --print-errorlogs\
+        \ elements_opus\\' 2>&1 | tee \"$A/base-delta-test.log\"\\nrc=${PIPESTATUS[0]}\\nset -e\\nprintf \\'%s\\\
+        \\n\\' \"$rc\" > \"$A/base-delta-test-exit.txt\"\\ncp build/meson-logs/testlog.json \"$A/base-delta-testlog.json\"\
+        \\ncp build/meson-logs/testlog.txt \"$A/base-delta-testlog.txt\"\\npython3 /sources/nav-opusbase-source-verify.py\\\
+        npython3 - <<\\'RECOUNT\\'\\nfrom pathlib import Path\\nimport json,collections,re,xml.etree.ElementTree\
+        \ as E,shutil\\nA=Path(\\'/sources/nav-opusbase-evidence\\');r=[json.loads(l)for l in(A/\\'base-delta-testlog.json\\\
+        ').read_text().splitlines()if l.strip()];d=json.loads((A/\\'base-delta-discovery.json\\').read_text());assert\
+        \ len(r)==1 and collections.Counter((x[\\'name\\'].removeprefix(\\'gst-plugins-base:\\'),tuple(x[\\'command\\\
+        ']))for x in r)==collections.Counter((x[\\'name\\'],tuple(x[\\'cmd\\']))for x in d);p=Path(\\'/sources/gst-plugins-base-1.28.6/tests/check/elements/opus.check.xml\\\
+        ');root=E.parse(p).getroot();cases=root.findall(\\'.//{*}test\\');assert cases;shutil.copyfile(p,A/\\'base-opus.check.xml\\\
+        ');out={\\'classification\\':\\'Added Base original Opus coverage only, prior134OK canonical not replayed\
+        \ or relabelled. Opus original15OK with5malloc nested skips OPEN. All inherited gaps OPEN. No save in this\
+        \ diagnostic.\\',\\'new_programs\\':len(r),\\'results\\':dict(collections.Counter(x[\\'result\\']for x in\
+        \ r)),\\'Check_cases\\':len(cases),\\'Check_results\\':dict(collections.Counter(x.get(\\'result\\')for x\
+        \ in cases)),\\'nested_warning_lines\\':[l for x in r for l in(x.get(\\'stdout\\',\\'\\')+\\'\\\\n\\'+x.get(\\\
+        'stderr\\',\\'\\')).splitlines()if re.search(r\\'\\\\b(?:skip(?:ped)?|todo|disabled)\\\\b\\',l,re.I)]};(A/\\\
+        'coverage.json\\').write_text(json.dumps(out,sort_keys=True));print(\\'NAV_OPUSBASE_DELTA_COVERAGE_JSON\
+        \ \\'+json.dumps(out,sort_keys=True),flush=True)\\nRECOUNT\\n# Stage only newly required Base Opus plugin,\
+        \ not a full replacement Base payload.\\ninstall -m0755 build/ext/opus/libgstopus.so \"$P/usr/lib/gstreamer-1.0/\"\
+        \\npython3 - <<\\'AUDIT\\'\\nfrom pathlib import Path\\nimport json,hashlib,os\\nA=Path(\\'/sources/nav-opusbase-evidence\\\
+        ');P=Path(\\'/sources/nav-opusbase-payload\\');files={}\\nfor p in P.rglob(\\'*\\'):\\n if p.is_symlink():files[str(p.relative_to(P))]={\\\
+        'link\\':os.readlink(p)}\\n elif p.is_file():files[str(p.relative_to(P))]={\\'bytes\\':p.stat().st_size,\\\
+        'sha256\\':hashlib.file_digest(p.open(\\'rb\\'),\\'sha256\\').hexdigest()}\\nassert (P/\\'usr/lib/gstreamer-1.0/libgstopus.so\\\
+        ').is_file();out={\\'payload\\':files,\\'source_integrity\\':json.loads((A/\\'source-integrity.json\\').read_text()),\\\
+        'canonical\\':json.loads((A/\\'canonical-ledger.json\\').read_text()),\\'delta\\':json.loads((A/\\'coverage.json\\\
+        ').read_text())};(A/\\'audit.json\\').write_text(json.dumps(out,sort_keys=True));print(\\'NAV_OPUSBASE_INSTALL_PAYLOAD_AUDIT_JSON\
         \ \\'+json.dumps(out,sort_keys=True),flush=True)\\nAUDIT\\nexit \"$rc\"\\n')\nPath('/mnt/nav-lfs/sources/nav-opusbase-source-verify.py').write_text(\"\
         from pathlib import Path\\nimport tarfile,hashlib,json\\nA=Path('/sources/nav-opusbase-evidence');out={}\\\
         nfor x in json.loads((A/'source-lock.json').read_text()):\\n n=0\\n with tarfile.open('/sources/'+x['filename'])as\
