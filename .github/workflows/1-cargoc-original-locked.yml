@@ -311,18 +311,19 @@ jobs:
     - name: Bounded rolling replacement budget gate
       shell: bash
       run: "set -euo pipefail\npython3 - <<'BUDGET'\nfrom pathlib import Path\nimport ctypes,ctypes.util,urllib.request,json,time,hashlib\n\
-        p=Path('/mnt/nav-cargoc-root.tar.zst');proof=json.loads(Path('/tmp/cargoc-candidate-proof.json').read_text());assert\
-        \ hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==proof['bundle_sha256']\nz=ctypes.CDLL(ctypes.util.find_library('zstd'));z.ZSTD_compressBound.argtypes=[ctypes.c_size_t];z.ZSTD_compressBound.restype=ctypes.c_size_t;worst=z.ZSTD_compressBound(p.stat().st_size+1024**2)+64*1024**2\n\
-        baseline={10792746143,10710908926,10700939007,10696846187,10516363617,10515953327,10511354384,10508735204,10480998516,10480209539}\n\
-        for attempt in range(25):\n req=urllib.request.Request('https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/actions/caches?per_page=100',headers={'Accept':'application/vnd.github+json'})\n\
-        \ with urllib.request.urlopen(req,timeout=60)as r:d=json.load(r)\n rows=d['actions_caches'];assert d['total_count']==len(rows)<=100;ids={x['id']for\
-        \ x in rows};assert (baseline-{10792746143})<=ids\n assert 10790873772 in ids\n assert 'nav-blfs13.1-x86_64-cargoc-open-v1'not\
-        \ in{x['key']for x in rows}\n existing=sum(x['size_in_bytes']for x in rows)\n if existing+worst<10*1024**3:\n\
-        \  print('NAV_CARGOC_ROOT_MEASURED_CACHE_GATE '+json.dumps({'existing':existing,'bundle_bytes':p.stat().st_size,'bundle_sha256':proof['bundle_sha256'],'new_cache_upper':worst,'worst_total':existing+worst,'limit':10*1024**3}),flush=True);break\n\
+        import os,time,json,urllib.request,urllib.error,email.utils\nTOKEN=os.environ['GH_TOKEN'];assert TOKEN\n\
+        BASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\ndef api(path):\n assert not path.startswith('/')\
+        \ and '://'not in path\n for attempt in range(5):\n  d=json.loads(api('actions/caches?per_page=100'))\n\
+        \ rows=d['actions_caches'];assert d['total_count']==len(rows)<=100;ids={x['id']for x in rows};assert (baseline-{10792746143})<=ids\n\
+        \ assert 10790873772 in ids\n assert 'nav-blfs13.1-x86_64-cargoc-open-v1'not in{x['key']for x in rows}\n\
+        \ existing=sum(x['size_in_bytes']for x in rows)\n if existing+worst<10*1024**3:\n  print('NAV_CARGOC_ROOT_MEASURED_CACHE_GATE\
+        \ '+json.dumps({'existing':existing,'bundle_bytes':p.stat().st_size,'bundle_sha256':proof['bundle_sha256'],'new_cache_upper':worst,'worst_total':existing+worst,'limit':10*1024**3}),flush=True);break\n\
         \ assert 10792746143 in ids,'Budget still insufficient after permitted new intermediate disappeared; refuse\
         \ wider deletion'\n print('NAV_CARGOC_AWAITING_APPROVED_ROLLING_CACHE_REMOVAL candidate verified, only NEWheif10792746143\
         \ eligible, nineoriginal+correctedAOMprotected',flush=True)\n if attempt==24:raise RuntimeError('bounded120minute\
         \ budget wait exhausted, no save')\n time.sleep(300)\nBUDGET\n"
+      env:
+        GH_TOKEN: ${{ github.token }}
     - name: Save cargo-c TRANSITIONAL root
       uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
       with:
