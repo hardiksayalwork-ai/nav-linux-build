@@ -106,13 +106,13 @@ jobs:
         \ --tests build > \"$A/discovery.json\"\\nmeson introspect --buildoptions build > \"$A/options.json\"\\\
         nmeson introspect --dependencies build > \"$A/dependencies.json\"\\nmeson introspect --installed build >\
         \ \"$A/installed-map.json\"\\npython3 - <<\\'DISCOVERY\\'\\nfrom pathlib import Path\\nimport json\\nA=Path(\\\
-        '/sources/nav-opus-evidence\\');d=json.loads((A/\\'discovery.json\\').read_text());assert d and len({x[\\\
-        'name\\']for x in d})==len(d);o={x[\\'name\\']:x[\\'value\\']for x in json.loads((A/\\'options.json\\').read_text())};assert\
-        \ o[\\'tests\\']==\\'enabled\\'and o[\\'extra-programs\\']==\\'enabled\\';print(\\'NAV_OPUS_ORIGINAL_DISCOVERY_JSON\
-        \ \\'+json.dumps({\\'count\\':len(d),\\'names\\':[x[\\'name\\']for x in d]}),flush=True)\\nDISCOVERY\\nninja\
-        \ -C build -j2 2>&1 | tee \"$A/build.log\"\\npython3 /sources/nav-opus-source-verify.py\\nmkdir -p /tmp/nav-opus-home/.config\
-        \ /tmp/nav-opus-home/.cache\\nchmod 1777 /tmp /var/tmp\\nchown -R tester:tester /sources/opus-1.6.1 \"$A\"\
-        \ /tmp/nav-opus-home\\nsu tester -c \\'test -w /tmp/nav-opus-home && touch /tmp/nav-opus-home/write-probe\
+        '/sources/nav-opus-evidence\\');d=json.loads((A/\\'discovery.json\\').read_text());assert d and len({(x[\\\
+        'name\\'],tuple(x[\\'cmd\\']))for x in d})==len(d);o={x[\\'name\\']:x[\\'value\\']for x in json.loads((A/\\\
+        'options.json\\').read_text())};assert o[\\'tests\\']==\\'enabled\\'and o[\\'extra-programs\\']==\\'enabled\\\
+        ';print(\\'NAV_OPUS_ORIGINAL_DISCOVERY_JSON \\'+json.dumps({\\'count\\':len(d),\\'names\\':[x[\\'name\\\
+        ']for x in d]}),flush=True)\\nDISCOVERY\\nninja -C build -j2 2>&1 | tee \"$A/build.log\"\\npython3 /sources/nav-opus-source-verify.py\\\
+        nmkdir -p /tmp/nav-opus-home/.config /tmp/nav-opus-home/.cache\\nchmod 1777 /tmp /var/tmp\\nchown -R tester:tester\
+        \ /sources/opus-1.6.1 \"$A\" /tmp/nav-opus-home\\nsu tester -c \\'test -w /tmp/nav-opus-home && touch /tmp/nav-opus-home/write-probe\
         \ && rm /tmp/nav-opus-home/write-probe\\'\\nprintf \\'%s\\\\n\\' NAV_OPUS_RUNTIME_HOME_WRITE_PROBE_PASS\\\
         nset +e\\nsu tester -c \\'ulimit -v 4194304;ulimit -c 0;env HOME=/tmp/nav-opus-home XDG_CACHE_HOME=/tmp/nav-opus-home/.cache\
         \ XDG_CONFIG_HOME=/tmp/nav-opus-home/.config LANG=C.UTF-8 meson test -C /sources/opus-1.6.1/build --no-rebuild\
@@ -121,18 +121,19 @@ jobs:
         \ build/meson-logs/testlog.junit.xml ];then cp build/meson-logs/testlog.junit.xml \"$A/\";fi\\npython3 /sources/nav-opus-source-verify.py\\\
         npython3 - <<\\'RECOUNT\\'\\nfrom pathlib import Path\\nimport json,collections,re\\nA=Path(\\'/sources/nav-opus-evidence\\\
         ');d=json.loads((A/\\'discovery.json\\').read_text());r=[json.loads(l)for l in(A/\\'testlog.json\\').read_text().splitlines()if\
-        \ l.strip()];assert collections.Counter(x[\\'name\\'].removeprefix(\\'opus:\\')for x in r)==collections.Counter(x[\\\
-        'name\\']for x in d);out={\\'classification\\':\\'FIRST full original configured Opus 1.6.1 suite, no source/test\
-        \ changes. Default disabled DRED/OSCE/Deep PLC/custom modes and non-native architecture coverage OPEN. No\
-        \ install/save. Base prior canonical evidence recovered, not replayed.\\',\\'discovered\\':len(d),\\'records\\\
-        ':len(r),\\'results\\':dict(collections.Counter(x[\\'result\\']for x in r)),\\'non_OK\\':[{\\'name\\':x[\\\
-        'name\\'],\\'result\\':x[\\'result\\']}for x in r if x[\\'result\\']!=\\'OK\\'],\\'nested_warning_lines\\\
-        ':[{\\'name\\':x[\\'name\\'],\\'lines\\':re.findall(r\\'^.*(?:#\\\\s*(?:SKIP|TODO)|status: (?:SKIP|FAIL|ERROR)).*$\\\
-        ',x.get(\\'stdout\\',\\'\\')+\\'\\\\n\\'+x.get(\\'stderr\\',\\'\\'),re.M|re.I)}for x in r if re.search(r\\\
-        '#\\\\s*(?:SKIP|TODO)|status: (?:SKIP|FAIL|ERROR)\\',x.get(\\'stdout\\',\\'\\')+\\'\\\\n\\'+x.get(\\'stderr\\\
-        ',\\'\\'),re.I)]};(A/\\'coverage.json\\').write_text(json.dumps(out,sort_keys=True));print(\\'NAV_OPUS_ORIGINAL_COVERAGE_JSON\
-        \ \\'+json.dumps(out,sort_keys=True),flush=True)\\nRECOUNT\\nexit \"$rc\"\\n')\nPath('/mnt/nav-lfs/sources/nav-opus-source-verify.py').write_text(\"\
-        from pathlib import Path\\nimport tarfile,hashlib,json\\nA=Path('/sources/nav-opus-evidence');x=json.loads((A/'source-lock.json').read_text());n=0\\\
+        \ l.strip()];assert collections.Counter((x[\\'name\\'].removeprefix(\\'opus:\\'),tuple(x[\\'command\\']))for\
+        \ x in r)==collections.Counter((x[\\'name\\'],tuple(x[\\'cmd\\']))for x in d);out={\\'classification\\':\\\
+        'FIRST full original configured Opus 1.6.1 suite, no source/test changes. Default disabled DRED/OSCE/Deep\
+        \ PLC/custom modes and non-native architecture coverage OPEN. No install/save. Base prior canonical evidence\
+        \ recovered, not replayed.\\',\\'discovered\\':len(d),\\'records\\':len(r),\\'results\\':dict(collections.Counter(x[\\\
+        'result\\']for x in r)),\\'non_OK\\':[{\\'name\\':x[\\'name\\'],\\'result\\':x[\\'result\\']}for x in r\
+        \ if x[\\'result\\']!=\\'OK\\'],\\'nested_warning_lines\\':[{\\'name\\':x[\\'name\\'],\\'lines\\':re.findall(r\\\
+        '^.*(?:#\\\\s*(?:SKIP|TODO)|status: (?:SKIP|FAIL|ERROR)).*$\\',x.get(\\'stdout\\',\\'\\')+\\'\\\\n\\'+x.get(\\\
+        'stderr\\',\\'\\'),re.M|re.I)}for x in r if re.search(r\\'#\\\\s*(?:SKIP|TODO)|status: (?:SKIP|FAIL|ERROR)\\\
+        ',x.get(\\'stdout\\',\\'\\')+\\'\\\\n\\'+x.get(\\'stderr\\',\\'\\'),re.I)]};(A/\\'coverage.json\\').write_text(json.dumps(out,sort_keys=True));print(\\\
+        'NAV_OPUS_ORIGINAL_COVERAGE_JSON \\'+json.dumps(out,sort_keys=True),flush=True)\\nRECOUNT\\nexit \"$rc\"\
+        \\n')\nPath('/mnt/nav-lfs/sources/nav-opus-source-verify.py').write_text(\"from pathlib import Path\\nimport\
+        \ tarfile,hashlib,json\\nA=Path('/sources/nav-opus-evidence');x=json.loads((A/'source-lock.json').read_text());n=0\\\
         nwith tarfile.open('/sources/'+x['filename'])as t:\\n for m in t:\\n  if m.isfile():\\n   p=Path('/sources')/m.name;assert\
         \ p.is_file()and not p.is_symlink()and hashlib.file_digest(p.open('rb'),'sha256').digest()==hashlib.sha256(t.extractfile(m).read()).digest(),m.name;n+=1\\\
         n(A/'source-integrity.json').write_text(json.dumps({'files_exact':n,'source_sha256':x['sha256']},sort_keys=True));print('NAV_OPUS_SOURCE_EXACT',n,flush=True)\\\
