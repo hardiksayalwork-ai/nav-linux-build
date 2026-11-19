@@ -164,6 +164,18 @@ jobs:
 
         mount --bind "$LFS" "$LFS"
 
+        # Resolver config is runtime-only within this namespace, never saved.
+
+        test -f /etc/resolv.conf
+
+        test ! -L "$LFS/etc/resolv.conf"
+
+        test -f "$LFS/etc/resolv.conf" || touch "$LFS/etc/resolv.conf"
+
+        mount --bind /etc/resolv.conf "$LFS/etc/resolv.conf"
+
+        mount -o remount,bind,ro "$LFS/etc/resolv.conf"
+
         mount --bind /dev "$LFS/dev"
 
         mount -t devpts devpts -o gid=5,mode=0620 "$LFS/dev/pts"
