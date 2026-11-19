@@ -1,0 +1,240 @@
+name: NAV x2654.2 original full TestBench and lossless cross-codec
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-x265-source-build
+  cancel-in-progress: false
+jobs:
+  x265:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
+        \ in /mnt/nav-de265-root.tar.zst /mnt/nav-x265-root.tar.zst; do\n test ! -e \"$bundle\"\n sudo install -o\
+        \ \"$(id -u)\" -g \"$(id -g)\" -m 0600 /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"$(stat -c '%u:%g:%a'\
+        \ \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n printf\
+        \ 'NAV_AOM_EXACT_RUNNER_OUTPUT\\n' > \"$probe/proof\"\n tar --zstd -cf \"$bundle\" -C \"$probe\" proof\n\
+        \ zstd -t \"$bundle\"\n tar --zstd -xOf \"$bundle\" proof > \"$probe/recovered\"\n cmp \"$probe/proof\"\
+        \ \"$probe/recovered\"\n # Match actions/cache extraction semantics, not only bundle writer access.\n test\
+        \ \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n cp \"$bundle\" \"$probe/expected-bundle\"\n\
+        \ relative_bundle=$(realpath --relative-to=\"$PWD\" \"$bundle\")\n tar --zstd -cf \"$probe/cache.tzst\"\
+        \ -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n env -u TAR_OPTIONS /usr/bin/tar -xf \"$probe/cache.tzst\"\
+        \ -P -C \"$PWD\" --use-compress-program unzstd > \"$probe/default-restore.log\" 2>&1\n negative_rc=$?\n\
+        \ set -e\n test \"$negative_rc\" = 2\n test ! -s \"$bundle\"\n grep -F 'Cannot open: File exists' \"$probe/default-restore.log\"\
+        \n TAR_OPTIONS=--overwrite /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program\
+        \ unzstd\n cmp \"$probe/expected-bundle\" \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"\
+        $(id -u):$(id -g):600\"\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS\
+        \ %s\\n' \"$bundle\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic\
+        \ failure evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"\
+        ><failure message=\"synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n\
+        \ f=p/name;f.write_bytes(data)\n subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\\
+        n    data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_X265_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing =\
+        \ []\\n    manifest['errors'].append({'area': str(p), 'error': repr(ex)})\\nfor item in sorted((x for x\
+        \ in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\n    rel = str(f.relative_to(p))\\n    wanted\
+        \ = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard'\
+        \ and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples'\
+        \ and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name,\
+        \ data)\\n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error':\
+        \ repr(ex)})\\nemit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\\
+        n    raise RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"\
+        '/mnt/nav-lfs/nav-build-metadata/aom-tooling'\",repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\n\
+        assert r.returncode==0,r.stderr\nparts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_X265_'):\n\
+        \  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\nm=json.loads(gzip.decompress(b''.join(parts['NAV_X265_EXPORT-MANIFEST_JSON_GZB64'])))\n\
+        assert not m['errors'] and len(m['files'])==len(expected)\nfor name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_X265_'+name+'_GZB64']))\n\
+        \ assert b==expected[v['source']] and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\n\
+        missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
+        assert r.returncode!=0 and 'NAV_X265_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_X265_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
+        EXPORT_SELFTEST\n"
+    - name: Restore verified libde265 intermediate
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-de265-root.tar.zst
+        key: nav-blfs13.1-x86_64-de265-open-v1
+        fail-on-cache-miss: true
+    - name: Verify and extract exact libde265 root
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf "6850f54971d3a49b4b3a6d5ffb5c3eec28ecc68637de8a95f928b39ca5de6486  /mnt/nav-de265-root.tar.zst\n"
+        | sha256sum -c -
+
+        zstd -t /mnt/nav-de265-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-de265-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/libde265/LIBDE265-TRANSITIONAL-OPEN.json
+
+        '
+    - name: Original x265 TestBench full default scope then installed cross-codec lossless
+      shell: bash
+      run: "python3 - <<'NAV_GUARD'\nimport os, pathlib, shutil, subprocess, time, signal, json\nmem = lambda :\
+        \ int(next((x.split()[1] for x in pathlib.Path('/proc/meminfo').read_text().splitlines() if x.startswith('MemAvailable:'))))\n\
+        assert os.cpu_count() >= 4\nassert mem() > 8 * 1024 ** 2\nassert shutil.disk_usage('/mnt').free > 12 * 1024\
+        \ ** 3\np = pathlib.Path('/tmp/nav-source-stage.sh')\np.write_text('set -euo pipefail\\nexport LFS=/mnt/nav-lfs\
+        \ LC_ALL=POSIX\\nulimit -v 4194304\\numask 022\\nmkdir -p \"$LFS/nav-build-metadata/x265\"\\npython3 - <<\\\
+        'DOWNLOAD\\'\\nfrom pathlib import Path,PurePosixPath\\nimport urllib.request,hashlib,tarfile,json\\nsrc={\\\
+        'filename\\': \\'x265_4.2.tar.gz\\', \\'url\\': \\'https://bitbucket.org/multicoreware/x265_git/downloads/x265_4.2.tar.gz\\\
+        ', \\'sha256\\': \\'40b1ea0453e0309f0eba934e0ddf533f8f6295966679e8894e8f1c1c8d5e1210\\', \\'md5\\': \\'0a7edcf495aba9f320047d61647d610b\\\
+        ', \\'top\\': \\'x265_4.2\\'}\\np=Path(\\'/mnt/nav-lfs/sources\\')/src[\\'filename\\']\\nwith urllib.request.urlopen(src[\\\
+        'url\\'],timeout=120)as r:p.write_bytes(r.read())\\nassert hashlib.file_digest(p.open(\\'rb\\'),\\'sha256\\\
+        ').hexdigest()==src[\\'sha256\\']\\nwith tarfile.open(p)as t:\\n for m in t.getmembers():\\n  q=PurePosixPath(m.name);assert\
+        \ not q.is_absolute()and \\'..\\'not in q.parts and q.parts[0]==src[\\'top\\']\\n  assert m.isfile()or m.isdir(),m.name\\\
+        n t.extractall(p.parent,filter=\\'data\\')\\nPath(\\'/mnt/nav-lfs/nav-build-metadata/x265/source-lock.json\\\
+        ').write_text(json.dumps(src,indent=2))\\nprint(\\'NAV_X265_SOURCE_SHA256_OK\\')\\nDOWNLOAD\\npython3 -\
+        \ <<\\'INNER\\'\\nfrom pathlib import Path\\nPath(\\'/mnt/nav-lfs/sources/x265-stage.sh\\').write_text(\\\
+        'set -euo pipefail\\\\numask 022\\\\nulimit -v 4194304\\\\nexport PATH=/usr/bin:/usr/sbin:/bin:/sbin LANG=C.UTF-8\
+        \ MAKEFLAGS=-j2\\\\nunset LC_ALL LANGUAGE\\\\nchmod 1777 /tmp /var/tmp\\\\nP=/nav-build-metadata/x265\\\\\
+        nmkdir -p \"$P\"\\\\ncd /sources/x265_4.2\\\\ncmake -S source -B bld -D CMAKE_INSTALL_PREFIX=/usr -D GIT_ARCHETYPE=1\
+        \ -D ENABLE_TESTS=ON -W no-author > \"$P/configure.log\" 2>&1\\\\ncmake --build bld -j2 > \"$P/build.log\"\
+        \ 2>&1\\\\ncp bld/CMakeCache.txt \"$P/CMakeCache.txt\"\\\\n# Original TestBench defaults: all four harnesses,\
+        \ every detected architecture, correctness and performance.\\\\nchown -R tester:tester bld \"$P\"\\\\nsu\
+        \ tester -c \\\\\\'cd /sources/x265_4.2/bld && ./test/TestBench --cpuid list\\\\\\' > \"$P/cpu-discovery.log\"\
+        \ 2>&1\\\\nset +e\\\\nsu tester -c \\\\\\'cd /sources/x265_4.2/bld && ./test/TestBench\\\\\\' > \"$P/original-TestBench.log\"\
+        \ 2>&1\\\\nrc=$?\\\\nset -e\\\\nprintf \\\\\\'%s\\\\\\\\n\\\\\\' \"$rc\" > \"$P/original-TestBench.exit\"\
+        \\\\npython3 - <<\\\\\\'TESTGATE\\\\\\'\\\\nfrom pathlib import Path\\\\nimport re,json,hashlib\\\\np=Path(\\\
+        \\\\'/nav-build-metadata/x265\\\\\\');d=(p/\\\\\\'cpu-discovery.log\\\\\\').read_text();log=(p/\\\\\\'original-TestBench.log\\\
+        \\\\').read_text();rc=int((p/\\\\\\'original-TestBench.exit\\\\\\').read_text());detected=[s.strip()for\
+        \ s in d.splitlines()if s.startswith(\\\\\\'       \\\\\\')];ran=re.findall(r\\\\\\'^Testing primitives:\
+        \ (\\\\\\\\S+)\\\\\\\\s*$\\\\\\',log,re.M)\\\\nassert rc==0,{\\\\\\'exit\\\\\\':rc,\\\\\\'tail\\\\\\':log[-3000:]}\\\
+        \\nassert detected and detected==ran,{\\\\\\'detected\\\\\\':detected,\\\\\\'ran\\\\\\':ran}\\\\nassert\
+        \ \\\\\\'8bit\\\\\\' in log and \\\\\\'Testing only harnesses\\\\\\'not in log and \\\\\\'Disabling performance\\\
+        \\\\'not in log\\\\nassert all(\\\\\\'== \\\\\\'+h+\\\\\\' primitives ==\\\\\\'in log for h in [\\\\\\'pixel\\\
+        \\\\',\\\\\\'transforms\\\\\\',\\\\\\'interp\\\\\\',\\\\\\'intrapred\\\\\\'])\\\\nassert \\\\\\'primitive\
+        \ has failed\\\\\\'not in log\\\\n(p/\\\\\\'test-audit.json\\\\\\').write_text(json.dumps({\\\\\\'original_unmodified_TestBench_exit\\\
+        \\\\':rc,\\\\\\'bit_depth\\\\\\':8,\\\\\\'detected_architectures\\\\\\':detected,\\\\\\'executed_architectures\\\
+        \\\\':ran,\\\\\\'scope\\\\\\':\\\\\\'all default four harnesses, correctness and performance, no filters\\\
+        \\\\',\\\\\\'case_or_assertion_count\\\\\\':\\\\\\'not reported by upstream, not invented\\\\\\',\\\\\\\
+        'log_sha256\\\\\\':hashlib.sha256(log.encode()).hexdigest()},indent=2))\\\\nTESTGATE\\\\ncmake --install\
+        \ bld > \"$P/install.log\" 2>&1\\\\nldconfig\\\\nif [ -f /usr/lib/libx265.a ];then rm /usr/lib/libx265.a;fi\\\
+        \\npkg-config --modversion x265 > \"$P/installed-version.log\"\\\\ntest \"$(cat \"$P/installed-version.log\"\
+        )\" = 4.2\\\\nldd /usr/bin/x265 > \"$P/installed-linkage.log\" 2>&1\\\\n! grep -q \\\\\\'not found\\\\\\\
+        ' \"$P/installed-linkage.log\"\\\\ntest -f /usr/include/x265.h\\\\ntest -f /usr/lib/libx265.so\\\\npython3\
+        \ - <<\\\\\\'PIXELS\\\\\\'\\\\nfrom pathlib import Path\\\\nimport subprocess,tempfile,hashlib,json,shutil\\\
+        \\np=Path(\\\\\\'/nav-build-metadata/x265\\\\\\');d=Path(tempfile.mkdtemp(prefix=\\\\\\'nav-x265-installed-\\\
+        \\\\',dir=\\\\\\'/tmp\\\\\\'));data=bytes((i*7+13)%256 for i in range(64*64))+bytes((i*3+71)%256 for i in\
+        \ range(2*32*32));(d/\\\\\\'input.yuv\\\\\\').write_bytes(data)\\\\nwith(p/\\\\\\'installed-lossless-cross-codec.log\\\
+        \\\\').open(\\\\\\'w\\\\\\')as log:\\\\n subprocess.run([\\\\\\'/usr/bin/x265\\\\\\',\\\\\\'--input\\\\\\\
+        ',str(d/\\\\\\'input.yuv\\\\\\'),\\\\\\'--input-res\\\\\\',\\\\\\'64x64\\\\\\',\\\\\\'--fps\\\\\\',\\\\\\\
+        '1\\\\\\',\\\\\\'--frames\\\\\\',\\\\\\'1\\\\\\',\\\\\\'--input-csp\\\\\\',\\\\\\'i420\\\\\\',\\\\\\'--input-depth\\\
+        \\\\',\\\\\\'8\\\\\\',\\\\\\'--lossless\\\\\\',\\\\\\'--preset\\\\\\',\\\\\\'ultrafast\\\\\\',\\\\\\'--pools\\\
+        \\\\',\\\\\\'none\\\\\\',\\\\\\'--frame-threads\\\\\\',\\\\\\'2\\\\\\',\\\\\\'--no-wpp\\\\\\',\\\\\\'-o\\\
+        \\\\',str(d/\\\\\\'output.hevc\\\\\\')],stdout=log,stderr=subprocess.STDOUT,check=True)\\\\n subprocess.run([\\\
+        \\\\'/usr/bin/dec265\\\\\\',\\\\\\'-q\\\\\\',\\\\\\'-t\\\\\\',\\\\\\'2\\\\\\',\\\\\\'-o\\\\\\',str(d/\\\\\
+        \\'decoded.yuv\\\\\\'),str(d/\\\\\\'output.hevc\\\\\\')],stdout=log,stderr=subprocess.STDOUT,check=True)\\\
+        \\nassert(d/\\\\\\'decoded.yuv\\\\\\').read_bytes()==data\\\\n(p/\\\\\\'installed-lossless-pixels.json\\\
+        \\\\').write_text(json.dumps({\\\\\\'bytes\\\\\\':len(data),\\\\\\'sha256\\\\\\':hashlib.sha256(data).hexdigest(),\\\
+        \\\\'pixel_exact\\\\\\':True,\\\\\\'encoder\\\\\\':\\\\\\'installed x2654.2\\\\\\',\\\\\\'decoder\\\\\\\
+        ':\\\\\\'installed libde2651.1.3\\\\\\'},indent=2))\\\\nq=Path(\\\\\\'/nav-build-metadata/libde265/LIBDE265-TRANSITIONAL-OPEN.json\\\
+        \\\\');a=json.loads(q.read_text());a[\\\\\\'decoder_roundtrip\\\\\\']=\\\\\\'PASS installed x2654.2 lossless6144byte\
+        \ pixels exact, /nav-build-metadata/x265/installed-lossless-pixels.json\\\\\\';q.write_text(json.dumps(a,indent=2))\\\
+        \\nshutil.rmtree(d)\\\\nPIXELS\\\\npython3 - <<\\\\\\'AUDIT\\\\\\'\\\\nfrom pathlib import Path\\\\nimport\
+        \ json\\\\np=Path(\\\\\\'/nav-build-metadata/x265\\\\\\');a={\\\\\\'classification\\\\\\':\\\\\\'TRANSITIONAL\
+        \ ONLY, not OS acceptance; all inherited gaps remain OPEN\\\\\\',\\\\\\'version\\\\\\':\\\\\\'4.2\\\\\\\
+        ',\\\\\\'source_patches\\\\\\':[],\\\\\\'options\\\\\\':\\\\\\'BLFS64bit defaults plus ENABLE_TESTS=ON for\
+        \ original TestBench; no test filters\\\\\\',\\\\\\'test_audit\\\\\\':json.loads((p/\\\\\\'test-audit.json\\\
+        \\\\').read_text()),\\\\\\'installed_version_linkage_lossless_pixels\\\\\\':\\\\\\'PASS\\\\\\',\\\\\\'inherited_audit\\\
+        \\\\':\\\\\\'/nav-build-metadata/libde265/LIBDE265-TRANSITIONAL-OPEN.json\\\\\\',\\\\\\'jobs\\\\\\':2,\\\
+        \\\\'memory_cap_KiB\\\\\\':4194304}\\\\n(p/\\\\\\'X265-TRANSITIONAL-OPEN.json\\\\\\').write_text(json.dumps(a,indent=2));(p/\\\
+        \\\\'BUNDLE-NOTES.txt\\\\\\').write_text(\\\\\\'TRANSITIONAL ONLY. NOT OS ACCEPTANCE. All inherited gaps\
+        \ remain OPEN.\\\\\\\\nOriginal default8bit TestBench all harnesses and detected CPU architectures run,\
+        \ no assertion count invented. Installed x265->libde265 lossless6144byte pixel check.\\\\\\\\n\\\\\\')\\\
+        \\nprint(\\\\\\'NAV_X265_ORIGINAL_TESTBENCH_AND_INSTALLED_LOSSLESS_PASS\\\\\\')\\\\nAUDIT\\\\n\\')\\nINNER\\\
+        nsudo chown -hR root:root \"$LFS\"\\nsudo chown -R 101:101 \"$LFS/home/tester\"\\nsudo env LFS=\"$LFS\"\
+        \ unshare --mount --propagation private /bin/bash <<\\'NAV_MOUNT\\'\\nset -euo pipefail\\nmount --bind \"\
+        $LFS\" \"$LFS\"\\nmkdir -p \"$LFS\"/{dev,proc,sys,run}\\nmount --bind /dev \"$LFS/dev\"\\nmount -t devpts\
+        \ devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\\nmount -t proc proc \"$LFS/proc\"\\nmount -t sysfs -o ro sysfs\
+        \ \"$LFS/sys\"\\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\\nif [ -h \"$LFS/dev/shm\" ];then install\
+        \ -d -m1777 \"$LFS$(realpath /dev/shm)\";else mount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/dev/shm\";fi\\\
+        nchroot \"$LFS\" /usr/bin/env -i HOME=/root TERM=dumb PATH=/usr/bin:/usr/sbin MAKEFLAGS=-j2 LC_ALL=POSIX\
+        \ /bin/bash --noprofile --norc /sources/x265-stage.sh\\nNAV_MOUNT\\nsudo python3 - <<\\'CLEAN\\'\\nfrom\
+        \ pathlib import Path\\nimport shutil\\nroot=Path(\\'/mnt/nav-lfs/sources\\');p=root/\\'x265_4.2\\';assert\
+        \ p.is_dir()and not p.is_symlink();shutil.rmtree(p)\\nfor name in [\\'x265-stage.sh\\',\\'x265_4.2.tar.gz\\\
+        ']:(root/name).unlink()\\nassert not (root/\\'numpy-tooling-prefix\\').exists()\\nCLEAN\\nsudo chown -hR\
+        \ \"$(id -u):$(id -g)\" \"$LFS\"\\nsudo chown root:root \"$LFS/usr/bin/fusermount3\"\\nsudo chmod 4755 \"\
+        $LFS/usr/bin/fusermount3\"\\ntest \"$(du -sb \"$LFS\"|cut -f1)\" -lt 5368709120\\n')\nstart = time.monotonic()\n\
+        log = open('/tmp/nav-source-stage.log', 'w')\nproc = subprocess.Popen(['bash', str(p)], stdout=log, stderr=subprocess.STDOUT,\
+        \ start_new_session=True, preexec_fn=lambda : os.sched_setaffinity(0, sorted(os.sched_getaffinity(0))[:2]))\n\
+        try:\n    while proc.poll() is None:\n        free = shutil.disk_usage('/mnt').free\n        available =\
+        \ mem()\n        if free < 4 * 1024 ** 3 or available < 2 * 1024 ** 2 or time.monotonic() - start > 315\
+        \ * 60:\n            raise RuntimeError('resource or stage-time safety floor reached')\n        print(json.dumps({'elapsed_seconds':\
+        \ round(time.monotonic() - start), 'free_disk_bytes': free, 'available_memory_kib': available}), flush=True)\n\
+        \        time.sleep(20)\n    if proc.returncode:\n        raise RuntimeError('source-build failed with status\
+        \ ' + str(proc.returncode))\nfinally:\n    if proc.poll() is None:\n        os.killpg(proc.pid, signal.SIGTERM)\n\
+        \        try:\n            proc.wait(timeout=10)\n        except subprocess.TimeoutExpired:\n          \
+        \  os.killpg(proc.pid, signal.SIGKILL)\n            proc.wait()\n    log.close()\n    lines = pathlib.Path('/tmp/nav-source-stage.log').read_text(errors='replace').splitlines()\n\
+        \    print('\\n'.join(lines[-80:]))\n    print('\\n'.join((x for x in lines if any((k in x for k in ['SOURCE_SHA256_OK',\
+        \ 'BEGIN_FINAL_PACKAGE', 'DONE_FINAL_PACKAGE', 'NAV_PACKAGE', 'NAV_INPUT', 'NAV_QT', 'NAV_DISPLAY', 'NAV_TEST',\
+        \ 'NAV_BISON', 'NAV_TESTER', 'NAV_KF6', 'Totals:', 'FAIL!', 'SKIP', 'platform plugin', 'could not connect',\
+        \ 'NAV_GST', 'NAV_FUSE', 'NAV_PORTAL'])))))\n    import base64, gzip, subprocess, os, hashlib, json\n  \
+        \  mode = 'build'\n    p = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/x265')\n    manifest = {'mode':\
+        \ mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\n\n    def emit(name, data):\n        data\
+        \ = gzip.compress(data, mtime=0)\n        for i in range(0, len(data), 3000):\n            print('NAV_X265_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\n    try:\n        listing\
+        \ = subprocess.check_output(['sudo', 'find', str(p), '-type', 'f', '-print0']).split(b'\\x00')\n    except\
+        \ Exception as ex:\n        listing = []\n        manifest['errors'].append({'area': str(p), 'error': repr(ex)})\n\
+        \    for item in sorted((x for x in listing if x)):\n        f = pathlib.Path(os.fsdecode(item))\n     \
+        \   rel = str(f.relative_to(p))\n        wanted = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/')))\
+        \ or (mode == 'shard' and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list')))\
+        \ or (mode == 'examples' and rel.startswith('original-examples'))\n        if wanted:\n            try:\n\
+        \                data = subprocess.check_output(['sudo', 'cat', str(f)])\n                name = rel.replace('/',\
+        \ '-').replace('.', '_').upper()\n                manifest['files'][name] = {'source': rel, 'bytes': len(data),\
+        \ 'sha256': hashlib.sha256(data).hexdigest()}\n                emit(name, data)\n            except Exception\
+        \ as ex:\n                manifest['errors'].append({'file': rel, 'error': repr(ex)})\n    emit('EXPORT-MANIFEST_JSON',\
+        \ json.dumps(manifest, indent=2).encode())\n    if manifest['errors']:\n        raise RuntimeError('independent\
+        \ evidence export errors: ' + repr(manifest['errors']))\n\nNAV_GUARD\n"
+    - name: Build candidate archive and independently replay complete root metadata and hashes
+      shell: bash
+      run: "set -euo pipefail\nroot=$(du -sb /mnt/nav-lfs|cut -f1)\ntest \"$root\" -lt 5368709120\ntar --zstd -cf\
+        \ /mnt/nav-x265-root.tar.zst -C /mnt/nav-lfs .\nzstd -t /mnt/nav-x265-root.tar.zst\ntar --zstd -tf /mnt/nav-x265-root.tar.zst\
+        \ > /tmp/nav-x265-members\n! grep -Eq '^./sources/(numpy-tooling-prefix|libaom-3.15.3/|aom-testdata/|libde265-1.1.3/|x265_4.2/)'\
+        \ /tmp/nav-x265-members\ngrep -qx './usr/include/x265.h' /tmp/nav-x265-members\nsudo mkdir /mnt/nav-x265-replay\n\
+        sudo tar --zstd -xf /mnt/nav-x265-root.tar.zst -C /mnt/nav-x265-replay\nsudo python3 - <<'INDEPENDENT'\n\
+        from pathlib import Path\nimport os,stat,hashlib,json\n\ndef manifest(root):\n root=Path(root);out={}\n\
+        \ for d,dirs,files in os.walk(root,followlinks=False):\n  for p in [Path(d)]+[Path(d)/n for n in files]+[Path(d)/n\
+        \ for n in dirs if (Path(d)/n).is_symlink()]:\n   s=p.lstat();x={'type':stat.S_IFMT(s.st_mode),'mode':stat.S_IMODE(s.st_mode),'uid':s.st_uid,'gid':s.st_gid,'mtime':int(s.st_mtime)}\n\
+        \   if stat.S_ISREG(s.st_mode):x.update(bytes=s.st_size,sha256=hashlib.file_digest(p.open('rb'),'sha256').hexdigest())\n\
+        \   elif stat.S_ISLNK(s.st_mode):x['link']=os.readlink(p)\n   elif not stat.S_ISDIR(s.st_mode):x['rdev']=s.st_rdev\n\
+        \   out[str(p.relative_to(root))]=x\n return out\nleft=manifest('/mnt/nav-lfs');right=manifest('/mnt/nav-x265-replay');assert\
+        \ left==right,{'only_left':list(set(left)-set(right))[:10],'different':[k for k in set(left)&set(right)if\
+        \ left[k]!=right[k]][:10]}\np=Path('/mnt/nav-x265-root.tar.zst');proof={'classification':'TRANSITIONAL only,\
+        \ not OS acceptance, inherited gaps OPEN','bundle_bytes':p.stat().st_size,'bundle_sha256':hashlib.file_digest(p.open('rb'),'sha256').hexdigest(),'independent_full_replay_manifest_equal':True,'paths':len(left),'manifest_sha256':hashlib.sha256(json.dumps(left,sort_keys=True).encode()).hexdigest(),'audit':json.loads(Path('/mnt/nav-lfs/nav-build-metadata/x265/X265-TRANSITIONAL-OPEN.json').read_text()),'pixels':json.loads(Path('/mnt/nav-lfs/nav-build-metadata/x265/installed-lossless-pixels.json').read_text())}\n\
+        Path('/tmp/x265-candidate-proof.json').write_text(json.dumps(proof,sort_keys=True));print('NAV_X265_CANDIDATE_PROOF_JSON\
+        \ '+json.dumps(proof,sort_keys=True),flush=True)\nINDEPENDENT\nsudo rm -rf /mnt/nav-x265-replay\n"
+    - name: Wait for externally verified rolling intermediate cleanup and live budget
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'BUDGET'\nfrom pathlib import Path\nimport ctypes,ctypes.util,urllib.request,json,time,hashlib\n\
+        p=Path('/mnt/nav-x265-root.tar.zst');proof=json.loads(Path('/tmp/x265-candidate-proof.json').read_text());assert\
+        \ hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==proof['bundle_sha256']\nz=ctypes.CDLL(ctypes.util.find_library('zstd'));z.ZSTD_compressBound.argtypes=[ctypes.c_size_t];z.ZSTD_compressBound.restype=ctypes.c_size_t;worst=z.ZSTD_compressBound(p.stat().st_size+1024**2)+64*1024**2\n\
+        baseline={10734021888,10710908926,10700939007,10696846187,10516363617,10515953327,10511354384,10508735204,10480998516,10480209539}\n\
+        for attempt in range(25):\n req=urllib.request.Request('https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/actions/caches?per_page=100',headers={'Accept':'application/vnd.github+json'})\n\
+        \ with urllib.request.urlopen(req,timeout=60)as r:d=json.load(r)\n rows=d['actions_caches'];assert d['total_count']==len(rows)<=100;ids={x['id']for\
+        \ x in rows};assert baseline<=ids\n assert 'nav-blfs13.1-x86_64-x265-open-v1'not in{x['key']for x in rows}\n\
+        \ existing=sum(x['size_in_bytes']for x in rows)\n if existing+worst<10*1024**3:\n  print('NAV_X265_ROOT_MEASURED_CACHE_GATE\
+        \ '+json.dumps({'existing':existing,'bundle_bytes':p.stat().st_size,'bundle_sha256':proof['bundle_sha256'],'new_cache_upper':worst,'worst_total':existing+worst,'limit':10*1024**3}),flush=True);break\n\
+        \ assert 10785285884 in ids,'Budget still insufficient after permitted new intermediate disappeared; refuse\
+        \ wider deletion'\n print('NAV_X265_AWAITING_APPROVED_ROLLING_CACHE_REMOVAL candidate verified, only new\
+        \ de26510785285884 eligible, baseline10protected',flush=True)\n if attempt==24:raise RuntimeError('bounded120minute\
+        \ budget wait exhausted, no save')\n time.sleep(300)\nBUDGET\n"
+    - name: Save TRANSITIONAL x265 root inherited gaps OPEN
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-x265-root.tar.zst
+        key: nav-blfs13.1-x86_64-x265-open-v1
