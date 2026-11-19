@@ -128,7 +128,10 @@ jobs:
         for name,v in P['manifest'].items():\n p=Path('/mnt/nav-lfs')/name\n if v['type']==stat.S_IFREG:assert p.is_file()and\
         \ hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==v['sha256'],name\n if v['type']==stat.S_IFLNK:assert\
         \ p.is_symlink()and os.readlink(p)==v['link'],name\nA=Path('/mnt/nav-lfs/sources/nav-gtk-evidence');A.mkdir(parents=True,exist_ok=True);(A/'prerequisite-replay.json').write_text(json.dumps({'paths_exact':len(actual),'bundle_sha256':P['bundle_sha256'],'bundle_bytes':P['bundle_bytes'],'all_inherited_gaps':'OPEN','original_tests_replayed':False},sort_keys=True));print('NAV_GTK_PREREQUISITE_REPLAY_EXACT',len(actual),flush=True)\n\
-        VERIFY\n"
+        VERIFY\nsudo chown -R \"$(id -u):$(id -g)\" /mnt/nav-lfs/sources/nav-gtk-evidence\ntest -w /mnt/nav-lfs/sources/nav-gtk-evidence\n\
+        probe=$(mktemp -d /mnt/nav-lfs/sources/nav-gtk-evidence/owner-selftest.XXXXXX)\nprintf '%s\\\\n' 'NAV_GTK_RUNNER_EVIDENCE_WRITE_PASS'\
+        \ > \"$probe/proof\"\nsudo chown -R root:root \"$probe\"\nsudo chmod 600 \"$probe/proof\"\nsudo cat \"$probe/proof\"\
+        \nsudo chown -R \"$(id -u):$(id -g)\" \"$probe\"\ncat \"$probe/proof\"\n"
     - name: Authenticated recover and strict recount original32Shaderc exports no canonical replay
       env:
         GH_TOKEN: ${{ github.token }}
