@@ -217,22 +217,47 @@ jobs:
         \ x in delta];(A/\\'base-delta-discovery.json\\').write_text(json.dumps(delta,sort_keys=True));print(\\\
         'NAV_THEORABASE_NEW_DELTA_JSON \\'+json.dumps(delta,sort_keys=True),flush=True)\\nDELTA\\nninja -C build\
         \ -j2 2>&1 | tee \"$A/base-build.log\"\\npython3 /sources/nav-theorabase-source-verify.py\\npython3 - <<\\\
-        'EXACT\\'\\nfrom pathlib import Path\\nimport json\\nA=Path(\\'/sources/nav-theorabase-evidence\\')\\nfor\
-        \ n in [\\'base-discovery.json\\',\\'base-delta-discovery.json\\',\\'base-options.json\\']:\\n a=json.loads((A/n).read_text());b=json.loads((A/\\\
-        'original-delta\\'/n).read_text());assert a==b,(\\'STOP exact original delta configuration/discovery differs\\\
-        ',n)\\nprint(\\'NAV_THEORABASE_INSTALL_EXACT138_DELTA3_NO_TEST_REPLAY\\',flush=True)\\nEXACT\\ninstall -m0755\
-        \ build/ext/theora/libgsttheora.so \"$P/usr/lib/gstreamer-1.0/\"\\nLD_LIBRARY_PATH=\"$P/usr/lib\" GST_PLUGIN_PATH_1_0=\"\
-        $P/usr/lib/gstreamer-1.0\" GST_REGISTRY=/tmp/nav-theorabase-api.registry python3 - <<\\'SMOKE\\' | tee \"\
-        $A/staged-api-smoke.log\"\\nimport gi,json\\ngi.require_version(\\'Gst\\',\\'1.0\\');from gi.repository\
-        \ import Gst\\nGst.init(None);out={}\\nfor n in [\\'theoraenc\\',\\'theoradec\\']:\\n f=Gst.ElementFactory.find(n);assert\
-        \ f;p=Gst.Registry.get().find_plugin(f.get_plugin_name());assert p.get_filename()==\\'/sources/nav-theorabase-payload/usr/lib/gstreamer-1.0/libgsttheora.so\\\
-        ';assert f.create(None)is not None;out[n]=p.get_filename()\\nprint(\\'NAV_THEORABASE_SEPARATE_STAGED_API_JSON\
-        \ \\'+json.dumps(out,sort_keys=True))\\nSMOKE\\npython3 - <<\\'AUDIT\\'\\nfrom pathlib import Path\\nimport\
-        \ json,hashlib,os\\nA=Path(\\'/sources/nav-theorabase-evidence\\');P=Path(\\'/sources/nav-theorabase-payload\\\
-        ');files={}\\nfor p in P.rglob(\\'*\\'):\\n if p.is_symlink():files[str(p.relative_to(P))]={\\'link\\':os.readlink(p)}\\\
-        n elif p.is_file():files[str(p.relative_to(P))]={\\'bytes\\':p.stat().st_size,\\'sha256\\':hashlib.file_digest(p.open(\\\
-        'rb\\'),\\'sha256\\').hexdigest()}\\nassert (P/\\'usr/lib/gstreamer-1.0/libgsttheora.so\\').is_file();assert\
-        \ {str(p.relative_to(P))for p in(P/\\'usr/lib/gstreamer-1.0\\').iterdir()}=={\\'usr/lib/gstreamer-1.0/libgsttheora.so\\\
+        'EXACT\\'\\nfrom pathlib import Path\\nimport json\\nA=Path(\\'/sources/nav-theorabase-evidence\\')\\nimport\
+        \ collections,subprocess,re,copy,hashlib\\nallpaths=set();permuted=0\\nfor name in [\\'base-discovery.json\\\
+        ',\\'base-delta-discovery.json\\']:\\n new=json.loads((A/name).read_text());old=json.loads((A/\\'original-delta\\\
+        '/name).read_text());assert len(new)==len(old)\\n for x,y in zip(new,old):\\n  xx=copy.deepcopy(x);yy=copy.deepcopy(y);xe=xx[\\\
+        'env\\'];ye=yy[\\'env\\'];assert set(xe)==set(ye)\\n  if \\'LD_LIBRARY_PATH\\'in xe:\\n   xp=xe.pop(\\'LD_LIBRARY_PATH\\\
+        ').split(\\':\\');yp=ye.pop(\\'LD_LIBRARY_PATH\\').split(\\':\\');assert collections.Counter(xp)==collections.Counter(yp);assert\
+        \ len(xp)==len(set(xp));allpaths.update(xp);permuted+=xp!=yp\\n  assert xx==yy,(name,x[\\'name\\'],\\'non-order\
+        \ difference\\')\\nseen={};basenames={};rows=[];object_directories=[]\\nfor directory in sorted(allpaths):\\\
+        n root=Path(directory);assert root.is_dir()and root.is_relative_to(\\'/sources/gst-plugins-base-1.28.6/build/gst-libs/gst\\\
+        ');matches=sorted(root.glob(\\'*.so*\\'));files=[f for f in matches if f.is_file()];assert files,directory;assert\
+        \ all(f.is_file()or(f.is_dir()and not f.is_symlink())for f in matches);resolved=set();object_directories.extend(str(f)for\
+        \ f in matches if f.is_dir())\\n for f in files:\\n  target=f.resolve(strict=True);assert target.parent==root\\\
+        n  if f.name in basenames:assert basenames[f.name]==directory,(\\'CROSS_DIRECTORY_BASENAME_COLLISION\\',f.name)\\\
+        n  basenames[f.name]=directory\\n  if target in resolved:continue\\n  resolved.add(target);out=subprocess.check_output([\\\
+        'readelf\\',\\'-d\\',str(target)],text=True);sonames=re.findall(r\\'\\\\(SONAME\\\\).*?\\\\[([^\\\\]]+)\\\
+        \\]\\',out);assert len(sonames)==1,str(target);soname=sonames[0]\\n  if soname in seen:assert seen[soname]==directory,(\\\
+        'CROSS_DIRECTORY_SONAME_COLLISION\\',soname)\\n  seen[soname]=directory;rows.append({\\'file\\':str(target),\\\
+        'SONAME\\':soname,\\'sha256\\':hashlib.file_digest(target.open(\\'rb\\'),\\'sha256\\').hexdigest()})\\nproof={\\\
+        'classification\\':\\'Both raw discoveries retained. All other fields exact, identical LD path multisets.\
+        \ No cross-directory SONAME or loadable basename collisions. Search-order permutation cannot change library\
+        \ selection within these paths. NO original binary-equivalence claim.\\',\\'object_directories_not_loadable\\\
+        ':object_directories,\\'directories\\':sorted(allpaths),\\'permuted_records_including_delta\\':permuted,\\\
+        'libraries\\':rows,\\'basename_owners\\':basenames,\\'SONAME_owners\\':seen};(A/\\'library-search-order-proof.json\\\
+        ').write_text(json.dumps(proof,sort_keys=True));ledger=json.loads((A/\\'canonical-ledger.json\\').read_text());ledger[\\\
+        'library_search_order_proof\\']=proof;(A/\\'canonical-ledger.json\\').write_text(json.dumps(ledger,sort_keys=True));print(\\\
+        'NAV_THEORABASE_INSTALL_SEARCH_ORDER_PROOF_JSON \\'+json.dumps(proof,sort_keys=True),flush=True)\\n\\nnew=json.loads((A/\\\
+        'base-options.json\\').read_text());old=json.loads((A/\\'original-delta/base-options.json\\').read_text());assert\
+        \ len(new)==len(old)==len({x[\\'name\\']for x in new})==len({x[\\'name\\']for x in old});assert {x[\\'name\\\
+        ']:x for x in new}=={x[\\'name\\']:x for x in old}\\nprint(\\'NAV_THEORABASE_INSTALL_EXACT138_DELTA3_WITH_SEARCH_ORDER_PROOF_NO_REPLAY\\\
+        ',flush=True)\\nEXACT\\ninstall -m0755 build/ext/theora/libgsttheora.so \"$P/usr/lib/gstreamer-1.0/\"\\\
+        nLD_LIBRARY_PATH=\"$P/usr/lib\" GST_PLUGIN_PATH_1_0=\"$P/usr/lib/gstreamer-1.0\" GST_REGISTRY=/tmp/nav-theorabase-api.registry\
+        \ python3 - <<\\'SMOKE\\' | tee \"$A/staged-api-smoke.log\"\\nimport gi,json\\ngi.require_version(\\'Gst\\\
+        ',\\'1.0\\');from gi.repository import Gst\\nGst.init(None);out={}\\nfor n in [\\'theoraenc\\',\\'theoradec\\\
+        ']:\\n f=Gst.ElementFactory.find(n);assert f;p=Gst.Registry.get().find_plugin(f.get_plugin_name());assert\
+        \ p.get_filename()==\\'/sources/nav-theorabase-payload/usr/lib/gstreamer-1.0/libgsttheora.so\\';assert f.create(None)is\
+        \ not None;out[n]=p.get_filename()\\nprint(\\'NAV_THEORABASE_SEPARATE_STAGED_API_JSON \\'+json.dumps(out,sort_keys=True))\\\
+        nSMOKE\\npython3 - <<\\'AUDIT\\'\\nfrom pathlib import Path\\nimport json,hashlib,os\\nA=Path(\\'/sources/nav-theorabase-evidence\\\
+        ');P=Path(\\'/sources/nav-theorabase-payload\\');files={}\\nfor p in P.rglob(\\'*\\'):\\n if p.is_symlink():files[str(p.relative_to(P))]={\\\
+        'link\\':os.readlink(p)}\\n elif p.is_file():files[str(p.relative_to(P))]={\\'bytes\\':p.stat().st_size,\\\
+        'sha256\\':hashlib.file_digest(p.open(\\'rb\\'),\\'sha256\\').hexdigest()}\\nassert (P/\\'usr/lib/gstreamer-1.0/libgsttheora.so\\\
+        ').is_file();assert {str(p.relative_to(P))for p in(P/\\'usr/lib/gstreamer-1.0\\').iterdir()}=={\\'usr/lib/gstreamer-1.0/libgsttheora.so\\\
         '}\\nout={\\'payload\\':files,\\'canonical\\':json.loads((A/\\'canonical-ledger.json\\').read_text()),\\\
         'source_integrity\\':json.loads((A/\\'source-integrity.json\\').read_text())};(A/\\'audit.json\\').write_text(json.dumps(out,sort_keys=True));print(\\\
         'NAV_THEORABASE_INSTALL_PAYLOAD_AUDIT_JSON \\'+json.dumps(out,sort_keys=True),flush=True)\\nAUDIT\\nmkdir\
