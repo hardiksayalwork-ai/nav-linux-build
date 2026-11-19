@@ -1,11 +1,11 @@
-name: NAV native fixture verification fourverifiedbundles explicit bus errors no original test replay
+name: NAV FFmpeg READ ONLY capability inventory nobuild notests noinstall nosave
 'on':
   workflow_dispatch: {}
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: nav-native-fixture-verification
+  group: nav-ffmpeg-native-inventory
   cancel-in-progress: false
 jobs:
   inventory:
@@ -176,39 +176,22 @@ jobs:
         \ priorBase134OK+newOpus1program6casesOK. Hardware/optional/inherited OPEN gaps retained. No installation/save\
         \ in corrected diagnostic.','original_run':'https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44602532063/job/135837472874','original_exports_verified':123,'original_results':{'OK':97,'FAIL':5,'SKIP':2}};(A/'original-canonical-ledger.json').write_text(json.dumps(ledger,sort_keys=True));print('NAV_GSTBAD_CORRECTED_ORIGINAL_LEDGER_JSON\
         \ '+json.dumps(ledger,sort_keys=True),flush=True)\n\nRECOVER\nsudo chroot /mnt/nav-lfs /usr/sbin/ldconfig\n"
-    - name: Unchanged six original locked fixtures no substitutes
-      shell: bash
-      run: "set -euo pipefail\npython3 - <<'FIXTURES'\nfrom pathlib import Path\nimport urllib.request,hashlib,json\n\
-        A=Path('/mnt/nav-lfs/sources/nav-media-inventory-fixtures');A.mkdir()\nrows=[{'bytes': 82764, 'filename':\
-        \ 'audio.ogg', 'sha256': '8c8da16277dad52580709cb3428a54d591b7a8735dbad8773818c79b1959f45b', 'url': 'https://gstreamer.freedesktop.org/data/media/small/audio.ogg'},\
-        \ {'bytes': 97691, 'filename': 'audio-video.ogg', 'sha256': '10a124058f5dc25461a67f898da0f7647c0d39e35000ddf7ad5382c3be1ba2da',\
-        \ 'url': 'https://gstreamer.freedesktop.org/data/media/small/audio-video.ogg'}, {'bytes': 4387, 'filename':\
-        \ 'audio-short.ogg', 'sha256': 'f3d3ba4443923a4441705a3621bd77495fbef575bd67ab17f5c1ba2586f54a89', 'url':\
-        \ 'https://gstreamer.freedesktop.org/data/media/small/audio-short.ogg'}, {'bytes': 7350, 'filename': 'audio-video-short.ogg',\
-        \ 'sha256': 'ab9a1446877a9446d168a2b717ffcfca73477b116a7a981c632532d3be585929', 'url': 'https://gstreamer.freedesktop.org/data/media/small/audio-video-short.ogg'},\
-        \ {'bytes': 4053220, 'filename': 'sintel.mkv', 'sha256': '781f00f7815b6cec7eab5ee5e56e5022822bbd88595c4a74ba9f389a2443c19c',\
-        \ 'url': 'https://gstreamer.freedesktop.org/data/media/small/sintel.mkv'}, {'bytes': 197, 'filename': 'test_sub.srt',\
-        \ 'sha256': 'be358ae462b9c32ee6e00af9d31793dbe7c1abf0662253b484845a6f480bcf46', 'url': 'https://gstreamer.freedesktop.org/data/media/small/test_sub.srt'}]\n\
-        for x in rows:\n with urllib.request.urlopen(x['url'],timeout=120)as r:b=r.read()\n assert len(b)==x['bytes']and\
-        \ hashlib.sha256(b).hexdigest()==x['sha256']\n (A/x['filename']).write_bytes(b)\nprint('NAV_MEDIA_ALL6_ORIGINAL_FIXTURES_BYTES_SHA_EXACT',flush=True)\n\
-        FIXTURES\n"
-    - name: READ ONLY factory inventory unchanged fixtures explicit bus error playback no original tests
+    - name: READ ONLY FFmpeg tools pkgconfig sharedlibs metadata no build tests install save
       shell: bash
       run: "set -euo pipefail\nsudo chroot /mnt/nav-lfs /usr/bin/env -i HOME=/tmp PATH=/usr/bin:/usr/sbin:/bin:/sbin\
-        \ LC_ALL=C /usr/bin/python3 - <<'INVENTORY'\nfrom pathlib import Path\nimport subprocess,json,os,shutil,hashlib\n\
-        A=Path('/sources/nav-media-inventory-fixtures');names=['matroskademux','h264parse','aacparse','mpegaudioparse','avdec_h264','openh264dec','vah264dec','vaapih264dec','avdec_aac','faad','fdkaacdec','avdec_mp3','mpg123audiodec','mad','oggdemux','vorbisdec','theoradec','opusdec','decodebin','uridecodebin','typefind','filesrc','fakesink','queue','subparse']\n\
-        out={'classification':'READ ONLY separate native factory and unchanged-fixture playback inspection. No original\
-        \ tests rerun, no source/build/install/save. No diagnosis inferred from factory absence alone.','elements':{},'tools':{},'probes':{}}\n\
-        env=os.environ.copy();env.update({'GST_REGISTRY_UPDATE':'no','GST_REGISTRY':'/tmp/nav-media-inventory.registry','GST_DEBUG':'2','HOME':'/tmp'})\n\
-        def run(cmd,timeout=25):\n try:\n  p=subprocess.run(cmd,capture_output=True,text=True,env=env,timeout=timeout);return\
-        \ {'command':cmd,'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'timeout':False}\n except subprocess.TimeoutExpired\
-        \ as e:return {'command':cmd,'exit':None,'stdout':(e.stdout or b'').decode()if isinstance(e.stdout,bytes)else(e.stdout\
-        \ or''),'stderr':(e.stderr or b'').decode()if isinstance(e.stderr,bytes)else(e.stderr or''),'timeout':True}\n\
-        for n in names:out['elements'][n]=run(['gst-inspect-1.0','--gst-disable-registry-update',n])\nfor n in ['gst-launch-1.0','gst-discoverer-1.0','gst-typefind-1.0']:out['tools'][n]=shutil.which(n)\n\
-        for f in sorted(A.iterdir()):\n b=f.read_bytes();z={'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()}\n\
-        \ if out['tools']['gst-typefind-1.0']:z['typefind']=run(['gst-typefind-1.0',str(f)])\n if out['tools']['gst-discoverer-1.0']and\
-        \ f.suffix!='.srt':z['discoverer']=run(['gst-discoverer-1.0','-v',str(f)])\n if f.suffix!='.srt':z['decode_pipeline']=run(['gst-launch-1.0','-m','filesrc','location='+str(f),'!','decodebin','!','fakesink','sync=false'])\n\
-        \ else:z['subtitle_pipeline']=run(['gst-launch-1.0','-m','filesrc','location='+str(f),'!','subparse','!','fakesink','sync=false'])\n\
-        \ out['probes'][f.name]=z\nfor plugin in ['matroska','libav','openh264','faad','mpg123','mpeg4videoparse']:\n\
-        \ out['elements']['PLUGIN_'+plugin]=run(['gst-inspect-1.0','--gst-disable-registry-update',plugin])\nprint('NAV_MEDIA_NATIVE_INVENTORY_JSON\
+        \ LC_ALL=C /usr/bin/python3 - <<'INVENTORY'\nfrom pathlib import Path\nimport subprocess,json,shutil,os,stat,hashlib\n\
+        out={'classification':'READ ONLY FFmpeg capability inventory. Restore only, no tests/build/install/save.','tools':{},'pkgconfig':{},'paths':{},'metadata':{}}\n\
+        def run(c):\n try:\n  p=subprocess.run(c,capture_output=True,text=True,timeout=30);return {'command':c,'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr}\n\
+        \ except FileNotFoundError:return {'command':c,'missing_executable':True}\nfor n in ['ffmpeg','ffprobe']:\n\
+        \ out['tools'][n]={'path':shutil.which(n),'version':run([n,'-version'])}\n if shutil.which(n)and n=='ffmpeg':out['tools'][n]['decoders']=run([n,'-decoders']);out['tools'][n]['buildconf']=run([n,'-buildconf'])\n\
+        for n in ['libavcodec','libavformat','libavutil','libavfilter','libswresample','libswscale']:\n out['pkgconfig'][n]={k:run(['pkg-config']+args+[n])for\
+        \ k,args in [('version',['--modversion']),('libs',['--libs']),('cflags',['--cflags']),('pcfiledir',['--variable=pcfiledir']),('prefix',['--variable=prefix'])]}\n\
+        for root in ['/usr/lib','/usr/lib64','/usr/local/lib','/usr/share/pkgconfig','/usr/include']:\n p=Path(root)\n\
+        \ if not p.exists():continue\n for q in sorted(p.rglob('*')):\n  if q.is_file()and(q.name.startswith(('libavcodec','libavformat','libavutil','libavfilter','libswresample','libswscale'))or(q.suffix=='.pc'and'anyunlikely'in\
+        \ q.name)):\n   s=q.lstat();z={'mode':stat.S_IMODE(s.st_mode),'bytes':q.stat().st_size,'symlink':os.readlink(q)if\
+        \ q.is_symlink()else None,'sha256':hashlib.file_digest(q.open('rb'),'sha256').hexdigest()}\n   if q.suffix=='.pc':z['content']=q.read_text()\n\
+        \   out['paths'][str(q)]=z\nm=Path('/nav-build-metadata');out['metadata_directories']=sorted(p.name for\
+        \ p in m.iterdir())if m.exists()else[]\nfor p in m.rglob('*'):\n if p.is_file()and any(x in str(p).lower()for\
+        \ x in ['ffmpeg','libav']):\n  out['metadata'][str(p)]={'bytes':p.stat().st_size,'sha256':hashlib.file_digest(p.open('rb'),'sha256').hexdigest()}\n\
+        \  if p.stat().st_size<500000:out['metadata'][str(p)]['content']=p.read_text(errors='replace')\nprint('NAV_FFMPEG_NATIVE_INVENTORY_JSON\
         \ '+json.dumps(out,sort_keys=True),flush=True)\n\nINVENTORY\n"
