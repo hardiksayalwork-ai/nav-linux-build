@@ -1,0 +1,106 @@
+name: NAV GTK4 Glycin READ ONLY prerequisite inventory no install no save
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-gtk-glycin-preflight
+  cancel-in-progress: false
+jobs:
+  inventory:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+    - name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
+        \ in /mnt/nav-rsvg-root.tar.zst; do\n test ! -e \"$bundle\"\n sudo install -o \"$(id -u)\" -g \"$(id -g)\"\
+        \ -m 0600 /dev/null \"$bundle\"\n test -w \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"\
+        $(id -u):$(id -g):600\"\n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\\
+        n' > \"$probe/proof\"\n tar --zstd -cf \"$bundle\" -C \"$probe\" proof\n zstd -t \"$bundle\"\n tar --zstd\
+        \ -xOf \"$bundle\" proof > \"$probe/recovered\"\n cmp \"$probe/proof\" \"$probe/recovered\"\n # Match actions/cache\
+        \ extraction semantics, not only bundle writer access.\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test\
+        \ ! -w /mnt\n cp \"$bundle\" \"$probe/expected-bundle\"\n relative_bundle=$(realpath --relative-to=\"$PWD\"\
+        \ \"$bundle\")\n tar --zstd -cf \"$probe/cache.tzst\" -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n\
+        \ env -u TAR_OPTIONS /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program unzstd\
+        \ > \"$probe/default-restore.log\" 2>&1\n negative_rc=$?\n set -e\n test \"$negative_rc\" = 2\n test ! -s\
+        \ \"$bundle\"\n grep -F 'Cannot open: File exists' \"$probe/default-restore.log\"\n TAR_OPTIONS=--overwrite\
+        \ /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program unzstd\n cmp \"$probe/expected-bundle\"\
+        \ \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n test \"$(stat -c\
+        \ '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS\
+        \ %s\\n' \"$bundle\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic\
+        \ failure evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"\
+        ><failure message=\"synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n\
+        \ f=p/name;f.write_bytes(data)\n subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\\
+        n    data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_RSVG_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing =\
+        \ []\\n    manifest['errors'].append({'area': str(p), 'error': repr(ex)})\\nfor item in sorted((x for x\
+        \ in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\n    rel = str(f.relative_to(p))\\n    wanted\
+        \ = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard'\
+        \ and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples'\
+        \ and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name,\
+        \ data)\\n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error':\
+        \ repr(ex)})\\nemit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\\
+        n    raise RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"\
+        '/mnt/nav-lfs/nav-build-metadata/aom-tooling'\",repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\n\
+        assert r.returncode==0,r.stderr\nparts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_RSVG_'):\n\
+        \  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\nm=json.loads(gzip.decompress(b''.join(parts['NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64'])))\n\
+        assert not m['errors'] and len(m['files'])==len(expected)\nfor name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_RSVG_'+name+'_GZB64']))\n\
+        \ assert b==expected[v['source']] and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\n\
+        missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
+        assert r.returncode!=0 and 'NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_RSVG_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
+        EXPORT_SELFTEST\n"
+    - name: Restore newest verified librsvg TRANSITIONAL root
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-rsvg-root.tar.zst
+        key: nav-blfs13.1-x86_64-librsvg-transitional-open-v1
+        fail-on-cache-miss: true
+    - name: Verify newest saved root archive
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf ''b18303bde2a0da1f126fd595f21fd56ae353e1f2561adc0616337c380f21d2de  /mnt/nav-rsvg-root.tar.zst
+
+        '' | sha256sum -c -
+
+        zstd -t /mnt/nav-rsvg-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-rsvg-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/librsvg/RSVG-TRANSITIONAL-OPEN.json
+
+        '
+    - name: READ ONLY GTK4 Glycin native package Python icon shader display kernel prerequisite inventory
+      shell: bash
+      run: "set -euo pipefail\nsudo chroot /mnt/nav-lfs /usr/bin/env -i HOME=/root PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
+        \ LC_ALL=C /usr/bin/python3 - <<'AUDIT'\nfrom pathlib import Path\nimport subprocess,json,os,glob\nout={'classification':'READ\
+        \ ONLY prerequisite inventory. No configure/build/test/install/save; inheritedgapsOPEN','pkgconfig':{},'commands':{},'python':{},'paths':{},'targetkernelconfig':{}}\n\
+        for name in ['gtk4','graphene-gobject-1.0','iso-codes','epoxy','librsvg-2.0','gdk-pixbuf-2.0','xkbcommon','pango','wayland-protocols','gobject-introspection-1.0','glib-2.0','vulkan','gstreamer-1.0','gstreamer-video-1.0','libseccomp','lcms2','fontconfig','libheif','libjxl','glycin-2','bubblewrap']:\n\
+        \ p=subprocess.run(['pkg-config','--modversion',name],capture_output=True,text=True);out['pkgconfig'][name]={'exit':p.returncode,'stdout':p.stdout.strip(),'stderr':p.stderr.strip()}\n\
+        for cmd in [['Xvfb','-help'],['glslc','--version'],['g-ir-scanner','--version'],['bwrap','--version'],['dbus-run-session','--version'],['weston','--version'],['mutter','--version'],['wireplumber','--version'],['pipewire','--version']]:\n\
+        \ try:p=subprocess.run(cmd,capture_output=True,text=True,timeout=15);out['commands'][cmd[0]]={'exit':p.returncode,'output':(p.stdout+p.stderr)[:1500]}\n\
+        \ except FileNotFoundError:out['commands'][cmd[0]]={'unavailable':True}\nfor mod in ['gi','cairo','dbus','pydbus']:\n\
+        \ p=subprocess.run(['/usr/bin/python3','-c','import '+mod+';print(getattr('+mod+',\"__version__\",\"importable\"\
+        ))'],capture_output=True,text=True);out['python'][mod]={'exit':p.returncode,'output':(p.stdout+p.stderr)[:1000]}\n\
+        for name in ['/usr/share/icons/hicolor/index.theme','/usr/share/icons/Adwaita/index.theme','/usr/share/vulkan/icd.d','/usr/lib/girepository-1.0','/usr/share/iso-codes/json','/usr/bin/python3','/usr/bin/Xvfb','/usr/bin/openbox']:\n\
+        \ p=Path(name);out['paths'][name]={'exists':p.exists(),'symlink':os.readlink(p)if p.is_symlink()else None,'children':[x.name\
+        \ for x in p.iterdir()]if p.is_dir()and 'vulkan'in name else[]}\nfor name in glob.glob('/boot/config*'):\n\
+        \ out['targetkernelconfig'][name]=[l for l in Path(name).read_text().splitlines()if any(x in l for x in\
+        \ ['CONFIG_UDMABUF','CONFIG_USER_NS','CONFIG_SECCOMP','CONFIG_DRM_VIRTIO_GPU','CONFIG_DRM_VGEM'])]\nprint('NAV_GTK_GLYCIN_PREREQUISITE_AUDIT_JSON\
+        \ '+json.dumps(out,sort_keys=True),flush=True)\nAUDIT\nprintf 'RUNNER KERNEL FEATURES (not target evidence)\\\
+        n'\nuname -a\nfor f in /proc/sys/kernel/unprivileged_userns_clone /proc/sys/user/max_user_namespaces /sys/module/udmabuf/initstate;do\
+        \ if [ -f \"$f\" ];then printf '%s ' \"$f\";cat \"$f\";fi;done\n"
