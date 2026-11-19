@@ -105,10 +105,11 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
       shell: bash
-      run: "set -euo pipefail\npython3 - <<'RECOVER'\nimport os,json,time,urllib.request,hashlib,base64,gzip,re\n\
-        from pathlib import Path\nTOKEN=os.environ['GH_TOKEN'];assert TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\n\
-        class SafeRedirect(urllib.request.HTTPRedirectHandler):\n def redirect_request(self,req,fp,code,msg,headers,newurl):\n\
-        \  new=super().redirect_request(req,fp,code,msg,headers,newurl)\n  if new is not None and not newurl.startswith('https://api.github.com/'):new.remove_header('Authorization')\n\
+      run: "set -euo pipefail\nmkdir -p /mnt/nav-lfs/sources/nav-gstbad-evidence\nsudo --preserve-env=GH_TOKEN python3\
+        \ - <<'RECOVER'\nimport os,json,time,urllib.request,hashlib,base64,gzip,re\nfrom pathlib import Path\nTOKEN=os.environ['GH_TOKEN'];assert\
+        \ TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\nclass SafeRedirect(urllib.request.HTTPRedirectHandler):\n\
+        \ def redirect_request(self,req,fp,code,msg,headers,newurl):\n  new=super().redirect_request(req,fp,code,msg,headers,newurl)\n\
+        \  if new is not None and not newurl.startswith('https://api.github.com/'):new.remove_header('Authorization')\n\
         \  return new\nOPENER=urllib.request.build_opener(SafeRedirect())\n_probe=urllib.request.Request('https://api.github.com/synthetic',headers={'Authorization':'Bearer\
         \ SYNTHETIC_NOT_A_SECRET'})\n_cross=SafeRedirect().redirect_request(_probe,None,302,'Found',{},'https://example.invalid/synthetic-log')\n\
         _same=SafeRedirect().redirect_request(_probe,None,302,'Found',{},'https://api.github.com/synthetic-next')\n\
