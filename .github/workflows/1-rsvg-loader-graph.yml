@@ -287,23 +287,24 @@ jobs:
         \ archive.exists():\n        with urllib.request.urlopen('https://download.gnome.org/sources/librsvg/2.62/librsvg-2.62.4.tar.xz',\
         \ timeout=120) as r:\n            archive.write_bytes(r.read())\n    assert sha(archive) == 'c982b8157a054b803493bf994d31e50105eb948dd8da6b4ab9734e8d392712a3'\n\
         \    assert not s.exists(), 'Do not reconfigure an existing build tree'\n    with tarfile.open(archive)\
-        \ as tf:\n        for m in tf.getmembers():\n            import posixpath\n            assert m.name.startswith('librsvg-2.62.4/')\
-        \ and '..' not in Path(m.name).parts\n            assert m.isfile() or m.isdir() or (m.issym() and (not\
-        \ m.linkname.startswith('/')) and posixpath.normpath(posixpath.join(posixpath.dirname(m.name), m.linkname)).startswith('librsvg-2.62.4/'))\n\
-        \        tf.extractall(root / 'sources', filter='data')\n\n    def filesnapshot(d):\n        return {str(p.relative_to(d)):\
-        \ sha(p) for p in d.rglob('*') if p.is_file() and 'build' not in p.relative_to(d).parts}\n    original =\
-        \ filesnapshot(s)\n    libs = {str(p.relative_to(root)): sha(p) for p in (root / 'usr/lib').glob('librsvg*')\
-        \ if p.is_file()}\n    (out / 'source-before.json').write_text(json.dumps(original, sort_keys=True))\n \
-        \   (out / 'runtime-before.json').write_text(json.dumps(libs, sort_keys=True))\n    (out / 'Cargo.lock').write_bytes((s\
-        \ / 'Cargo.lock').read_bytes())\n    lock = tomllib.loads((s / 'Cargo.lock').read_text())\n    (out / 'locked-cargo-packages.json').write_text(json.dumps(lock,\
-        \ sort_keys=True))\n    for f in ['meson_options.txt', 'meson.build', 'gdk-pixbuf-loader/meson.build', 'gdk-pixbuf-loader/Cargo.toml',\
-        \ 'ci/cargo_wrapper.py']:\n        p = s / f\n        if p.exists():\n            (out / f.replace('/',\
-        \ '_')).write_bytes(p.read_bytes())\n    chome = root / 'tmp/nav-librsvg-cargo-home'\n    chome.mkdir(exist_ok=True)\n\
-        \    subprocess.run(['chown', '-R', '1000:1000', str(s), str(chome)], check=True)\n    env = ['chroot',\
-        \ str(root), '/usr/bin/env', '-i', 'HOME=/tmp', 'PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin', 'LANG=C.UTF-8',\
-        \ 'CARGO_HOME=/tmp/nav-librsvg-cargo-home', 'CARGO_BUILD_JOBS=2', 'MAKEFLAGS=-j2', '/bin/bash', '-c']\n\
-        \    base = 'ulimit -v 4194304;cd /sources/librsvg-2.62.4;'\n    rc = run(env + [base + 'su tester -c '\
-        \ + shlex.quote('export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin CARGO_HOME=/tmp/nav-librsvg-cargo-home\
+        \ as tf:\n        for m in tf.getmembers():\n            import posixpath\n            assert Path(m.name).parts[0]\
+        \ == 'librsvg-2.62.4' and '..' not in Path(m.name).parts\n            assert m.isfile() or m.isdir() or\
+        \ (m.issym() and (not m.linkname.startswith('/')) and posixpath.normpath(posixpath.join(posixpath.dirname(m.name),\
+        \ m.linkname)).startswith('librsvg-2.62.4/'))\n        tf.extractall(root / 'sources', filter='data')\n\n\
+        \    def filesnapshot(d):\n        return {str(p.relative_to(d)): sha(p) for p in d.rglob('*') if p.is_file()\
+        \ and 'build' not in p.relative_to(d).parts}\n    original = filesnapshot(s)\n    libs = {str(p.relative_to(root)):\
+        \ sha(p) for p in (root / 'usr/lib').glob('librsvg*') if p.is_file()}\n    (out / 'source-before.json').write_text(json.dumps(original,\
+        \ sort_keys=True))\n    (out / 'runtime-before.json').write_text(json.dumps(libs, sort_keys=True))\n   \
+        \ (out / 'Cargo.lock').write_bytes((s / 'Cargo.lock').read_bytes())\n    lock = tomllib.loads((s / 'Cargo.lock').read_text())\n\
+        \    (out / 'locked-cargo-packages.json').write_text(json.dumps(lock, sort_keys=True))\n    for f in ['meson_options.txt',\
+        \ 'meson.build', 'gdk-pixbuf-loader/meson.build', 'gdk-pixbuf-loader/Cargo.toml', 'ci/cargo_wrapper.py']:\n\
+        \        p = s / f\n        if p.exists():\n            (out / f.replace('/', '_')).write_bytes(p.read_bytes())\n\
+        \    chome = root / 'tmp/nav-librsvg-cargo-home'\n    chome.mkdir(exist_ok=True)\n    subprocess.run(['chroot',\
+        \ str(root), 'chown', '-R', 'tester:tester', '/sources/librsvg-2.62.4', '/tmp/nav-librsvg-cargo-home'],\
+        \ check=True)\n    env = ['chroot', str(root), '/usr/bin/env', '-i', 'HOME=/tmp', 'PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin',\
+        \ 'LANG=C.UTF-8', 'CARGO_HOME=/tmp/nav-librsvg-cargo-home', 'CARGO_BUILD_JOBS=2', 'MAKEFLAGS=-j2', '/bin/bash',\
+        \ '-c']\n    base = 'ulimit -v 4194304;cd /sources/librsvg-2.62.4;'\n    rc = run(env + [base + 'su tester\
+        \ -c ' + shlex.quote('export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin CARGO_HOME=/tmp/nav-librsvg-cargo-home\
         \ CARGO_BUILD_JOBS=2;meson setup --prefix=/usr --buildtype=release -Dpixbuf-loader=enabled build')], 'configure.log',\
         \ 300)\n    assert rc == 0, 'configuration failed, no build attempted'\n    for (n, c) in {'buildoptions':\
         \ 'meson introspect build --buildoptions', 'targets': 'meson introspect build --targets', 'installed-plan':\
