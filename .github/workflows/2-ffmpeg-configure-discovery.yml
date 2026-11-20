@@ -1,4 +1,4 @@
-name: NAV FFmpeg9.0.1 CONFIGURE and FATE discovery ONLY no build tests install save
+name: NAV FFmpeg9.0.1 native BUILD and genuine FATE discovery ONLY no tests install save
 'on':
   workflow_dispatch: {}
 permissions:
@@ -11,7 +11,7 @@ jobs:
   inventory:
     if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 75
     steps:
     - name: Live public standard runner free compute cache17exact and upstream rsync reachability
       shell: bash
@@ -225,15 +225,16 @@ jobs:
         \ priorBase134OK+newOpus1program6casesOK. Hardware/optional/inherited OPEN gaps retained. No installation/save\
         \ in corrected diagnostic.','original_run':'https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44602532063/job/135837472874','original_exports_verified':123,'original_results':{'OK':97,'FAIL':5,'SKIP':2}};(A/'original-canonical-ledger.json').write_text(json.dumps(ledger,sort_keys=True));print('NAV_GSTBAD_CORRECTED_ORIGINAL_LEDGER_JSON\
         \ '+json.dumps(ledger,sort_keys=True),flush=True)\n\nRECOVER\nsudo chroot /mnt/nav-lfs /usr/sbin/ldconfig\n"
-    - name: Untouched FFmpeg configure original source guard full FATE discovery hardstop no compilation no tests
+    - name: Untouched FFmpeg native build genuine full FATE discovery 60min processgroup cap no tests install save
       shell: bash
-      run: "set -euo pipefail\nsudo python3 - <<'DISCOVER'\nfrom pathlib import Path\nimport subprocess,os,json,hashlib,time,resource,tarfile,urllib.request,base64,gzip,traceback\n\
+      run: "set -euo pipefail\nsudo python3 - <<'DISCOVER'\nfrom pathlib import Path\nimport subprocess,os,json,hashlib,time,resource,tarfile,urllib.request,base64,gzip,traceback,signal\n\
         root=Path('/mnt/nav-lfs'); out=root/'nav-build-metadata/ffmpeg-discovery';out.mkdir(exist_ok=True);src=root/'sources/ffmpeg-9.0.1';archive=root/'sources/ffmpeg-9.0.1.tar.xz'\n\
         manifest={};errors=[]\ndef sha(p):\n h=hashlib.sha256()\n with p.open('rb')as f:\n  for b in iter(lambda:f.read(1048576),b''):h.update(b)\n\
-        \ return h.hexdigest()\ndef run(c,name,timeout=1200):\n start=time.monotonic()\n with (out/name).open('w')as\
-        \ f:p=subprocess.run(c,stdout=f,stderr=subprocess.STDOUT,timeout=timeout)\n (out/(name+'.exit.json')).write_text(json.dumps({'command':c,'exit':p.returncode,'seconds':time.monotonic()-start}));return\
-        \ p.returncode\ntry:\n assert not src.exists() and not archive.exists(),'unexpected existing FFmpeg source'\n\
-        \ data=urllib.request.urlopen('https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.xz',timeout=60).read();assert\
+        \ return h.hexdigest()\ndef run(c,name,timeout=1200):\n start=time.monotonic();timedout=False\n with (out/name).open('w')as\
+        \ f:\n  p=subprocess.Popen(c,stdout=f,stderr=subprocess.STDOUT,start_new_session=True)\n  try:p.wait(timeout=timeout)\n\
+        \  except subprocess.TimeoutExpired:\n   timedout=True;os.killpg(p.pid,signal.SIGTERM)\n   try:p.wait(timeout=10)\n\
+        \   except subprocess.TimeoutExpired:os.killpg(p.pid,signal.SIGKILL);p.wait()\n rc=p.returncode;(out/(name+'.exit.json')).write_text(json.dumps({'command':c,'exit':rc,'seconds':time.monotonic()-start,'timeout':timedout,'process_group_killed_on_timeout':timedout}));return\
+        \ rc\n\ntry:\n assert not src.exists() and not archive.exists(),'unexpected existing FFmpeg source'\n data=urllib.request.urlopen('https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.xz',timeout=60).read();assert\
         \ len(data)==12036420 and hashlib.sha256(data).hexdigest()=='cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635';archive.write_bytes(data)\n\
         \ with tarfile.open(archive)as t:\n  for m in t.getmembers():assert not m.name.startswith('/')and'..'not\
         \ in Path(m.name).parts\n  t.extractall(root/'sources',filter='data')\n original={str(p.relative_to(src)):sha(p)for\
@@ -244,17 +245,21 @@ jobs:
         \ if (src/'ffbuild/config.log').exists():(out/'ffbuild-config.log').write_bytes((src/'ffbuild/config.log').read_bytes())\n\
         \ assert rc==0,'configure failed, no feature-change workaround authorized'\n for n in ['config.h','config_components.h','ffbuild/config.mak']:\n\
         \  if (src/n).exists():(out/n.replace('/','-')).write_bytes((src/n).read_bytes())\n rc=run(['sudo','chroot',str(root),'/usr/bin/env','-i','HOME=/tmp','PATH=/usr/bin:/usr/sbin:/bin:/sbin','LC_ALL=C','/bin/bash','-c','ulimit\
-        \ -v 4194304; cd /sources/ffmpeg-9.0.1; make -s fate-list SAMPLES=/tmp/nav-fate-samples THREADS=2'],'fate-list.txt',120)\n\
-        \ assert rc==0\n names=(out/'fate-list.txt').read_text().splitlines();assert names and len(names)==len(set(names))\n\
-        \ after={n:sha(src/n)for n in original};assert original==after\n (out/'original-source-after-sha256.json').write_text(json.dumps(after,sort_keys=True))\n\
+        \ -v 4194304; cd /sources/ffmpeg-9.0.1; make -j2 -s fate-list SAMPLES=/tmp/nav-fate-samples THREADS=2'],'build-and-fate-list.txt',3600)\n\
+        \ assert rc==0\n rawnames=(out/'build-and-fate-list.txt').read_text().splitlines();names=[n for n in rawnames\
+        \ if n.startswith('fate-')];assert names and len(names)==len(set(names));assert not any(n.startswith('TEST\
+        \ ') for n in rawnames);(out/'fate-list.txt').write_text('\\n'.join(names)+'\\n')\n after={n:sha(src/n)for\
+        \ n in original};assert original==after\n (out/'original-source-after-sha256.json').write_text(json.dumps(after,sort_keys=True))\n\
         \ components=(src/'config_components.h').read_text();needed={k:('#define CONFIG_'+k+'_DECODER 1')in components\
-        \ for k in ['H264','AAC','MP3','MP3FLOAT']}\n summary={'classification':'CONFIGURED ONLY. No FFmpeg compilation\
-        \ tests install sample fetch cache save or delete.','source_sha256':sha(archive),'source_files_unchanged':len(original),'configure':conf,'fate_target_count':len(names),'fate_target_names_unique':True,'nested_case_count':'not\
+        \ for k in ['H264','AAC','MP3','MP3FLOAT']}\n summary={'classification':'NATIVE BUILD and genuine target\
+        \ discovery only. No original FATE tests install sample fetch cache save or delete.','source_sha256':sha(archive),'source_files_unchanged':len(original),'configure':conf,'fate_target_count':len(names),'fate_target_names_unique':True,'nested_case_count':'not\
         \ discovered until execution; target count is not internal assertions','required_native_decoders_enabled':needed,'sample_files_present':False,'runtime_projection':'UNRESOLVED:\
-        \ no measured NAV2job FATE basis, hard stop before full tests; return split proposal','job_cap_seconds':2100,'hosted_absolute_cap_seconds':21600}\n\
+        \ no measured NAV2job FATE basis, hard stop before full tests; return split proposal','job_cap_seconds':4500,'build_cap_seconds':3600,'hosted_absolute_cap_seconds':21600}\n\
         \ (out/'discovery.json').write_text(json.dumps(summary,indent=2));print('NAV_FFMPEG_DISCOVERY_SUMMARY '+json.dumps(summary),flush=True)\n\
         except Exception:\n (out/'error.txt').write_text(traceback.format_exc());errors.append(traceback.format_exc());raise\n\
-        finally:\n for p in sorted(out.rglob('*')):\n  if p.is_file():\n   b=p.read_bytes();tag=p.relative_to(out).as_posix().upper().replace('/','--').replace('.','_').replace('-','_');manifest[tag]={'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest(),'file':p.relative_to(out).as_posix()};enc=base64.b64encode(gzip.compress(b)).decode();parts=[enc[i:i+6000]for\
+        finally:\n if src.exists() and 'original' in globals():\n  after={n:sha(src/n)if(src/n).is_file()else None\
+        \ for n in original};(out/'original-source-after-sha256.json').write_text(json.dumps(after,sort_keys=True));(out/'source-finally-audit.json').write_text(json.dumps({'files':len(original),'unchanged':original==after,'finally_even_on_failure':True}));errors.extend(['source\
+        \ bytes changed']if original!=after else [])\n for p in sorted(out.rglob('*')):\n  if p.is_file():\n   b=p.read_bytes();tag=p.relative_to(out).as_posix().upper().replace('/','--').replace('.','_').replace('-','_');manifest[tag]={'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest(),'file':p.relative_to(out).as_posix()};enc=base64.b64encode(gzip.compress(b)).decode();parts=[enc[i:i+6000]for\
         \ i in range(0,len(enc),6000)]\n   for i,part in enumerate(parts):print('NAV_FFMPEG_'+tag+'_GZB64 '+str(i+1)+'/'+str(len(parts))+'\
         \ '+part,flush=True)\n b=json.dumps({'files':manifest,'errors':errors},sort_keys=True).encode();enc=base64.b64encode(gzip.compress(b)).decode();print('NAV_FFMPEG_EXPORT_MANIFEST_JSON_GZB64\
         \ 1/1 '+enc,flush=True)\n\nDISCOVER\n"
