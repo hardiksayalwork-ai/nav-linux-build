@@ -248,8 +248,9 @@ jobs:
         \ -v 4194304; cd /sources/ffmpeg-9.0.1; make -j2 -s fate-list SAMPLES=/tmp/nav-fate-samples THREADS=2'],'build-and-fate-list.txt',3600)\n\
         \ assert rc==0\n rawnames=(out/'build-and-fate-list.txt').read_text().splitlines();names=[n for n in rawnames\
         \ if n.startswith('fate-')];assert names and len(names)==len(set(names));assert not any(n.startswith('TEST\
-        \ ') for n in rawnames);(out/'fate-list.txt').write_text('\\n'.join(names)+'\\n')\n after={n:sha(src/n)for\
-        \ n in original};assert original==after\n (out/'original-source-after-sha256.json').write_text(json.dumps(after,sort_keys=True))\n\
+        \ ') for n in rawnames);(out/'fate-list.txt').write_text('\\n'.join(names)+'\\n')\n rc=run(['sudo','chroot',str(root),'/usr/bin/env','-i','HOME=/tmp','PATH=/usr/bin:/usr/sbin:/bin:/sbin','LC_ALL=C','/bin/bash','-c','ulimit\
+        \ -v 4194304; cd /sources/ffmpeg-9.0.1; make -qp fate SAMPLES=/tmp/nav-fate-samples THREADS=2'],'expanded-make-database.txt',180);assert\
+        \ rc in (0,1),'make database error'\n after={n:sha(src/n)for n in original};assert original==after\n (out/'original-source-after-sha256.json').write_text(json.dumps(after,sort_keys=True))\n\
         \ components=(src/'config_components.h').read_text();needed={k:('#define CONFIG_'+k+'_DECODER 1')in components\
         \ for k in ['H264','AAC','MP3','MP3FLOAT']}\n summary={'classification':'NATIVE BUILD and genuine target\
         \ discovery only. No original FATE tests install sample fetch cache save or delete.','source_sha256':sha(archive),'source_files_unchanged':len(original),'configure':conf,'fate_target_count':len(names),'fate_target_names_unique':True,'nested_case_count':'not\
