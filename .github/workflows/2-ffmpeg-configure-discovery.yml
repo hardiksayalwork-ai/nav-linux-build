@@ -227,7 +227,7 @@ jobs:
         \ '+json.dumps(ledger,sort_keys=True),flush=True)\n\nRECOVER\nsudo chroot /mnt/nav-lfs /usr/sbin/ldconfig\n"
     - name: Untouched FFmpeg configure original source guard full FATE discovery hardstop no compilation no tests
       shell: bash
-      run: "set -euo pipefail\npython3 - <<'DISCOVER'\nfrom pathlib import Path\nimport subprocess,os,json,hashlib,time,resource,tarfile,urllib.request,base64,gzip,traceback\n\
+      run: "set -euo pipefail\nsudo python3 - <<'DISCOVER'\nfrom pathlib import Path\nimport subprocess,os,json,hashlib,time,resource,tarfile,urllib.request,base64,gzip,traceback\n\
         root=Path('/mnt/nav-lfs'); out=root/'nav-build-metadata/ffmpeg-discovery';out.mkdir(exist_ok=True);src=root/'sources/ffmpeg-9.0.1';archive=root/'sources/ffmpeg-9.0.1.tar.xz'\n\
         manifest={};errors=[]\ndef sha(p):\n h=hashlib.sha256()\n with p.open('rb')as f:\n  for b in iter(lambda:f.read(1048576),b''):h.update(b)\n\
         \ return h.hexdigest()\ndef run(c,name,timeout=1200):\n start=time.monotonic()\n with (out/name).open('w')as\
