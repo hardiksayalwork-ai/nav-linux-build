@@ -303,13 +303,14 @@ jobs:
         \ str(root), 'chown', '-R', 'tester:tester', '/sources/librsvg-2.62.4', '/tmp/nav-librsvg-cargo-home'],\
         \ check=True)\n    env = ['chroot', str(root), '/usr/bin/env', '-i', 'HOME=/tmp', 'PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin',\
         \ 'LANG=C.UTF-8', 'CARGO_HOME=/tmp/nav-librsvg-cargo-home', 'CARGO_BUILD_JOBS=2', 'MAKEFLAGS=-j2', '/bin/bash',\
-        \ '-c']\n    base = 'ulimit -v 4194304;cd /sources/librsvg-2.62.4;'\n    rc = run(env + [base + 'su tester\
-        \ -c ' + shlex.quote('export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin CARGO_HOME=/tmp/nav-librsvg-cargo-home\
-        \ CARGO_BUILD_JOBS=2;meson setup --prefix=/usr --buildtype=release -Dpixbuf-loader=enabled build')], 'configure.log',\
-        \ 300)\n    assert rc == 0, 'configuration failed, no build attempted'\n    for (n, c) in {'buildoptions':\
-        \ 'meson introspect build --buildoptions', 'targets': 'meson introspect build --targets', 'installed-plan':\
-        \ 'meson introspect build --installed', 'dependencies': 'meson introspect build --dependencies', 'target-list':\
-        \ 'ninja -C build -t targets all', 'module-query': 'ninja -C build -t query gdk-pixbuf-loader/libpixbufloader_svg.so',\
+        \ '-c']\n    base = 'ulimit -v 4194304;cd /sources/librsvg-2.62.4;'\n    rc = run(['chroot', str(root),\
+        \ '/usr/bin/su', 'tester', '-s', '/bin/bash', '-c', 'ulimit -v 4194304;export PATH=/opt/rustc/bin:/usr/bin:/usr/sbin:/bin:/sbin\
+        \ CARGO_HOME=/tmp/nav-librsvg-cargo-home CARGO_BUILD_JOBS=2 LANG=C.UTF-8;cd /sources/librsvg-2.62.4;meson\
+        \ setup --prefix=/usr --buildtype=release -Dpixbuf-loader=enabled build'], 'configure.log', 300)\n    assert\
+        \ rc == 0, 'configuration failed, no build attempted'\n    for (n, c) in {'buildoptions': 'meson introspect\
+        \ build --buildoptions', 'targets': 'meson introspect build --targets', 'installed-plan': 'meson introspect\
+        \ build --installed', 'dependencies': 'meson introspect build --dependencies', 'target-list': 'ninja -C\
+        \ build -t targets all', 'module-query': 'ninja -C build -t query gdk-pixbuf-loader/libpixbufloader_svg.so',\
         \ 'module-commands': 'ninja -C build -t commands gdk-pixbuf-loader/libpixbufloader_svg.so', 'module-dry-plan':\
         \ 'ninja -C build -n -j2 gdk-pixbuf-loader/libpixbufloader_svg.so', 'cargo-metadata-offline': 'cargo metadata\
         \ --locked --offline --format-version=1 --no-deps', 'pixbuf-paths': 'pkg-config --variable=gdk_pixbuf_moduledir\
