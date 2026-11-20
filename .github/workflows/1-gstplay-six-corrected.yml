@@ -1,0 +1,348 @@
+name: NAV GstPlay ONLY six priorfailed corrected codecs original13PASS excluded
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  inventory:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+    - name: Live public standard runner all19protected exact no save delete
+      shell: bash
+      run: "test \"$GITHUB_RUN_NUMBER\" = 1\ntest \"$GITHUB_RUN_ATTEMPT\" = 1\ndate +%s > /tmp/nav-shard-job-start\n\
+        set -euo pipefail\ncommand -v rsync\nrsync --version | head -3\npython3 - <<'PREFLIGHT'\nimport urllib.request,urllib.error,json,time,os\n\
+        start=time.monotonic();base='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build';token=os.environ['GH_TOKEN'];assert\
+        \ token\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n def redirect_request(self,req,fp,code,msg,headers,newurl):raise\
+        \ urllib.error.HTTPError(req.full_url,code,'redirect refused for scoped authenticated preflight',headers,fp)\n\
+        opener=urllib.request.build_opener(NoRedirect())\ndef req(u):\n assert u.startswith(base)\n q=urllib.request.Request(u,headers={'Authorization':'Bearer\
+        \ '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \ with opener.open(q,timeout=30)as response:return json.load(response)\nr=req(base+'?t='+str(time.time_ns()));assert\
+        \ r['private'] is False\nc=req(base+'/actions/caches?per_page=100&t='+str(time.time_ns()));expected={'10826754060':\
+        \ {'key': 'nav-ffmpeg9.0.1-install-only-first5290-corrected31-open-v1', 'bytes': 109875240}, '10818008081':\
+        \ {'key': 'nav-theora-basetheora-install-only-open-v1', 'bytes': 1665268}, '10816097588': {'key': 'nav-gstmatroska-original-tested-install-only-open-v1',\
+        \ 'bytes': 283419}, '10813815026': {'key': 'nav-opus-baseopus-install-only-open-v1', 'bytes': 512022}, '10810498235':\
+        \ {'key': 'nav-gstgood-narrow-install-only-transitional-open-v1', 'bytes': 901348}, '10803318199': {'key':\
+        \ 'nav-blfs13.1-x86_64-librsvg-transitional-open-v1', 'bytes': 1477765679}, '10805037408': {'key': 'nav-graphene-isocodes-hicolor-install-only-open-v1',\
+        \ 'bytes': 6895265}, '10804828520': {'key': 'nav-linux7.1.8-userns-udmabuf-compiled-open-v1', 'bytes': 17602045},\
+        \ '10790873772': {'key': 'nav-blfs13.1-x86_64-aom-static-repair-open-v1', 'bytes': 1414253410}, '10710908926':\
+        \ {'key': 'nav-blfs13.1-x86_64-jxl-open-v1', 'bytes': 1404400214}, '10700939007': {'key': 'nav-blfs13.1-x86_64-giflib-open-v1',\
+        \ 'bytes': 1374812746}, '10696846187': {'key': 'nav-blfs13.1-x86_64-git-open-v1', 'bytes': 1374122764},\
+        \ '10516363617': {'key': 'nav-lfs13.1-x86_64-final-gcc-v1', 'bytes': 1413472049}, '10515953327': {'key':\
+        \ 'nav-lfs13.1-x86_64-gcc-test-runtime-v1', 'bytes': 148732}, '10511354384': {'key': 'nav-lfs13.1-x86_64-gcc-test-cxx-v1',\
+        \ 'bytes': 1030391}, '10508735204': {'key': 'nav-lfs13.1-x86_64-gcc-test-c-v1', 'bytes': 1021068}, '10480998516':\
+        \ {'key': 'nav-lfs13.1-x86_64-access-tools-v1', 'bytes': 909038418}, '10480209539': {'key': 'nav-lfs13.1-x86_64-final-math-v1',\
+        \ 'bytes': 901878016}, '10827259500': {'key': 'nav-gstlibav1.28.6-install-only-5OK1FAIL-OPEN16channel-v1',\
+        \ 'bytes': 526760}}\nactual={str(z['id']):{'key':z['key'],'bytes':z['size_in_bytes']}for z in c['actions_caches']};assert\
+        \ c['total_count']==len(actual)==len(expected)and actual==expected\nassert sum(z['bytes']for z in actual.values())<10*1024**3\n\
+        print('NAV_FFMPEG_PUBLIC_STANDARD_RUNNER_FREE_CACHE_EXACT '+json.dumps({'public':True,'standard_runner':'ubuntu-24.04','cache_count':len(actual),'cache_bytes':sum(z['bytes']for\
+        \ z in actual.values()),'no_cache_save_or_delete':True,'elapsed':time.monotonic()-start}),flush=True)\n\
+        PREFLIGHT\n"
+      env:
+        GH_TOKEN: ${{ github.token }}
+    - name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
+        \ in /mnt/nav-ffmpeg-candidate.tar.zst /mnt/nav-gstlibav-candidate.tar.zst /mnt/nav-rsvg-root.tar.zst /mnt/nav-gstmatroska-prerequisites.tar.zst\
+        \ /mnt/nav-theorabase-prerequisites.tar.zst /mnt/nav-gstgood-prerequisites.tar.zst /mnt/nav-opusbase-prerequisites.tar.zst;\
+        \ do\n test ! -e \"$bundle\"\n sudo install -o \"$(id -u)\" -g \"$(id -g)\" -m 0600 /dev/null \"$bundle\"\
+        \n test -w \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n probe=$(mktemp\
+        \ -d /tmp/nav-aom-bundle-probe.XXXXXX)\n printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\n' > \"$probe/proof\"\n tar\
+        \ --zstd -cf \"$bundle\" -C \"$probe\" proof\n zstd -t \"$bundle\"\n tar --zstd -xOf \"$bundle\" proof >\
+        \ \"$probe/recovered\"\n cmp \"$probe/proof\" \"$probe/recovered\"\n # Match actions/cache extraction semantics,\
+        \ not only bundle writer access.\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n cp \"\
+        $bundle\" \"$probe/expected-bundle\"\n relative_bundle=$(realpath --relative-to=\"$PWD\" \"$bundle\")\n\
+        \ tar --zstd -cf \"$probe/cache.tzst\" -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n env -u TAR_OPTIONS\
+        \ /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program unzstd > \"$probe/default-restore.log\"\
+        \ 2>&1\n negative_rc=$?\n set -e\n test \"$negative_rc\" = 2\n test ! -s \"$bundle\"\n grep -F 'Cannot open:\
+        \ File exists' \"$probe/default-restore.log\"\n TAR_OPTIONS=--overwrite /usr/bin/tar -xf \"$probe/cache.tzst\"\
+        \ -P -C \"$PWD\" --use-compress-program unzstd\n cmp \"$probe/expected-bundle\" \"$bundle\"\n test \"$(stat\
+        \ -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n\
+        \ test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS %s\\n' \"$bundle\"\n : > \"\
+        $bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic\
+        \ failure evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"\
+        ><failure message=\"synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n\
+        \ f=p/name;f.write_bytes(data)\n subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\\
+        n    data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_RSVG_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing =\
+        \ []\\n    manifest['errors'].append({'area': str(p), 'error': repr(ex)})\\nfor item in sorted((x for x\
+        \ in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\n    rel = str(f.relative_to(p))\\n    wanted\
+        \ = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard'\
+        \ and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples'\
+        \ and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name,\
+        \ data)\\n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error':\
+        \ repr(ex)})\\nemit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\\
+        n    raise RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"\
+        '/mnt/nav-lfs/nav-build-metadata/aom-tooling'\",repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\n\
+        assert r.returncode==0,r.stderr\nparts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_RSVG_'):\n\
+        \  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\nm=json.loads(gzip.decompress(b''.join(parts['NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64'])))\n\
+        assert not m['errors'] and len(m['files'])==len(expected)\nfor name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_RSVG_'+name+'_GZB64']))\n\
+        \ assert b==expected[v['source']] and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\n\
+        missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
+        assert r.returncode!=0 and 'NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_RSVG_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
+        EXPORT_SELFTEST\n"
+    - name: Restore newest verified librsvg TRANSITIONAL root
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-rsvg-root.tar.zst
+        key: nav-blfs13.1-x86_64-librsvg-transitional-open-v1
+        fail-on-cache-miss: true
+    - name: Verify newest saved root archive
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf ''b18303bde2a0da1f126fd595f21fd56ae353e1f2561adc0616337c380f21d2de  /mnt/nav-rsvg-root.tar.zst
+
+        '' | sha256sum -c -
+
+        zstd -t /mnt/nav-rsvg-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-rsvg-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/librsvg/RSVG-TRANSITIONAL-OPEN.json
+
+        '
+    - name: Restore exact verified gstgood narrow original-tested bundle OPEN gaps retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gstgood-prerequisites.tar.zst
+        key: nav-gstgood-narrow-install-only-transitional-open-v1
+        fail-on-cache-miss: true
+    - name: Restore exact verified opusbase narrow original-tested bundle OPEN gaps retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-opusbase-prerequisites.tar.zst
+        key: nav-opus-baseopus-install-only-open-v1
+        fail-on-cache-miss: true
+    - name: Restore exact verified gstmatroska additional tested bundle
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gstmatroska-prerequisites.tar.zst
+        key: nav-gstmatroska-original-tested-install-only-open-v1
+        fail-on-cache-miss: true
+    - name: Restore exact verified theorabase additional tested bundle
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-theorabase-prerequisites.tar.zst
+        key: nav-theora-basetheora-install-only-open-v1
+        fail-on-cache-miss: true
+    - name: Restore exact saved FFmpeg installonly original5290 latestcorrected ledger retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-ffmpeg-candidate.tar.zst
+        key: nav-ffmpeg9.0.1-install-only-first5290-corrected31-open-v1
+        fail-on-cache-miss: true
+        enableCrossOsArchive: false
+    - name: Restore saved gstlibav original5OK1FAIL OPEN16channel
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gstlibav-candidate.tar.zst
+        key: nav-gstlibav1.28.6-install-only-5OK1FAIL-OPEN16channel-v1
+        fail-on-cache-miss: true
+    - name: Authenticate four narrow bundles every path metadata replay preserve original canonical records
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "set -euo pipefail\nmkdir -p /mnt/nav-lfs/sources/nav-gstbad-evidence\nsudo --preserve-env=GH_TOKEN python3\
+        \ - <<'RECOVER'\nimport os,json,time,urllib.request,hashlib,base64,gzip,re\nfrom pathlib import Path\nTOKEN=os.environ['GH_TOKEN'];assert\
+        \ TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\nclass SafeRedirect(urllib.request.HTTPRedirectHandler):\n\
+        \ def redirect_request(self,req,fp,code,msg,headers,newurl):\n  new=super().redirect_request(req,fp,code,msg,headers,newurl)\n\
+        \  if new is not None and not newurl.startswith('https://api.github.com/'):new.remove_header('Authorization')\n\
+        \  return new\nOPENER=urllib.request.build_opener(SafeRedirect())\n_probe=urllib.request.Request('https://api.github.com/synthetic',headers={'Authorization':'Bearer\
+        \ SYNTHETIC_NOT_A_SECRET'})\n_cross=SafeRedirect().redirect_request(_probe,None,302,'Found',{},'https://example.invalid/synthetic-log')\n\
+        _same=SafeRedirect().redirect_request(_probe,None,302,'Found',{},'https://api.github.com/synthetic-next')\n\
+        assert not _cross.has_header('Authorization') and _same.get_header('Authorization')=='Bearer SYNTHETIC_NOT_A_SECRET'\n\
+        print('NAV_SAFE_REDIRECT_HEADER_SCOPE_SYNTHETIC_SELFTEST_PASS',flush=True)\ndef get(path):\n url=path if\
+        \ path.startswith('https://api.github.com/')else BASE+path\n req=urllib.request.Request(url,headers={'Authorization':'Bearer\
+        \ '+TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \ with OPENER.open(req,timeout=90)as r:return r.read()\ndef inventory():\n d=json.loads(get('actions/caches?per_page=100'));assert\
+        \ d['total_count']==len(d['actions_caches']);return {str(x['id']):{k:x[k]for k in ['key','ref','version','size_in_bytes']}for\
+        \ x in d['actions_caches']}\ndef unique_record(text,marker):\n rows=[]\n for l in text.splitlines():\n \
+        \ l=re.sub(r'^\\S+Z ','',l)\n  if l.startswith(marker+' '):rows.append(json.loads(l.split(' ',1)[1]))\n\
+        \ assert len(rows)==1,(marker,len(rows));return rows[0]\n\nBUNDLES=[{'label': 'gstgood', 'job': 135856812015,\
+        \ 'expected_proof': {'bytes': 42050, 'file': 'bundle-proof.json', 'sha256': '5d11e5054ebc4fd55486a70dd3c1ed90d0822055ed6e44d17a2a95ec1a9832e2'},\
+        \ 'key': 'nav-gstgood-narrow-install-only-transitional-open-v1', 'archive': '/mnt/nav-gstgood-prerequisites.tar.zst',\
+        \ 'prefix': 'NAV_GSTGOOD_'}, {'label': 'opusbase', 'job': 135899642946, 'expected_proof': {'bytes': 30579,\
+        \ 'file': 'bundle-proof.json', 'sha256': 'a9f48cc656b71ede3a8940a2c7b30eb274ea5719c2db128ca2f5a99a232c3e05'},\
+        \ 'key': 'nav-opus-baseopus-install-only-open-v1', 'archive': '/mnt/nav-opusbase-prerequisites.tar.zst',\
+        \ 'prefix': 'NAV_OPUSBASE_'}, {'label': 'gstmatroska', 'job': 135930808948, 'expected_proof': {'bytes':\
+        \ 41420, 'file': 'bundle-proof.json', 'sha256': '65f58d3266a1507075e3364190f735746aa4bff18722ebdc78d9969e0dafdb24'},\
+        \ 'key': 'nav-gstmatroska-original-tested-install-only-open-v1', 'archive': '/mnt/nav-gstmatroska-prerequisites.tar.zst',\
+        \ 'prefix': 'NAV_GSTGOOD_'}, {'label': 'theorabase', 'job': 135956171672, 'expected_proof': {'bytes': 87924,\
+        \ 'file': 'bundle-proof.json', 'sha256': '1be85ac55114fc743f1f3a21b380f3041d8450c0a3c4ff2cc99c5f96f5a4405f'},\
+        \ 'key': 'nav-theora-basetheora-install-only-open-v1', 'archive': '/mnt/nav-theorabase-prerequisites.tar.zst',\
+        \ 'prefix': 'NAV_THEORABASE_'}]\nimport stat\nA=Path('/mnt/nav-lfs/sources/nav-gstbad-evidence');A.mkdir(parents=True,exist_ok=True)\n\
+        for x in BUNDLES:\n raw=get('actions/jobs/'+str(x['job'])+'/logs').decode();prefix=x['prefix'];m=unique_record(raw,prefix+'EXPORT_MANIFEST_JSON');assert\
+        \ m['BUNDLE-PROOF_JSON']==x['expected_proof'];parts=[]\n for l in raw.splitlines():\n  l=re.sub(r'^\\S+Z\
+        \ ','',l)\n  if l.startswith(prefix+'BUNDLE-PROOF_JSON_GZB64 '):parts.append(base64.b64decode(l.split('\
+        \ ',1)[1]))\n b=gzip.decompress(b''.join(parts));pf=x['expected_proof'];assert len(b)==pf['bytes']and hashlib.sha256(b).hexdigest()==pf['sha256'];P=json.loads(b);f=Path(x['archive']);assert\
+        \ f.stat().st_size==P['bundle_bytes']and hashlib.file_digest(f.open('rb'),'sha256').hexdigest()==P['bundle_sha256'];root=Path('/mnt/nav-'+x['label']+'-replay');root.mkdir();import\
+        \ subprocess\n subprocess.run(['tar','--zstd','--same-owner','--same-permissions','-xpf',str(f),'-C',str(root)],check=True)\n\
+        \ def manifest(root):\n  out={}\n  for p in[root]+sorted(root.rglob('*')):\n   s=p.lstat();z={'type':stat.S_IFMT(s.st_mode),'mode':stat.S_IMODE(s.st_mode),'uid':s.st_uid,'gid':s.st_gid,'mtime':s.st_mtime_ns}\n\
+        \   if p.is_symlink():z['link']=os.readlink(p)\n   elif p.is_file():z['bytes']=s.st_size;z['sha256']=hashlib.file_digest(p.open('rb'),'sha256').hexdigest()\n\
+        \   else:assert p.is_dir()\n   out[str(p.relative_to(root))]=z\n  return out\n actual=manifest(root);assert\
+        \ actual==P['manifest'];subprocess.run(['tar','--zstd','--same-owner','--same-permissions','-xpf',str(f),'-C','/mnt/nav-lfs'],check=True)\n\
+        \ for name,z in P['manifest'].items():\n  p=Path('/mnt/nav-lfs')/name\n  if z['type']==stat.S_IFREG:assert\
+        \ p.is_file()and hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==z['sha256'],name\n  elif z['type']==stat.S_IFLNK:assert\
+        \ p.is_symlink()and os.readlink(p)==z['link'],name\n (A/(x['label']+'-replay-proof.json')).write_bytes(b);print('NAV_GSTBAD_CORRECTED_BUNDLE_REPLAY_EXACT',x['label'],len(actual),P['bundle_sha256'],flush=True)\n\
+        raw=get('actions/jobs/135837472874/logs').decode();m=unique_record(raw,'NAV_GSTBAD_EXPORT_MANIFEST_JSON');assert\
+        \ len(m)==123;parts={};O=A/'original-canonical';O.mkdir()\nfor l in raw.splitlines():\n l=re.sub(r'^\\S+Z\
+        \ ','',l)\n if l.startswith('NAV_GSTBAD_')and'_GZB64 'in l:\n  k,z=l.split(' ',1);parts.setdefault(k,[]).append(base64.b64decode(z))\n\
+        assert set(parts)=={'NAV_GSTBAD_'+k+'_GZB64'for k in m}\nfor k,z in m.items():\n b=gzip.decompress(b''.join(parts['NAV_GSTBAD_'+k+'_GZB64']));assert\
+        \ len(b)==z['bytes']and hashlib.sha256(b).hexdigest()==z['sha256'];p=O/z['file'];assert p.is_relative_to(O);p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(b)\n\
+        import collections\nr=[json.loads(l)for l in(O/'testlog.json').read_text().splitlines()if l.strip()];assert\
+        \ len(r)==104 and collections.Counter(x['result']for x in r)=={'OK':97,'FAIL':5,'SKIP':2};ledger={'classification':'SEPARATELY\
+        \ LABELED CORRECTED GstBad diagnostic. Original97OK5FAIL2SKIP immutable, never replaced/relabelled. Verified\
+        \ narrow Good and OpusBase prerequisites plus writable tester HOME runtime correction only. No source/test\
+        \ patch, no fixture substitution. Original Good101OK1FAIL timeout OPEN; Opus15OK5nestedmallocskipsOPEN;\
+        \ priorBase134OK+newOpus1program6casesOK. Hardware/optional/inherited OPEN gaps retained. No installation/save\
+        \ in corrected diagnostic.','original_run':'https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44602532063/job/135837472874','original_exports_verified':123,'original_results':{'OK':97,'FAIL':5,'SKIP':2}};(A/'original-canonical-ledger.json').write_text(json.dumps(ledger,sort_keys=True));print('NAV_GSTBAD_CORRECTED_ORIGINAL_LEDGER_JSON\
+        \ '+json.dumps(ledger,sort_keys=True),flush=True)\n\nRECOVER\nsudo chroot /mnt/nav-lfs /usr/sbin/ldconfig\n"
+    - name: Only six priorfailed GstPlay cases once exclude13passed allotherprograms
+      shell: bash
+      run: "set -euo pipefail\nsudo unshare --mount --propagation private python3 - <<'DISCOVER'\nfrom pathlib import\
+        \ Path\nimport subprocess,os,json,hashlib,time,resource,tarfile,urllib.request,base64,gzip,traceback,signal,threading,collections,shlex\n\
+        root=Path('/mnt/nav-lfs'); out=root/'nav-build-metadata/gstplay-six-corrected';out.mkdir(exist_ok=True);src=root/'sources/ffmpeg-9.0.1';archive=root/'sources/ffmpeg-9.0.1.tar.xz'\n\
+        manifest={};errors=[]\ndef sha(p):\n h=hashlib.sha256()\n with p.open('rb')as f:\n  for b in iter(lambda:f.read(1048576),b''):h.update(b)\n\
+        \ return h.hexdigest()\ndef run(c,name,timeout=1200):\n start=time.monotonic();timedout=False\n with (out/name).open('w')as\
+        \ f:\n  p=subprocess.Popen(c,stdout=f,stderr=subprocess.STDOUT,start_new_session=True)\n  try:p.wait(timeout=timeout)\n\
+        \  except subprocess.TimeoutExpired:\n   timedout=True;os.killpg(p.pid,signal.SIGTERM)\n   try:p.wait(timeout=10)\n\
+        \   except subprocess.TimeoutExpired:os.killpg(p.pid,signal.SIGKILL);p.wait()\n rc=p.returncode;(out/(name+'.exit.json')).write_text(json.dumps({'command':c,'exit':rc,'seconds':time.monotonic()-start,'timeout':timedout,'process_group_killed_on_timeout':timedout}));return\
+        \ rc\n\ntry:\n def tmp_metadata():\n  import stat\n  z=(root/'tmp').lstat();return {'type':stat.S_IFMT(z.st_mode),'mode':oct(stat.S_IMODE(z.st_mode)),'uid':z.st_uid,'gid':z.st_gid}\n\
+        \ account=next(l.split(':')for l in(root/'etc/passwd').read_text().splitlines()if l.split(':')[0]=='tester');uid,gid=account[2:4];assert\
+        \ int(uid)>0\n probe_code=\"import tempfile,os,json;fd,p=tempfile.mkstemp(prefix='NAV_NONTEST_',dir='/tmp');os.write(fd,b'NAV_TMP');os.lseek(fd,0,0);assert\
+        \ os.read(fd,7)==b'NAV_TMP';os.close(fd);os.unlink(p);assert not os.path.exists(p);print(json.dumps({'tester_mkstemp_read_write_unlink':True,'uid':os.getuid()}))\"\
+        \n probe=['chroot','--userspec='+uid+':'+gid,str(root),'/usr/bin/env','-i','HOME=/tmp','PATH=/usr/bin:/usr/sbin:/bin:/sbin','LC_ALL=C','/usr/bin/python3','-c',probe_code]\n\
+        \ (out/'tmp-before.json').write_text(json.dumps(tmp_metadata()))\n pre=subprocess.run(probe,capture_output=True,text=True);(out/'tester-mkstemp-before.json').write_text(json.dumps({'exit':pre.returncode,'stdout':pre.stdout,'stderr':pre.stderr}))\n\
+        \ assert pre.returncode!=0,'hypothesis not reproduced, stop before correction or test'\n os.chown(root/'tmp',0,0);os.chmod(root/'tmp',0o1777);(out/'tmp-after.json').write_text(json.dumps(tmp_metadata()))\n\
+        \ post=subprocess.run(probe,capture_output=True,text=True);(out/'tester-mkstemp-after.json').write_text(json.dumps({'exit':post.returncode,'stdout':post.stdout,'stderr':post.stderr}));assert\
+        \ post.returncode==0\n def device_record():\n  import stat\n  result={}\n  for name in ['dev','dev/null','dev/zero','dev/random','dev/urandom','dev/tty','dev/ptmx','dev/pts','dev/pts/ptmx','dev/shm','proc']:\n\
+        \   p=root/name\n   try:\n    z=p.lstat();r={'type':stat.S_IFMT(z.st_mode),'mode':oct(stat.S_IMODE(z.st_mode)),'uid':z.st_uid,'gid':z.st_gid,'rdev':z.st_rdev,'is_char':stat.S_ISCHR(z.st_mode),'is_regular':stat.S_ISREG(z.st_mode)}\n\
+        \    if stat.S_ISCHR(z.st_mode):r.update(major=os.major(z.st_rdev),minor=os.minor(z.st_rdev))\n    if stat.S_ISLNK(z.st_mode):r['link']=os.readlink(p)\n\
+        \    result[name]=r\n   except FileNotFoundError:result[name]={'missing':True}\n  return result\n (out/'devices-before.json').write_text(json.dumps(device_record()))\n\
+        \ import stat\n assert os.readlink('/proc/self/ns/mnt')!=os.readlink('/proc/1/ns/mnt'),'must be private\
+        \ disposable mount namespace'\n subprocess.run(['mount','--make-rprivate','/'],check=True)\n for name,major,minor\
+        \ in [('null',1,3),('zero',1,5),('random',1,8),('urandom',1,9),('tty',5,0)]:\n  p=root/'dev'/name\n  if\
+        \ p.exists()or p.is_symlink():\n   z=p.lstat()\n   if not stat.S_ISCHR(z.st_mode):assert not stat.S_ISDIR(z.st_mode);p.unlink()\n\
+        \  if not p.exists():os.mknod(p,stat.S_IFCHR|0o666,os.makedev(major,minor))\n  z=p.stat();assert stat.S_ISCHR(z.st_mode)and\
+        \ os.major(z.st_rdev)==major and os.minor(z.st_rdev)==minor\n  os.chown(p,0,0);os.chmod(p,0o666)\n for name\
+        \ in ['proc','dev/pts','dev/shm']:(root/name).mkdir(exist_ok=True,parents=True)\n ttygid=next(l.split(':')[2]for\
+        \ l in(root/'etc/group').read_text().splitlines()if l.split(':')[0]=='tty')\n subprocess.run(['mount','-t','proc','proc',str(root/'proc')],check=True)\n\
+        \ subprocess.run(['mount','-t','devpts','-o','newinstance,ptmxmode=0666,mode=0620,gid='+ttygid,'devpts',str(root/'dev/pts')],check=True)\n\
+        \ subprocess.run(['mount','-t','tmpfs','-o','mode=1777,nosuid,nodev','tmpfs',str(root/'dev/shm')],check=True)\n\
+        \ ptmx=root/'dev/ptmx'\n if ptmx.exists()or ptmx.is_symlink():assert not ptmx.is_dir();ptmx.unlink()\n ptmx.symlink_to('pts/ptmx')\n\
+        \ (out/'devices-after.json').write_text(json.dumps(device_record()))\n (out/'mountinfo-after.txt').write_text(Path('/proc/self/mountinfo').read_text())\n\
+        \ (out/'namespace-proof.json').write_text(json.dumps({'self':os.readlink('/proc/self/ns/mnt'),'pid1':os.readlink('/proc/1/ns/mnt'),'private_disposable':True}))\n\
+        \ ffarchive=Path('/mnt/nav-ffmpeg-candidate.tar.zst');assert ffarchive.stat().st_size==109871031 and sha(ffarchive)=='ca64649a2be3951b5e8c5dad8796f8ee125cf10a29b49611cc517c44a708c30d'\n\
+        \ subprocess.run(['tar','--zstd','-xpf',str(ffarchive),'-C',str(root)],check=True);subprocess.run(['chroot',str(root),'/sbin/ldconfig'],check=True)\n\
+        \ (out/'ffmpeg-restored-proof.json').write_text(json.dumps({'cache_id':10826754060,'archive_bytes':109871031,'sha256':sha(ffarchive),'original_first':{'PASS':5259,'FAIL':31},'latest_corrected':{'PASS':5290,'FAIL':0},'no_FATE_replay':True}))\n\
+        \ libavarchive=Path('/mnt/nav-gstlibav-candidate.tar.zst');assert libavarchive.stat().st_size==525188 and\
+        \ sha(libavarchive)=='a06fa19db67a75ccaa710311f5025018eb73cc20e6867f545cc36249a2517d67'\n subprocess.run(['tar','--zstd','-xpf',str(libavarchive),'-C',str(root)],check=True);subprocess.run(['chroot',str(root),'/sbin/ldconfig'],check=True)\n\
+        \ gsrc=root/'sources/gst-plugins-bad-1.28.6';assert not gsrc.exists();source_url='https://gstreamer.freedesktop.org/src/gst-plugins-bad/gst-plugins-bad-1.28.6.tar.xz';data=urllib.request.urlopen(source_url,timeout=120).read();assert\
+        \ hashlib.sha256(data).hexdigest()=='6636f2c2289ceda52c4aba971338c81e2b5780d3381bd3673c1c116ec87587c3'\n\
+        \ import io\n with tarfile.open(fileobj=io.BytesIO(data))as t:\n  for m in t.getmembers():assert not m.name.startswith('/')and'..'not\
+        \ in Path(m.name).parts\n  t.extractall(root/'sources',filter='data')\n goriginal={p.relative_to(gsrc).as_posix():sha(p)for\
+        \ p in gsrc.rglob('*')if p.is_file()};(out/'gstbad-source-before.json').write_text(json.dumps(goriginal,sort_keys=True))\n\
+        \ def shell(command,name,timeout=1200,tester=False):\n  args=['chroot']+(['--userspec='+uid+':'+gid]if tester\
+        \ else [])+[str(root),'/usr/bin/env','-i','HOME=/tmp/nav-gstbad-home','PATH=/usr/bin:/usr/sbin:/bin:/sbin','LC_ALL=C','/bin/bash','-c','set\
+        \ -euo pipefail; ulimit -v 4194304;ulimit -c 0; export MAKEFLAGS=-j2; cd /sources/gst-plugins-bad-1.28.6;\
+        \ '+command]\n  return run(args,name,timeout)\n assert shell('meson setup build --prefix=/usr --buildtype=release\
+        \ --wrap-mode=nodownload -Dtests=enabled -Dgst_play_tests=true -Ddoc=disabled','gstbad-configure.log',600)==0\n\
+        \ for option,name in [('--tests','discovery.json'),('--buildoptions','options.json'),('--dependencies','dependencies.json')]:assert\
+        \ shell('meson introspect build '+option,name,120)==0\n discovered=json.loads((out/'discovery.json').read_text());target=next(z\
+        \ for z in discovered if z['name']=='libs_play');assert target['cmd']==['/sources/gst-plugins-bad-1.28.6/build/tests/check/libs_play']\n\
+        \ selected=['test_play_position_update_interval','test_play_audio_video_eos','test_play_media_info','test_play_stream_disable','test_play_stream_switch_audio','test_play_stream_switch_subtitle']\n\
+        \ text=(gsrc/'tests/check/libs/play.c').read_text()\n for n in selected:assert text.count('tcase_add_test\
+        \ (tc_general, '+n+');')==1\n # Fetch original fixtures only to their native build fixture directory, pinned\
+        \ bytes/hash.\n fixtures=[{'bytes': 82764, 'filename': 'audio.ogg', 'sha256': '8c8da16277dad52580709cb3428a54d591b7a8735dbad8773818c79b1959f45b',\
+        \ 'url': 'https://gstreamer.freedesktop.org/data/media/small/audio.ogg'}, {'bytes': 97691, 'filename': 'audio-video.ogg',\
+        \ 'sha256': '10a124058f5dc25461a67f898da0f7647c0d39e35000ddf7ad5382c3be1ba2da', 'url': 'https://gstreamer.freedesktop.org/data/media/small/audio-video.ogg'},\
+        \ {'bytes': 4387, 'filename': 'audio-short.ogg', 'sha256': 'f3d3ba4443923a4441705a3621bd77495fbef575bd67ab17f5c1ba2586f54a89',\
+        \ 'url': 'https://gstreamer.freedesktop.org/data/media/small/audio-short.ogg'}, {'bytes': 7350, 'filename':\
+        \ 'audio-video-short.ogg', 'sha256': 'ab9a1446877a9446d168a2b717ffcfca73477b116a7a981c632532d3be585929',\
+        \ 'url': 'https://gstreamer.freedesktop.org/data/media/small/audio-video-short.ogg'}, {'bytes': 4053220,\
+        \ 'filename': 'sintel.mkv', 'sha256': '781f00f7815b6cec7eab5ee5e56e5022822bbd88595c4a74ba9f389a2443c19c',\
+        \ 'url': 'https://gstreamer.freedesktop.org/data/media/small/sintel.mkv'}, {'bytes': 197, 'filename': 'test_sub.srt',\
+        \ 'sha256': 'be358ae462b9c32ee6e00af9d31793dbe7c1abf0662253b484845a6f480bcf46', 'url': 'https://gstreamer.freedesktop.org/data/media/small/test_sub.srt'}]\n\
+        \ media=gsrc/'build/tests/check/media';media.mkdir(parents=True,exist_ok=True)\n for z in fixtures:\n  b=urllib.request.urlopen(z['url'],timeout=60).read();assert\
+        \ len(b)==z['bytes']and hashlib.sha256(b).hexdigest()==z['sha256'];(media/z['filename']).write_bytes(b)\n\
+        \ (out/'fixture-before.json').write_text(json.dumps(fixtures,sort_keys=True))\n assert shell('ninja -C build\
+        \ -j2','gstbad-build.log',2400)==0\n for z in fixtures:assert(media/z['filename']).stat().st_size==z['bytes']and\
+        \ sha(media/z['filename'])==z['sha256']\n assert all(sha(gsrc/n)==v for n,v in goriginal.items()),'source\
+        \ changed'\n home=root/'tmp/nav-gstbad-home';runtime=root/'tmp/nav-gstbad-runtime'\n for p in [home/'.config',home/'.cache/fontconfig',home/'.fontconfig',runtime]:p.mkdir(parents=True,exist_ok=True)\n\
+        \ os.chmod(runtime,0o700);subprocess.run(['chown','-R',uid+':'+gid,str(home),str(runtime),str(gsrc)],check=True)\n\
+        \ assert shell(\"python3 -c 'import os,tempfile,pty;assert os.getuid()>0;f=tempfile.TemporaryFile(dir=\\\
+        \"/tmp\\\");f.write(b\\\"NAV\\\");f.seek(0);assert f.read()==b\\\"NAV\\\";f.close();m,s=pty.openpty();os.close(m);os.close(s);assert\
+        \ os.path.isfile(\\\"/proc/cpuinfo\\\");print(\\\"NONTEST_ENV_PASS\\\")'\",'tester-smoke.log',30,True)==0\n\
+        \ assert shell('gst-inspect-1.0 avdec_h264 && gst-inspect-1.0 avdec_aac && gst-inspect-1.0 avdec_mp3','separate-codec-prerequisite-smoke.log',120)==0\n\
+        \ xvlog=(out/'xvfb.log').open('w');xv=subprocess.Popen(['chroot',str(root),'Xvfb',':98','-screen','0','1280x800x24','-nolisten','tcp','-ac','-noreset'],stdout=xvlog,stderr=subprocess.STDOUT)\n\
+        \ for _ in range(100):\n  if(root/'tmp/.X11-unix/X98').exists():break\n  time.sleep(0.1)\n assert(root/'tmp/.X11-unix/X98').exists()\n\
+        \ env=dict(target['env']);env.update(GST_CHECKS=','.join(selected),GST_CHECK_XML='1',HOME='/tmp/nav-gstbad-home',XDG_CONFIG_HOME='/tmp/nav-gstbad-home/.config',XDG_CACHE_HOME='/tmp/nav-gstbad-home/.cache',LANG='C.UTF-8',DISPLAY=':98',XDG_RUNTIME_DIR='/tmp/nav-gstbad-runtime',LIBGL_ALWAYS_SOFTWARE='1')\n\
+        \ (out/'selection-before.json').write_text(json.dumps({'exact_prior_failed_cases':selected,'count':6,'excluded_prior_passed_GstPlay':13,'excluded_passed_Bad_programs':101,'prior_optional2SKIP_OPEN':True,'native_target':target,'env':env,'once_only':True,'canonical_original97OK5FAIL2SKIP_immutable':True,'prior_corrected101OK1FAIL2SKIP_immutable':True},sort_keys=True))\n\
+        \ command='cd build && dbus-run-session -- env -u LC_ALL -u LANGUAGE '+ ' '.join(shlex.quote(k+'='+str(v))for\
+        \ k,v in env.items())+' '+shlex.quote(target['cmd'][0])\n rc=shell(command,'gstplay-six-original.log',600,True);xv.terminate();xv.wait(timeout=10);xvlog.close()\n\
+        \ import xml.etree.ElementTree as E\n xml=gsrc/'tests/check/libs/play.check.xml';assert xml.is_file();(out/'play.check.xml').write_bytes(xml.read_bytes());cases=E.parse(xml).getroot().findall('.//{*}test');ids=[t.find('{*}id').text\
+        \ for t in cases];assert len(ids)==6 and set(ids)==set(selected)and len(set(ids))==6,'case selection mismatch\
+        \ stop no replay'\n result={'exit':rc,'count':6,'cases':[{'name':t.find('{*}id').text,'result':t.get('result'),'message':t.find('{*}message').text\
+        \ if t.find('{*}message')is not None else None}for t in cases],'results':dict(collections.Counter(t.get('result')for\
+        \ t in cases)),'original13passed_excluded':True,'original_all_program_records_immutable':True,'separate_corrected_prerequisite_diagnostic':True}\n\
+        \ (out/'six-case-results.json').write_text(json.dumps(result,sort_keys=True));print('NAV_GSTPLAY_SIX_RESULTS\
+        \ '+json.dumps(result,sort_keys=True),flush=True)\n for z in fixtures:assert(media/z['filename']).stat().st_size==z['bytes']and\
+        \ sha(media/z['filename'])==z['sha256']\n (out/'fixture-after.json').write_text(json.dumps({'files':len(fixtures),'all_exact':True}));\n\
+        \nexcept Exception:\n (out/'error.txt').write_text(traceback.format_exc());errors.append(traceback.format_exc());raise\n\
+        finally:\n if 'samples' in globals() and samples.exists():\n  try:\n   sample_after=verify_samples();(out/'sample-after.json').write_text(json.dumps(sample_after));errors.extend(['sample\
+        \ bytes changed']if not sample_after['exact']else [])\n  except Exception as ex:errors.append('sample after\
+        \ verification: '+repr(ex))\n  import shutil;shutil.rmtree(samples);(out/'samples-removed.json').write_text(json.dumps({'removed':not\
+        \ samples.exists(),'no_persistent_media':True}))\n if src.exists() and 'original' in globals():\n  after={n:sha(src/n)if(src/n).is_file()else\
+        \ None for n in original};(out/'original-source-after-sha256.json').write_text(json.dumps(after,sort_keys=True));(out/'source-finally-audit.json').write_text(json.dumps({'files':len(original),'unchanged':original==after,'finally_even_on_failure':True}));errors.extend(['source\
+        \ bytes changed']if original!=after else [])\n if 'media'in globals()and media.exists():\n  import shutil;shutil.rmtree(media);(out/'fixtures-removed.json').write_text(json.dumps({'removed':not\
+        \ media.exists(),'no_persistent_media':True}))\n if 'goriginal'in globals():\n  gafter={n:sha(gsrc/n)if(gsrc/n).is_file()else\
+        \ None for n in goriginal};(out/'gstbad-source-finally-audit.json').write_text(json.dumps({'files':len(goriginal),'unchanged':goriginal==gafter}));errors.extend(['gstbad\
+        \ source changed']if goriginal!=gafter else [])\n for export_index,p in enumerate(sorted(out.rglob('*'))):\n\
+        \  if p.is_file():\n   b=p.read_bytes();tag='FILE_'+str(export_index).zfill(6);manifest[tag]={'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest(),'file':p.relative_to(out).as_posix()};enc=base64.b64encode(gzip.compress(b)).decode();parts=[enc[i:i+6000]for\
+        \ i in range(0,len(enc),6000)]\n   for i,part in enumerate(parts):print('NAV_FFMPEG_'+tag+'_GZB64 '+str(i+1)+'/'+str(len(parts))+'\
+        \ '+part,flush=True)\n b=json.dumps({'files':manifest,'errors':errors},sort_keys=True).encode();enc=base64.b64encode(gzip.compress(b)).decode();parts=[enc[i:i+6000]for\
+        \ i in range(0,len(enc),6000)]\n for i,part in enumerate(parts):print('NAV_FFMPEG_EXPORT_MANIFEST_JSON_GZB64\
+        \ '+str(i+1)+'/'+str(len(parts))+' '+part,flush=True)\n\nif errors:raise RuntimeError('post-export audit\
+        \ errors, inspect evidence')\nDISCOVER\n"
+    - name: Exact current cache bytes headroom no save delete
+      if: always()
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "python3 - <<'PREFLIGHT'\nimport urllib.request,urllib.error,json,time,os\nstart=time.monotonic();base='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build';token=os.environ['GH_TOKEN'];assert\
+        \ token\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n def redirect_request(self,req,fp,code,msg,headers,newurl):raise\
+        \ urllib.error.HTTPError(req.full_url,code,'redirect refused for scoped authenticated preflight',headers,fp)\n\
+        opener=urllib.request.build_opener(NoRedirect())\ndef req(u):\n assert u.startswith(base)\n q=urllib.request.Request(u,headers={'Authorization':'Bearer\
+        \ '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \ with opener.open(q,timeout=30)as response:return json.load(response)\nc=req(base+'/actions/caches?per_page=100&t='+str(time.time_ns()));total=sum(z['size_in_bytes']for\
+        \ z in c['actions_caches']);print('NAV_CANDIDATE_EXACT_CURRENT_CACHE '+json.dumps({'count':c['total_count'],'bytes':total,'headroom':10*1024**3-total,'no_save_or_delete':True,'caches':c['actions_caches']},sort_keys=True),flush=True)\n\
+        \nPREFLIGHT\n"
