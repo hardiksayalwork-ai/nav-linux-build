@@ -1,3 +1,4 @@
+# Packaging only. Manual single run, no firmware boot or cache writes.
 name: NAV ISO packaging ONLY BIOSUEFI readback NO boot single attempt
 'on':
   workflow_dispatch: {}
