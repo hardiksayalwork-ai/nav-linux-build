@@ -1,4 +1,3 @@
-# Packaging only. Manual single run, no firmware boot or cache writes.
 name: NAV ISO packaging ONLY BIOSUEFI readback NO boot single attempt
 'on':
   workflow_dispatch: {}
@@ -464,22 +463,16 @@ jobs:
         fail-on-cache-miss: true
     - name: Sole ISO packaging no firmware boot draft-only under2GiB else ephemeral
       shell: bash
-      run: 'set -euo pipefail
-
-        python3 - <<''FETCH''
-
-        import urllib.request,pathlib,hashlib
-
-        u=''https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/e3a90851c828b6e582ed60f796f08b3718f5db2a/1-12-nav-ISO-packaging-runner-v1.py''
-
-        b=urllib.request.urlopen(u,timeout=60).read();assert len(b)==529405 and hashlib.sha256(b).hexdigest()==''44869031bd5f3d630b51e05cb82d72e541ade9b7a9b7b01bb65ecda4c9645498'';pathlib.Path(''/tmp/nav-ISO-packaging-runner.py'').write_bytes(b)
-
-        FETCH
-
-        sudo --preserve-env=GH_TOKEN,GITHUB_REPOSITORY,GITHUB_RUN_ID,GITHUB_SHA unshare --mount --propagation private
-        python3 /tmp/nav-ISO-packaging-runner.py
-
-        '
+      run: "set -euo pipefail\npython3 - <<'FETCH'\nimport urllib.request,pathlib,hashlib\nu='https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/e3a90851c828b6e582ed60f796f08b3718f5db2a/1-12-nav-ISO-packaging-runner-v1.py'\n\
+        b=urllib.request.urlopen(u,timeout=60).read();assert len(b)==529405 and hashlib.sha256(b).hexdigest()=='44869031bd5f3d630b51e05cb82d72e541ade9b7a9b7b01bb65ecda4c9645498';pathlib.Path('/tmp/nav-ISO-packaging-runner.py').write_bytes(b)\n\
+        FETCH\nsudo python3 - <<'NOSECRETS'\nfrom pathlib import Path\nr=Path('/mnt/nav-lfs')\nshadow=r/'etc/shadow'\n\
+        if shadow.exists():\n for line in shadow.read_text().splitlines():\n  fields=line.split(':');assert len(fields)>1\n\
+        \  assert not fields[1] or fields[1].startswith(('!','*')), 'unlocked password hash forbidden in development\
+        \ ISO, stop without upload'\nfor directory in ['etc/ssh','etc/ssl/private']:\n p=r/directory\n if p.exists():\n\
+        \  assert not any(q.is_file() and not q.name.endswith('.pub') and (q.name.endswith('_key') or q.suffix in\
+        \ ('.key','.pem')) for q in p.rglob('*')), 'private key material forbidden in development ISO, stop without\
+        \ upload'\nprint('NAV_ISO_NO_UNLOCKED_PASSWORD_HASH_OR_PRIVATEKEY_GATE_PASS')\nNOSECRETS\nsudo --preserve-env=GH_TOKEN,GITHUB_REPOSITORY,GITHUB_RUN_ID,GITHUB_SHA\
+        \ unshare --mount --propagation private python3 /tmp/nav-ISO-packaging-runner.py\n"
       env:
         GH_TOKEN: ${{ github.token }}
     - name: Always exact45 protected postflight NO cache save delete
