@@ -1,0 +1,479 @@
+name: NAV argcomplete372 pinned readinessonly manifest42protected
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  inventory:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - name: Preflight manifest42protected exact no save delete
+      shell: bash
+      run: "test \"$GITHUB_RUN_NUMBER\" = 1\ntest \"$GITHUB_RUN_ATTEMPT\" = 1\nset -euo pipefail\npython3 - <<'PREFLIGHT'\n\
+        import urllib.request, urllib.error, json, time, os\nstart = time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
+        token = os.environ['GH_TOKEN']\nassert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n\
+        \    def redirect_request(self, req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url,\
+        \ code, 'redirect refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control':\
+        \ 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return json.load(response)\nr\
+        \ = req(base + '?t=' + str(time.time_ns()))\nassert r['private'] is False\nc = req(base + '/actions/caches?per_page=100&t='\
+        \ + str(time.time_ns()))\nimport pathlib, hashlib, urllib.request, importlib.util\nfor (url, dest, digest)\
+        \ in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/1-nav-build-manifest-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', 'c88c1a460c25ef23adcb0547784600fd7c0a3c24042175102c1879041c9126a6'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest() == digest\n\
+        \    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\n\
+        accepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json', 'c88c1a460c25ef23adcb0547784600fd7c0a3c24042175102c1879041c9126a6')\n\
+        expected = accepted['protected_caches']\nactual = {str(z['id']): {'key': z['key'], 'bytes': z['size_in_bytes']}\
+        \ for z in c['actions_caches']}\nassert c['total_count'] == len(actual) == len(expected) and actual == expected\n\
+        assert sum((z['bytes'] for z in actual.values())) < 10 * 1024 ** 3\nprint('NAV_FFMPEG_PUBLIC_STANDARD_RUNNER_FREE_CACHE_EXACT\
+        \ ' + json.dumps({'public': True, 'standard_runner': 'ubuntu-24.04', 'cache_count': len(actual), 'cache_bytes':\
+        \ sum((z['bytes'] for z in actual.values())), 'no_cache_save_or_delete': True, 'elapsed': time.monotonic()\
+        \ - start}), flush=True)\nprint('NAV_MANIFEST42_READONLY_VERIFIED ' + json.dumps(verifier.verify_inventory(accepted,\
+        \ c), sort_keys=True), flush=True)\nPREFLIGHT\n"
+      env:
+        GH_TOKEN: ${{ github.token }}
+    - name: Prepare owned isolated root and exact bundle files
+      shell: bash
+      run: "set -euo pipefail\nsudo mkdir -p /mnt/nav-lfs\nsudo chown \"$(id -u):$(id -g)\" /mnt/nav-lfs\nfor bundle\
+        \ in /mnt/nav-gdesktop51-accepted-original.tar.zst /mnt/nav-sysprof500-accepted-noGUI.tar.zst /mnt/nav-colord148-accepted-original.tar.zst\
+        \ /mnt/nav-glycin215-accepted-original.tar.zst /mnt/nav-libcanberra-0.30-accepted-original.tar.zst /mnt/nav-startup-notification-0.12-accepted-original.tar.zst\
+        \ /mnt/nav-xwayland24113-accepted-original.tar.zst /mnt/nav-libdisplay040-accepted-original.tar.zst /mnt/nav-libinput-accepted-original.tar.zst\
+        \ /mnt/nav-libwacom2191-accepted-original.tar.zst /mnt/nav-lua548-embedded-open.tar.zst /mnt/nav-rpc137-accepted-original.tar.zst\
+        \ /mnt/nav-libei-accepted-original.tar.zst /mnt/nav-libdw0195-accepted-open.tar.zst /mnt/nav-libdex110-accepted-ledgers.tar.zst\
+        \ /mnt/nav-bashcomp218-accepted-original.tar.zst /mnt/nav-gusb049-accepted-original.tar.zst /mnt/nav-gtk4224-accepted-open.tar.zst\
+        \ /mnt/nav-gtk3-32443-accepted-original.tar.zst /mnt/nav-svg-loader.tar.zst /mnt/nav-pango-introspection.tar.zst\
+        \ /mnt/nav-atspi2606-accepted-original.tar.zst /mnt/nav-hwdata0410-accepted-open.tar.zst /mnt/nav-ffmpeg-candidate.tar.zst\
+        \ /mnt/nav-gstlibav-candidate.tar.zst /mnt/nav-gstbad-candidate.tar.zst /mnt/nav-gtk-prerequisites.tar.zst\
+        \ /mnt/nav-rsvg-root.tar.zst /mnt/nav-gstmatroska-prerequisites.tar.zst /mnt/nav-theorabase-prerequisites.tar.zst\
+        \ /mnt/nav-gstgood-prerequisites.tar.zst /mnt/nav-opusbase-prerequisites.tar.zst; do\n test ! -e \"$bundle\"\
+        \n sudo install -o \"$(id -u)\" -g \"$(id -g)\" -m 0600 /dev/null \"$bundle\"\n test -w \"$bundle\"\n test\
+        \ \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"$(id -u):$(id -g):600\"\n probe=$(mktemp -d /tmp/nav-aom-bundle-probe.XXXXXX)\n\
+        \ printf 'NAV_AOM_EXACT_RUNNER_OUTPUT\\n' > \"$probe/proof\"\n tar --zstd -cf \"$bundle\" -C \"$probe\"\
+        \ proof\n zstd -t \"$bundle\"\n tar --zstd -xOf \"$bundle\" proof > \"$probe/recovered\"\n cmp \"$probe/proof\"\
+        \ \"$probe/recovered\"\n # Match actions/cache extraction semantics, not only bundle writer access.\n test\
+        \ \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n cp \"$bundle\" \"$probe/expected-bundle\"\n\
+        \ relative_bundle=$(realpath --relative-to=\"$PWD\" \"$bundle\")\n tar --zstd -cf \"$probe/cache.tzst\"\
+        \ -P \"$relative_bundle\"\n : > \"$bundle\"\n set +e\n env -u TAR_OPTIONS /usr/bin/tar -xf \"$probe/cache.tzst\"\
+        \ -P -C \"$PWD\" --use-compress-program unzstd > \"$probe/default-restore.log\" 2>&1\n negative_rc=$?\n\
+        \ set -e\n test \"$negative_rc\" = 2\n test ! -s \"$bundle\"\n grep -F 'Cannot open: File exists' \"$probe/default-restore.log\"\
+        \n TAR_OPTIONS=--overwrite /usr/bin/tar -xf \"$probe/cache.tzst\" -P -C \"$PWD\" --use-compress-program\
+        \ unzstd\n cmp \"$probe/expected-bundle\" \"$bundle\"\n test \"$(stat -c '%u:%g:%a' \"$bundle\")\" = \"\
+        $(id -u):$(id -g):600\"\n test \"$(stat -c '%U:%a' /mnt)\" = root:755\n test ! -w /mnt\n printf 'NAV_AOM_REAL_CACHE_RESTORE_OVERWRITE_SELFTEST_PASS\
+        \ %s\\n' \"$bundle\"\n : > \"$bundle\"\ndone\nprintf 'NAV_AOM_EXACT_BUNDLE_PERMISSION_SELFTEST_PASS\\n'\n"
+    - name: Actual root-owned failure evidence exporter selftest
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'EXPORT_SELFTEST'\nimport pathlib,subprocess,tempfile,base64,gzip,json,hashlib\n\
+        p=pathlib.Path(tempfile.mkdtemp(prefix='nav-aom-export-selftest-'))\nexpected={'shard-00.log':b'synthetic\
+        \ failure evidence\\n','shard-00.xml':b'<testsuites><testsuite name=\"synthetic\"><testcase name=\"failed\"\
+        ><failure message=\"synthetic\"/></testcase></testsuite></testsuites>'}\nfor name,data in expected.items():\n\
+        \ f=p/name;f.write_bytes(data)\n subprocess.run(['sudo','chown','root:root',str(f)],check=True)\n subprocess.run(['sudo','chmod','600',str(f)],check=True)\n\
+        code=\"import pathlib\\nimport base64, gzip, subprocess, os, hashlib, json\\nmode = 'shard'\\np = pathlib.Path('/mnt/nav-lfs/nav-build-metadata/aom-tooling')\\\
+        nmanifest = {'mode': mode, 'files': {}, 'errors': [], 'runner_uid': os.getuid()}\\n\\ndef emit(name, data):\\\
+        n    data = gzip.compress(data, mtime=0)\\n    for i in range(0, len(data), 3000):\\n        print('NAV_RSVG_'\
+        \ + name + '_GZB64', base64.b64encode(data[i:i + 3000]).decode(), flush=True)\\ntry:\\n    listing = subprocess.check_output(['sudo',\
+        \ 'find', str(p), '-type', 'f', '-print0']).split(b'\\\\x00')\\nexcept Exception as ex:\\n    listing =\
+        \ []\\n    manifest['errors'].append({'area': str(p), 'error': repr(ex)})\\nfor item in sorted((x for x\
+        \ in listing if x)):\\n    f = pathlib.Path(os.fsdecode(item))\\n    rel = str(f.relative_to(p))\\n    wanted\
+        \ = mode == 'build' and (not (rel.endswith('.log') and rel.startswith('discovery/'))) or (mode == 'shard'\
+        \ and '/' not in rel and rel.startswith(('shard-', 'run-status-', 'current-list'))) or (mode == 'examples'\
+        \ and rel.startswith('original-examples'))\\n    if wanted:\\n        try:\\n            data = subprocess.check_output(['sudo',\
+        \ 'cat', str(f)])\\n            name = rel.replace('/', '-').replace('.', '_').upper()\\n            manifest['files'][name]\
+        \ = {'source': rel, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}\\n            emit(name,\
+        \ data)\\n        except Exception as ex:\\n            manifest['errors'].append({'file': rel, 'error':\
+        \ repr(ex)})\\nemit('EXPORT-MANIFEST_JSON', json.dumps(manifest, indent=2).encode())\\nif manifest['errors']:\\\
+        n    raise RuntimeError('independent evidence export errors: ' + repr(manifest['errors']))\"\ncode=code.replace(\"\
+        '/mnt/nav-lfs/nav-build-metadata/aom-tooling'\",repr(str(p)))\nr=subprocess.run(['python3','-c',code],capture_output=True,text=True)\n\
+        assert r.returncode==0,r.stderr\nparts={}\nfor line in r.stdout.splitlines():\n if line.startswith('NAV_RSVG_'):\n\
+        \  name,value=line.split();parts.setdefault(name,[]).append(base64.b64decode(value))\nm=json.loads(gzip.decompress(b''.join(parts['NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64'])))\n\
+        assert not m['errors'] and len(m['files'])==len(expected)\nfor name,v in m['files'].items():\n b=gzip.decompress(b''.join(parts['NAV_RSVG_'+name+'_GZB64']))\n\
+        \ assert b==expected[v['source']] and len(b)==v['bytes'] and hashlib.sha256(b).hexdigest()==v['sha256']\n\
+        missing=code.replace(repr(str(p)),repr(str(p/'missing-area')))\nr=subprocess.run(['python3','-c',missing],capture_output=True,text=True)\n\
+        assert r.returncode!=0 and 'NAV_RSVG_EXPORT-MANIFEST_JSON_GZB64 'in r.stdout\nprint('NAV_RSVG_REAL_ROOT_OWNED_EXPORT_AND_MISSING_SOURCE_SELFTEST_PASS')\n\
+        EXPORT_SELFTEST\n"
+    - name: Restore newest verified librsvg TRANSITIONAL root
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-rsvg-root.tar.zst
+        key: nav-blfs13.1-x86_64-librsvg-transitional-open-v1
+        fail-on-cache-miss: true
+    - name: Verify newest saved root archive
+      shell: bash
+      run: 'set -euo pipefail
+
+        printf ''b18303bde2a0da1f126fd595f21fd56ae353e1f2561adc0616337c380f21d2de  /mnt/nav-rsvg-root.tar.zst
+
+        '' | sha256sum -c -
+
+        zstd -t /mnt/nav-rsvg-root.tar.zst
+
+        tar --zstd -xf /mnt/nav-rsvg-root.tar.zst -C /mnt/nav-lfs
+
+        test -f /mnt/nav-lfs/nav-build-metadata/librsvg/RSVG-TRANSITIONAL-OPEN.json
+
+        '
+    - name: Restore exact verified gstgood narrow original-tested bundle OPEN gaps retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gstgood-prerequisites.tar.zst
+        key: nav-gstgood-narrow-install-only-transitional-open-v1
+        fail-on-cache-miss: true
+    - name: Restore exact verified opusbase narrow original-tested bundle OPEN gaps retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-opusbase-prerequisites.tar.zst
+        key: nav-opus-baseopus-install-only-open-v1
+        fail-on-cache-miss: true
+    - name: Restore exact verified gstmatroska additional tested bundle
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gstmatroska-prerequisites.tar.zst
+        key: nav-gstmatroska-original-tested-install-only-open-v1
+        fail-on-cache-miss: true
+    - name: Restore exact verified theorabase additional tested bundle
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-theorabase-prerequisites.tar.zst
+        key: nav-theora-basetheora-install-only-open-v1
+        fail-on-cache-miss: true
+    - name: Restore exact saved FFmpeg installonly original5290 latestcorrected ledger retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-ffmpeg-candidate.tar.zst
+        key: nav-ffmpeg9.0.1-install-only-first5290-corrected31-open-v1
+        fail-on-cache-miss: true
+        enableCrossOsArchive: false
+    - name: Restore saved gstlibav original5OK1FAIL OPEN16channel
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gstlibav-candidate.tar.zst
+        key: nav-gstlibav1.28.6-install-only-5OK1FAIL-OPEN16channel-v1
+        fail-on-cache-miss: true
+    - name: Authenticate four narrow bundles every path metadata replay preserve original canonical records
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "set -euo pipefail\nmkdir -p /mnt/nav-lfs/sources/nav-gstbad-evidence\nsudo --preserve-env=GH_TOKEN python3\
+        \ - <<'RECOVER'\nimport os,json,time,urllib.request,hashlib,base64,gzip,re\nfrom pathlib import Path\nTOKEN=os.environ['GH_TOKEN'];assert\
+        \ TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\nclass SafeRedirect(urllib.request.HTTPRedirectHandler):\n\
+        \ def redirect_request(self,req,fp,code,msg,headers,newurl):\n  new=super().redirect_request(req,fp,code,msg,headers,newurl)\n\
+        \  if new is not None and not newurl.startswith('https://api.github.com/'):new.remove_header('Authorization')\n\
+        \  return new\nOPENER=urllib.request.build_opener(SafeRedirect())\n_probe=urllib.request.Request('https://api.github.com/synthetic',headers={'Authorization':'Bearer\
+        \ SYNTHETIC_NOT_A_SECRET'})\n_cross=SafeRedirect().redirect_request(_probe,None,302,'Found',{},'https://example.invalid/synthetic-log')\n\
+        _same=SafeRedirect().redirect_request(_probe,None,302,'Found',{},'https://api.github.com/synthetic-next')\n\
+        assert not _cross.has_header('Authorization') and _same.get_header('Authorization')=='Bearer SYNTHETIC_NOT_A_SECRET'\n\
+        print('NAV_SAFE_REDIRECT_HEADER_SCOPE_SYNTHETIC_SELFTEST_PASS',flush=True)\ndef get(path):\n url=path if\
+        \ path.startswith('https://api.github.com/')else BASE+path\n req=urllib.request.Request(url,headers={'Authorization':'Bearer\
+        \ '+TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \ with OPENER.open(req,timeout=90)as r:return r.read()\ndef inventory():\n d=json.loads(get('actions/caches?per_page=100'));assert\
+        \ d['total_count']==len(d['actions_caches']);return {str(x['id']):{k:x[k]for k in ['key','ref','version','size_in_bytes']}for\
+        \ x in d['actions_caches']}\ndef unique_record(text,marker):\n rows=[]\n for l in text.splitlines():\n \
+        \ l=re.sub(r'^\\S+Z ','',l)\n  if l.startswith(marker+' '):rows.append(json.loads(l.split(' ',1)[1]))\n\
+        \ assert len(rows)==1,(marker,len(rows));return rows[0]\n\nBUNDLES=[{'label': 'gstgood', 'job': 135856812015,\
+        \ 'expected_proof': {'bytes': 42050, 'file': 'bundle-proof.json', 'sha256': '5d11e5054ebc4fd55486a70dd3c1ed90d0822055ed6e44d17a2a95ec1a9832e2'},\
+        \ 'key': 'nav-gstgood-narrow-install-only-transitional-open-v1', 'archive': '/mnt/nav-gstgood-prerequisites.tar.zst',\
+        \ 'prefix': 'NAV_GSTGOOD_'}, {'label': 'opusbase', 'job': 135899642946, 'expected_proof': {'bytes': 30579,\
+        \ 'file': 'bundle-proof.json', 'sha256': 'a9f48cc656b71ede3a8940a2c7b30eb274ea5719c2db128ca2f5a99a232c3e05'},\
+        \ 'key': 'nav-opus-baseopus-install-only-open-v1', 'archive': '/mnt/nav-opusbase-prerequisites.tar.zst',\
+        \ 'prefix': 'NAV_OPUSBASE_'}, {'label': 'gstmatroska', 'job': 135930808948, 'expected_proof': {'bytes':\
+        \ 41420, 'file': 'bundle-proof.json', 'sha256': '65f58d3266a1507075e3364190f735746aa4bff18722ebdc78d9969e0dafdb24'},\
+        \ 'key': 'nav-gstmatroska-original-tested-install-only-open-v1', 'archive': '/mnt/nav-gstmatroska-prerequisites.tar.zst',\
+        \ 'prefix': 'NAV_GSTGOOD_'}, {'label': 'theorabase', 'job': 135956171672, 'expected_proof': {'bytes': 87924,\
+        \ 'file': 'bundle-proof.json', 'sha256': '1be85ac55114fc743f1f3a21b380f3041d8450c0a3c4ff2cc99c5f96f5a4405f'},\
+        \ 'key': 'nav-theora-basetheora-install-only-open-v1', 'archive': '/mnt/nav-theorabase-prerequisites.tar.zst',\
+        \ 'prefix': 'NAV_THEORABASE_'}]\nimport stat\nA=Path('/mnt/nav-lfs/sources/nav-gstbad-evidence');A.mkdir(parents=True,exist_ok=True)\n\
+        for x in BUNDLES:\n raw=get('actions/jobs/'+str(x['job'])+'/logs').decode();prefix=x['prefix'];m=unique_record(raw,prefix+'EXPORT_MANIFEST_JSON');assert\
+        \ m['BUNDLE-PROOF_JSON']==x['expected_proof'];parts=[]\n for l in raw.splitlines():\n  l=re.sub(r'^\\S+Z\
+        \ ','',l)\n  if l.startswith(prefix+'BUNDLE-PROOF_JSON_GZB64 '):parts.append(base64.b64decode(l.split('\
+        \ ',1)[1]))\n b=gzip.decompress(b''.join(parts));pf=x['expected_proof'];assert len(b)==pf['bytes']and hashlib.sha256(b).hexdigest()==pf['sha256'];P=json.loads(b);f=Path(x['archive']);assert\
+        \ f.stat().st_size==P['bundle_bytes']and hashlib.file_digest(f.open('rb'),'sha256').hexdigest()==P['bundle_sha256'];root=Path('/mnt/nav-'+x['label']+'-replay');root.mkdir();import\
+        \ subprocess\n subprocess.run(['tar','--zstd','--same-owner','--same-permissions','-xpf',str(f),'-C',str(root)],check=True)\n\
+        \ def manifest(root):\n  out={}\n  for p in[root]+sorted(root.rglob('*')):\n   s=p.lstat();z={'type':stat.S_IFMT(s.st_mode),'mode':stat.S_IMODE(s.st_mode),'uid':s.st_uid,'gid':s.st_gid,'mtime':s.st_mtime_ns}\n\
+        \   if p.is_symlink():z['link']=os.readlink(p)\n   elif p.is_file():z['bytes']=s.st_size;z['sha256']=hashlib.file_digest(p.open('rb'),'sha256').hexdigest()\n\
+        \   else:assert p.is_dir()\n   out[str(p.relative_to(root))]=z\n  return out\n actual=manifest(root);assert\
+        \ actual==P['manifest'];subprocess.run(['tar','--zstd','--same-owner','--same-permissions','-xpf',str(f),'-C','/mnt/nav-lfs'],check=True)\n\
+        \ for name,z in P['manifest'].items():\n  p=Path('/mnt/nav-lfs')/name\n  if z['type']==stat.S_IFREG:assert\
+        \ p.is_file()and hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==z['sha256'],name\n  elif z['type']==stat.S_IFLNK:assert\
+        \ p.is_symlink()and os.readlink(p)==z['link'],name\n (A/(x['label']+'-replay-proof.json')).write_bytes(b);print('NAV_GSTBAD_CORRECTED_BUNDLE_REPLAY_EXACT',x['label'],len(actual),P['bundle_sha256'],flush=True)\n\
+        raw=get('actions/jobs/135837472874/logs').decode();m=unique_record(raw,'NAV_GSTBAD_EXPORT_MANIFEST_JSON');assert\
+        \ len(m)==123;parts={};O=A/'original-canonical';O.mkdir()\nfor l in raw.splitlines():\n l=re.sub(r'^\\S+Z\
+        \ ','',l)\n if l.startswith('NAV_GSTBAD_')and'_GZB64 'in l:\n  k,z=l.split(' ',1);parts.setdefault(k,[]).append(base64.b64decode(z))\n\
+        assert set(parts)=={'NAV_GSTBAD_'+k+'_GZB64'for k in m}\nfor k,z in m.items():\n b=gzip.decompress(b''.join(parts['NAV_GSTBAD_'+k+'_GZB64']));assert\
+        \ len(b)==z['bytes']and hashlib.sha256(b).hexdigest()==z['sha256'];p=O/z['file'];assert p.is_relative_to(O);p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(b)\n\
+        import collections\nr=[json.loads(l)for l in(O/'testlog.json').read_text().splitlines()if l.strip()];assert\
+        \ len(r)==104 and collections.Counter(x['result']for x in r)=={'OK':97,'FAIL':5,'SKIP':2};ledger={'classification':'SEPARATELY\
+        \ LABELED CORRECTED GstBad diagnostic. Original97OK5FAIL2SKIP immutable, never replaced/relabelled. Verified\
+        \ narrow Good and OpusBase prerequisites plus writable tester HOME runtime correction only. No source/test\
+        \ patch, no fixture substitution. Original Good101OK1FAIL timeout OPEN; Opus15OK5nestedmallocskipsOPEN;\
+        \ priorBase134OK+newOpus1program6casesOK. Hardware/optional/inherited OPEN gaps retained. No installation/save\
+        \ in corrected diagnostic.','original_run':'https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44602532063/job/135837472874','original_exports_verified':123,'original_results':{'OK':97,'FAIL':5,'SKIP':2}};(A/'original-canonical-ledger.json').write_text(json.dumps(ledger,sort_keys=True));print('NAV_GSTBAD_CORRECTED_ORIGINAL_LEDGER_JSON\
+        \ '+json.dumps(ledger,sort_keys=True),flush=True)\n\nRECOVER\nsudo chroot /mnt/nav-lfs /usr/sbin/ldconfig\n"
+    - name: Restore exact saved Bad honest OPEN2
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gstbad-candidate.tar.zst
+        key: nav-gstbad1.28.6-install-only-original97OK5FAIL2SKIP-Play17PASS2OPEN-v1
+        fail-on-cache-miss: true
+    - name: Restore GTK Graphene ISO hicolor original tested prerequisites
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gtk-prerequisites.tar.zst
+        key: nav-graphene-isocodes-hicolor-install-only-open-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted AT-SPI original201paths brokerNOTRUN realdesktopOPEN
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-atspi2606-accepted-original.tar.zst
+        key: nav-atspi2.60.6-original9OK-registryd27PASS-brokerNOTRUN-realdesktopOPEN-v1
+        fail-on-cache-miss: true
+    - name: Restore exact accepted Pango12metadata original ledgerunchanged
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-pango-introspection.tar.zst
+        key: nav-pango1.58.2-introspection-only-original-ledger-unchanged-v1
+        fail-on-cache-miss: true
+    - name: Restore exact accepted SVG loader runtimeonly originalOPENretained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-svg-loader.tar.zst
+        key: nav-librsvg2.62.4-svg-pixbufloader-only-native5-decode-verified-original-ledgers-unchanged-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted GTK3 payload allOPENretained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gtk3-32443-accepted-original.tar.zst
+        key: nav-gtk3.24.43-canonical192OK2FAIL-hiddenTAPFAIL-45NOTRUN-OPEN-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted GTK4 payload allOPENretained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gtk4224-accepted-open.tar.zst
+        key: nav-gtk4.22.4-unchanged-canonical10928-OPEN-G3NOTRUN-install-only-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted hwdata7paths allOPENretained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-hwdata0410-accepted-open.tar.zst
+        key: nav-hwdata0.410-original-check7OK-USBskip-external3NOTRUN-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted gusb25paths USBOPENretained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gusb049-accepted-original.tar.zst
+        key: nav-libgusb0.4.9-canonical2OK1FAIL-realUSBsigabrtOPEN-6NOTRUN-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted bashcomp1109paths labelsretained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-bashcomp218-accepted-original.tar.zst
+        key: nav-bashcompletion2.18.0-original1771PASS460SKIP14XFAIL3XPASS-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted libdex originalOPENs unchanged
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-libdex110-accepted-ledgers.tar.zst
+        key: nav-libdex1.1.0-original12OK1envFAIL-dbusonly1OK-liburingabsent-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted libdw originalOPENs unchanged
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-libdw0195-accepted-open.tar.zst
+        key: nav-libdw0.195-original253PASS-OPEN1OOM8SKIP34NOTRUN-narrow-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted libei liboeffis exact original16paths
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-libei-accepted-original.tar.zst
+        key: nav-libei1.6.0-original11OK-nested2SKIP-ruff2NOTRUN-toolingexcluded-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted RPC original59paths GSSAPIapprovedOFF
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-rpc137-accepted-original.tar.zst
+        key: nav-libtirpc1.3.7-originalplumbingOK-GSSAPIapprovedOFF-networkNOTRUN-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted lua original allOPEN retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-lua548-embedded-open.tar.zst
+        key: nav-lua5.4.8-zero-source-patch-O2-PIC-embedded-OPEN-main385-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted libwacom original allOPEN retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-libwacom2191-accepted-original.tar.zst
+        key: nav-libwacom2.19.1-original16OK1SKIP-nested3323PASS1157SKIP-OPENhw-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted libinput original allOPEN retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-libinput-accepted-original.tar.zst
+        key: nav-libinput1.31.3-original40-canonical11OK1FAIL28SKIP-OPENrecord-segv-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted libdisplay original allOPEN retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-libdisplay040-accepted-original.tar.zst
+        key: nav-libdisplay-info0.4.0-original68OK-referencegenNOTRUN-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted gdesktop51 exact original OPENs retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-gdesktop51-accepted-original.tar.zst
+        key: nav-gnomedesktop51-original6OK-44PASS1SKIP-qrcodegen521PASS-realdesktopOPEN-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted sysprof500 exact original OPENs retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-sysprof500-accepted-noGUI.tar.zst
+        key: nav-sysprof50.0-original7OK-26NOTRUN-gtkhelpOFF-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted colord148 exact original OPENs retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-colord148-accepted-original.tar.zst
+        key: nav-colord1.4.8-original3OK1FAIL-importOPEN-76PASS5hardwareSKIP-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted glycin215 exact original OPENs retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-glycin215-accepted-original.tar.zst
+        key: nav-glycin2.1.5-original5installconfigOK-2cargoBLOCKED-NOTRUN-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted libcanberra030 exact original OPENs retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-libcanberra-0.30-accepted-original.tar.zst
+        key: nav-libcanberra0.30-originalplumbingOK-audioNOTRUN-absentdefaultALSApulse-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted startupnotification012 exact original OPENs retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-startup-notification-0.12-accepted-original.tar.zst
+        key: nav-startupnotification0.12-originalcheckFAIL-APItypeOPEN-manualNOTRUN-v1
+        fail-on-cache-miss: true
+    - name: Restore accepted Xwayland24113mapped exact original OPENs retained
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      env:
+        TAR_OPTIONS: --overwrite
+      with:
+        path: /mnt/nav-xwayland24113-accepted-original.tar.zst
+        key: nav-xwayland24.1.13-original28OK-XTS673P220S-docmapped-fixturesNOTRUN-v1
+        fail-on-cache-miss: true
+    - name: Pinned argcomplete imports and original test collection only
+      shell: bash
+      run: 'set -euo pipefail
+
+        python3 - <<''FETCH''
+
+        import urllib.request,pathlib,hashlib
+
+        url=''https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/9ad949830c9117ab0694412d8dc0f5952783299a/build/runners/1-nav-argcomplete-readiness-runner-v1.py''
+
+        b=urllib.request.urlopen(url,timeout=60).read();assert len(b)==488036 and hashlib.sha256(b).hexdigest()==''b8dd890ce46491a93944cc3425e37ac913e83e107cd57b15570ce41168252e36'';pathlib.Path(''/tmp/nav-argcomplete-readiness-runner-v1.py'').write_bytes(b)
+
+        FETCH
+
+        sudo --preserve-env=GH_TOKEN unshare --mount --propagation private python3 /tmp/nav-argcomplete-readiness-runner-v1.py
+
+        '
+      env:
+        GH_TOKEN: ${{ github.token }}
+    - name: Postflight manifest42protected exact no save delete
+      if: always()
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "python3 - <<'PREFLIGHT'\nimport urllib.request, urllib.error, json, time, os\nstart = time.monotonic()\n\
+        base = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\ntoken = os.environ['GH_TOKEN']\n\
+        assert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n    def redirect_request(self,\
+        \ req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url, code, 'redirect\
+        \ refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control':\
+        \ 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return json.load(response)\nc\
+        \ = req(base + '/actions/caches?per_page=100&t=' + str(time.time_ns()))\ntotal = sum((z['size_in_bytes']\
+        \ for z in c['actions_caches']))\nprint('NAV_CANDIDATE_EXACT_CURRENT_CACHE ' + json.dumps({'count': c['total_count'],\
+        \ 'bytes': total, 'headroom': 10 * 1024 ** 3 - total, 'no_save_or_delete': True, 'caches': c['actions_caches']},\
+        \ sort_keys=True), flush=True)\nimport pathlib, hashlib, urllib.request, importlib.util\nfor (url, dest,\
+        \ digest) in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/1-nav-build-manifest-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', 'c88c1a460c25ef23adcb0547784600fd7c0a3c24042175102c1879041c9126a6'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest() == digest\n\
+        \    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\n\
+        accepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json', 'c88c1a460c25ef23adcb0547784600fd7c0a3c24042175102c1879041c9126a6')\n\
+        print('NAV_MANIFEST42_READONLY_VERIFIED ' + json.dumps(verifier.verify_inventory(accepted, c), sort_keys=True),\
+        \ flush=True)\nPREFLIGHT\n"
