@@ -1,0 +1,360 @@
+{
+  "accepted_archives": {
+    "xwayland-24.1.13": {
+      "bytes": 1517958,
+      "cache_id": "10883381643",
+      "canonical_paths_unchanged": {
+        "usr/lib/xorg/protocol.txt": {
+          "bytes": 25699,
+          "sha256": "b8f6921aaf1d88c74b0cd88295bdfe28b84b432200b8d2fb5b40b0d6eef6016d"
+        },
+        "usr/share/man/man1/Xserver.1": {
+          "bytes": 24207,
+          "sha256": "9eda0ff0551a97a299f6c39d6a59f298b33f61ac6d461a903fb14fa89af53f4b"
+        }
+      },
+      "original_stage_paths": {
+        "usr/bin/Xwayland": {
+          "bytes": 3256672,
+          "sha256": "9cf8eb97cd9570e46ef11d502cd366c1232f24c18b562fc155fc5d6dc00fd4b6"
+        },
+        "usr/lib/pkgconfig/xwayland.pc": {
+          "bytes": 540,
+          "sha256": "93a66f4be4a79ab07f1e650681f9763bb89e539da031e3515c4efc59f7c458f7"
+        },
+        "usr/lib/xorg/protocol.txt": {
+          "bytes": 25162,
+          "sha256": "88b141646fc68627338443a820eeb949149ba73d4ddc925d4717d56a92e7e138"
+        },
+        "usr/share/applications/org.freedesktop.Xwayland.desktop": {
+          "bytes": 187,
+          "sha256": "9e0d766ef55267ea242f6935aadce08983e07ad29903e079876bd22aeba49f0b"
+        },
+        "usr/share/man/man1/Xserver.1": {
+          "bytes": 24753,
+          "sha256": "5bb77d62bb50c18c8a2d1c8580ec965d73505ea054edcb150e28ec40865d2960"
+        },
+        "usr/share/man/man1/Xwayland.1": {
+          "bytes": 7168,
+          "sha256": "e83a1737f953d70c47268fe16c914f3ad990f6def5faa5c86653e9cc344fa2ed"
+        }
+      },
+      "packaging_mapping": {
+        "usr/bin/Xwayland": "usr/bin/Xwayland",
+        "usr/lib/pkgconfig/xwayland.pc": "usr/lib/pkgconfig/xwayland.pc",
+        "usr/lib/xorg/protocol.txt": "usr/share/doc/xwayland-24.1.13/protocol.txt",
+        "usr/share/applications/org.freedesktop.Xwayland.desktop": "usr/share/applications/org.freedesktop.Xwayland.desktop",
+        "usr/share/man/man1/Xserver.1": "usr/share/doc/xwayland-24.1.13/Xserver.1",
+        "usr/share/man/man1/Xwayland.1": "usr/share/man/man1/Xwayland.1"
+      },
+      "restore_path": "/mnt/nav-xwayland24113-accepted-original.tar.zst",
+      "sha256": "d91daf258d67f9876259d8f864490cefd83d3f752a825868d770052f8680b702",
+      "source_run": "https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44874973786/job/136757584414",
+      "status_ledger": {
+        "Meson": {
+          "OK": 28
+        },
+        "bytes": 1517958,
+        "canonical_docs_unchanged": {
+          "usr/lib/xorg/protocol.txt": {
+            "bytes": 25699,
+            "sha256": "b8f6921aaf1d88c74b0cd88295bdfe28b84b432200b8d2fb5b40b0d6eef6016d"
+          },
+          "usr/share/man/man1/Xserver.1": {
+            "bytes": 24207,
+            "sha256": "9eda0ff0551a97a299f6c39d6a59f298b33f61ac6d461a903fb14fa89af53f4b"
+          }
+        },
+        "collision_policy": "existing canonical docs win; Xwayland original docs kept byte-identical at versioned doc locations; original stage archive never rewritten",
+        "current_rendercheck": {
+          "OK": 23
+        },
+        "fixture_exposure_removed_and_excluded": true,
+        "fixture_suites": "NOTRUN",
+        "full981exports_exact": true,
+        "full_metadata_two_extracts_exact": true,
+        "historical_configure_missing_rendercheck": "23absent-fixtureNOTRUN only in earlier discovery, superseded by native registration23OK",
+        "inherited_OPENs": "unchanged",
+        "nested_XTS": {
+          "xvfb": {
+            "UNTESTED_reasons": {
+              "The statement in the X11 specification is not specific enough to write a test": 1,
+              "There is no known portable test method for this assertion": 16,
+              "There is no known reliable test method for this assertion": 12
+            },
+            "counts": {
+              "pass": 340,
+              "skip": 110
+            },
+            "skip_tet_results": {
+              "NOTINUSE": 81,
+              "UNTESTED": 29
+            }
+          },
+          "xwayland": {
+            "UNTESTED_reasons": {
+              "The statement in the X11 specification is not specific enough to write a test": 1,
+              "There is no known portable test method for this assertion": 16,
+              "There is no known reliable test method for this assertion": 12
+            },
+            "counts": {
+              "pass": 333,
+              "skip": 110
+            },
+            "skip_tet_results": {
+              "NOTINUSE": 81,
+              "UNTESTED": 29
+            }
+          }
+        },
+        "no_build_or_test_rerun": true,
+        "original_archive_only": true,
+        "packaging_mapping": {
+          "usr/bin/Xwayland": {
+            "bytes": 3256672,
+            "destination": "usr/bin/Xwayland",
+            "sha256": "9cf8eb97cd9570e46ef11d502cd366c1232f24c18b562fc155fc5d6dc00fd4b6"
+          },
+          "usr/lib/pkgconfig/xwayland.pc": {
+            "bytes": 540,
+            "destination": "usr/lib/pkgconfig/xwayland.pc",
+            "sha256": "93a66f4be4a79ab07f1e650681f9763bb89e539da031e3515c4efc59f7c458f7"
+          },
+          "usr/lib/xorg/protocol.txt": {
+            "bytes": 25162,
+            "destination": "usr/share/doc/xwayland-24.1.13/protocol.txt",
+            "sha256": "88b141646fc68627338443a820eeb949149ba73d4ddc925d4717d56a92e7e138"
+          },
+          "usr/share/applications/org.freedesktop.Xwayland.desktop": {
+            "bytes": 187,
+            "destination": "usr/share/applications/org.freedesktop.Xwayland.desktop",
+            "sha256": "9e0d766ef55267ea242f6935aadce08983e07ad29903e079876bd22aeba49f0b"
+          },
+          "usr/share/man/man1/Xserver.1": {
+            "bytes": 24753,
+            "destination": "usr/share/doc/xwayland-24.1.13/Xserver.1",
+            "sha256": "5bb77d62bb50c18c8a2d1c8580ec965d73505ea054edcb150e28ec40865d2960"
+          },
+          "usr/share/man/man1/Xwayland.1": {
+            "bytes": 7168,
+            "destination": "usr/share/man/man1/Xwayland.1",
+            "sha256": "e83a1737f953d70c47268fe16c914f3ad990f6def5faa5c86653e9cc344fa2ed"
+          }
+        },
+        "real_VM_G3": "NOTRUN",
+        "sha256": "d91daf258d67f9876259d8f864490cefd83d3f752a825868d770052f8680b702",
+        "source_run": "https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44874973786/job/136757584414",
+        "source_unchanged": true,
+        "upstream_exclusions": {
+          "additional_xwayland_patterns": [
+            "xcleararea@6",
+            "xcleararea@7",
+            "xclearwindow@4",
+            "xclearwindow@5",
+            "xcopyarea@1",
+            "xsetfontpath@1",
+            "xsetfontpath@2"
+          ],
+          "base_patterns": [
+            "xlistfontswithinfo@3",
+            "xlistfontswithinfo@4",
+            "xloadqueryfont@1",
+            "xqueryfont@1",
+            "xqueryfont@2",
+            "xsetfontpath@1",
+            "xsetfontpath@2",
+            "rendercheck (separate Meson23currentOK)"
+          ],
+          "status": "upstream wrapper exclusions NOTRUN; pattern count is not excluded case identity count"
+        }
+      }
+    }
+  },
+  "limits": {
+    "capacity_bytes": 10737418240,
+    "reserve_bytes": 268435456
+  },
+  "migration": {
+    "other_payloads": "Existing exact inline archive/path proofs remain required until separately migrated and compared. This file does not replace omitted proofs.",
+    "payload_schema_coverage": [
+      "xwayland-24.1.13"
+    ]
+  },
+  "protected_caches": {
+    "10508735204": {
+      "bytes": 1021068,
+      "key": "nav-lfs13.1-x86_64-gcc-test-c-v1"
+    },
+    "10511354384": {
+      "bytes": 1030391,
+      "key": "nav-lfs13.1-x86_64-gcc-test-cxx-v1"
+    },
+    "10515953327": {
+      "bytes": 148732,
+      "key": "nav-lfs13.1-x86_64-gcc-test-runtime-v1"
+    },
+    "10516363617": {
+      "bytes": 1413472049,
+      "key": "nav-lfs13.1-x86_64-final-gcc-v1"
+    },
+    "10696846187": {
+      "bytes": 1374122764,
+      "key": "nav-blfs13.1-x86_64-git-open-v1"
+    },
+    "10700939007": {
+      "bytes": 1374812746,
+      "key": "nav-blfs13.1-x86_64-giflib-open-v1"
+    },
+    "10710908926": {
+      "bytes": 1404400214,
+      "key": "nav-blfs13.1-x86_64-jxl-open-v1"
+    },
+    "10790873772": {
+      "bytes": 1414253410,
+      "key": "nav-blfs13.1-x86_64-aom-static-repair-open-v1"
+    },
+    "10803318199": {
+      "bytes": 1477765679,
+      "key": "nav-blfs13.1-x86_64-librsvg-transitional-open-v1"
+    },
+    "10804828520": {
+      "bytes": 17602045,
+      "key": "nav-linux7.1.8-userns-udmabuf-compiled-open-v1"
+    },
+    "10805037408": {
+      "bytes": 6895265,
+      "key": "nav-graphene-isocodes-hicolor-install-only-open-v1"
+    },
+    "10810498235": {
+      "bytes": 901348,
+      "key": "nav-gstgood-narrow-install-only-transitional-open-v1"
+    },
+    "10813815026": {
+      "bytes": 512022,
+      "key": "nav-opus-baseopus-install-only-open-v1"
+    },
+    "10816097588": {
+      "bytes": 283419,
+      "key": "nav-gstmatroska-original-tested-install-only-open-v1"
+    },
+    "10818008081": {
+      "bytes": 1665268,
+      "key": "nav-theora-basetheora-install-only-open-v1"
+    },
+    "10826754060": {
+      "bytes": 109875240,
+      "key": "nav-ffmpeg9.0.1-install-only-first5290-corrected31-open-v1"
+    },
+    "10827259500": {
+      "bytes": 526760,
+      "key": "nav-gstlibav1.28.6-install-only-5OK1FAIL-OPEN16channel-v1"
+    },
+    "10829907838": {
+      "bytes": 6420637,
+      "key": "nav-gstbad1.28.6-install-only-original97OK5FAIL2SKIP-Play17PASS2OPEN-v1"
+    },
+    "10833464043": {
+      "bytes": 179240,
+      "key": "nav-pango1.58.2-introspection-only-original-ledger-unchanged-v1"
+    },
+    "10843934869": {
+      "bytes": 180383,
+      "key": "nav-librsvg2.62.4-svg-pixbufloader-only-native5-decode-verified-original-ledgers-unchanged-v1"
+    },
+    "10868593577": {
+      "bytes": 314639,
+      "key": "nav-lua5.4.8-zero-source-patch-O2-PIC-embedded-OPEN-main385-v1"
+    },
+    "10869122579": {
+      "bytes": 661828,
+      "key": "nav-wireplumber0.5.15-original53OK-systemLua-docGIR-explicitOFF-v1"
+    },
+    "10869895695": {
+      "bytes": 31141567,
+      "key": "nav-gtk4.22.4-unchanged-canonical10928-OPEN-G3NOTRUN-install-only-v1"
+    },
+    "10870138327": {
+      "bytes": 2329532,
+      "key": "nav-hwdata0.410-original-check7OK-USBskip-external3NOTRUN-v1"
+    },
+    "10871175499": {
+      "bytes": 142028,
+      "key": "nav-libdex1.1.0-original12OK1envFAIL-dbusonly1OK-liburingabsent-v1"
+    },
+    "10871519908": {
+      "bytes": 5326726,
+      "key": "nav-libdw0.195-original253PASS-OPEN1OOM8SKIP34NOTRUN-narrow-v1"
+    },
+    "10872412032": {
+      "bytes": 1491910,
+      "key": "nav-sysprof50.0-original7OK-26NOTRUN-gtkhelpOFF-v1"
+    },
+    "10872912778": {
+      "bytes": 159489,
+      "key": "nav-libdisplay-info0.4.0-original68OK-referencegenNOTRUN-v1"
+    },
+    "10873903681": {
+      "bytes": 206396,
+      "key": "nav-libwacom2.19.1-original16OK1SKIP-nested3323PASS1157SKIP-OPENhw-v1"
+    },
+    "10875048082": {
+      "bytes": 330838,
+      "key": "nav-libei1.6.0-original11OK-nested2SKIP-ruff2NOTRUN-toolingexcluded-v1"
+    },
+    "10875048834": {
+      "bytes": 1051277,
+      "key": "nav-libinput1.31.3-original40-canonical11OK1FAIL28SKIP-OPENrecord-segv-v1"
+    },
+    "10875659848": {
+      "bytes": 1648948,
+      "key": "nav-atspi2.60.6-original9OK-registryd27PASS-brokerNOTRUN-realdesktopOPEN-v1"
+    },
+    "10876928655": {
+      "bytes": 25760507,
+      "key": "nav-gtk3.24.43-canonical192OK2FAIL-hiddenTAPFAIL-45NOTRUN-OPEN-v1"
+    },
+    "10877275610": {
+      "bytes": 551620,
+      "key": "nav-gnomedesktop51-original6OK-44PASS1SKIP-qrcodegen521PASS-realdesktopOPEN-v1"
+    },
+    "10877807804": {
+      "bytes": 149452,
+      "key": "nav-libgusb0.4.9-canonical2OK1FAIL-realUSBsigabrtOPEN-6NOTRUN-v1"
+    },
+    "10878681236": {
+      "bytes": 250911,
+      "key": "nav-bashcompletion2.18.0-original1771PASS460SKIP14XFAIL3XPASS-v1"
+    },
+    "10879229098": {
+      "bytes": 1409499,
+      "key": "nav-colord1.4.8-original3OK1FAIL-importOPEN-76PASS5hardwareSKIP-v1"
+    },
+    "10880575516": {
+      "bytes": 8588780,
+      "key": "nav-glycin2.1.5-original5installconfigOK-2cargoBLOCKED-NOTRUN-v1"
+    },
+    "10881014184": {
+      "bytes": 256016,
+      "key": "nav-libcanberra0.30-originalplumbingOK-audioNOTRUN-absentdefaultALSApulse-v1"
+    },
+    "10881014406": {
+      "bytes": 142423,
+      "key": "nav-startupnotification0.12-originalcheckFAIL-APItypeOPEN-manualNOTRUN-v1"
+    },
+    "10881461821": {
+      "bytes": 897343,
+      "key": "nav-libtirpc1.3.7-originalplumbingOK-GSSAPIapprovedOFF-networkNOTRUN-v1"
+    },
+    "10883381643": {
+      "bytes": 1519658,
+      "key": "nav-xwayland24.1.13-original28OK-XTS673P220S-docmapped-fixturesNOTRUN-v1"
+    }
+  },
+  "provenance": {
+    "accepted_save_run": "https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44876759117/job/136763048089",
+    "authority": "Protected inventory changes require explicit reviewed diffs, never observed-state auto-acceptance.",
+    "base_workflow_commit": "8cb140519d5376a141f4862e181c489969019515"
+  },
+  "revision": "nav-accepted-state-42-xwayland24113-v1",
+  "schema_version": 1
+}
