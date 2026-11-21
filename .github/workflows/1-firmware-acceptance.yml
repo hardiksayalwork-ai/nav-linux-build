@@ -1,0 +1,146 @@
+name: NAV exactdraftISO BIOS and UEFI capture oneeach no edits
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  firmware:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - name: Exact45 public standard free single dispatch preflight
+      shell: bash
+      run: "test \"$GITHUB_RUN_NUMBER\" = 1\ntest \"$GITHUB_RUN_ATTEMPT\" = 1\nset -euo pipefail\npython3 - <<'PREFLIGHT'\n\
+        import urllib.request, urllib.error, json, time, os\nstart = time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
+        token = os.environ['GH_TOKEN']\nassert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n\
+        \    def redirect_request(self, req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url,\
+        \ code, 'redirect refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control':\
+        \ 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return json.load(response)\nr\
+        \ = req(base + '?t=' + str(time.time_ns()))\nassert r['private'] is False\nc = req(base + '/actions/caches?per_page=100&t='\
+        \ + str(time.time_ns()))\nimport pathlib, hashlib, urllib.request, importlib.util\nfor (url, dest, digest)\
+        \ in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/82ecdb920190e8773d7cdad577ea0d8c331b531e/build/attestations/4-nav-build-manifest45-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest() == digest\n\
+        \    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\n\
+        accepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json', '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5')\n\
+        expected = accepted['protected_caches']\nactual = {str(z['id']): {'key': z['key'], 'bytes': z['size_in_bytes']}\
+        \ for z in c['actions_caches']}\nassert c['total_count'] == len(actual) == len(expected) and actual == expected\n\
+        assert sum((z['bytes'] for z in actual.values())) < 10 * 1024 ** 3\nprint('NAV_FFMPEG_PUBLIC_STANDARD_RUNNER_FREE_CACHE_EXACT\
+        \ ' + json.dumps({'public': True, 'standard_runner': 'ubuntu-24.04', 'cache_count': len(actual), 'cache_bytes':\
+        \ sum((z['bytes'] for z in actual.values())), 'no_cache_save_or_delete': True, 'elapsed': time.monotonic()\
+        \ - start}), flush=True)\nprint('NAV_MANIFEST43_READONLY_VERIFIED ' + json.dumps(verifier.verify_inventory(accepted,\
+        \ c), sort_keys=True), flush=True)\nPREFLIGHT\n"
+      env:
+        GH_TOKEN: ${{ github.token }}
+    - name: Hostonly QEMU OVMF install and inventory
+      run: 'sudo apt-get update
+
+        sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf seabios python3-pil
+
+        qemu-system-x86_64 --version
+
+        dpkg-query -W qemu-system-x86 ovmf seabios python3-pil'
+    - name: Fetch exact draft asset only
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: "python3 - <<'FETCH'\nimport json,subprocess,pathlib,hashlib\nrepo='hardiksayalwork-ai/nav-linux-build';release=453724002;asset=775726636;expected='09cf7f18940f8f84b9301050d98ee004a401a212a18c1abbadb18a547db83467'\n\
+        r=json.loads(subprocess.check_output(['gh','api','repos/'+repo+'/releases/'+str(release)],timeout=45));assert\
+        \ r['draft']is True and r['published_at']is None and r['tag_name']=='nav-development-packaging-44910263539';a=next(x\
+        \ for x in r['assets']if x['id']==asset);assert a['name']=='NAV-development-001.iso' and a['size']==1734334464\
+        \ and a['digest']=='sha256:'+expected and a['state']=='uploaded'\np=pathlib.Path('/tmp/NAV-development-001.iso')\n\
+        with p.open('wb')as f:subprocess.run(['gh','api','repos/'+repo+'/releases/assets/'+str(asset),'-H','Accept:\
+        \ application/octet-stream'],stdout=f,check=True,timeout=240)\nh=hashlib.sha256()\nwith p.open('rb')as f:\n\
+        \ for b in iter(lambda:f.read(1048576),b''):h.update(b)\nassert p.stat().st_size==1734334464 and h.hexdigest()==expected;p.chmod(0o444);print(json.dumps({'exact_retained_asset':asset,'bytes':p.stat().st_size,'sha256':h.hexdigest(),'draft':True}))\n\
+        \nFETCH\n"
+    - name: One BIOS and one UEFI exactISO capture no media edits
+      timeout-minutes: 17
+      run: 'python3 - <<''PREP''
+
+        import pathlib
+
+        pathlib.Path(''/tmp/nav-firmware-driver.py'').write_text("import pathlib,subprocess,os,json,time,hashlib,socket,signal,shutil,traceback,argparse\np=argparse.ArgumentParser();p.add_argument(''--iso'',required=True);p.add_argument(''--out'',required=True);p.add_argument(''--qemu'',default=''qemu-system-x86_64'');p.add_argument(''--firmware-root'',default=''/usr/share'');p.add_argument(''--fixture'',action=''store_true'');a=p.parse_args()\nD=pathlib.Path(a.out);D.mkdir();iso=pathlib.Path(a.iso).resolve();F=pathlib.Path(a.firmware_root);expected=''09cf7f18940f8f84b9301050d98ee004a401a212a18c1abbadb18a547db83467''\ndef
+        sha(p):\n h=hashlib.sha256()\n with p.open(''rb'')as f:\n  for b in iter(lambda:f.read(1048576),b''''):h.update(b)\n
+        return h.hexdigest()\nif not a.fixture:assert iso.stat().st_size==1734334464 and sha(iso)==expected and
+        os.access(''/dev/kvm'',os.R_OK|os.W_OK)\nL={''scope'':''SYNTHETIC_LOCAL_FIXTURE_NOT_NAV''if a.fixture else
+        ''EXACT_DRAFT_ISO_FIRMWARE_ACCEPTANCE_PENDING_VISUAL_REVIEW'',''ISO'':{''bytes'':iso.stat().st_size,''sha256'':sha(iso)},''boots'':{},''guest_journal'':''UNAVAILABLE:
+        unchanged ISO has no exporter or serialconsole'',''no_media_edits'':True,''no_guest_network'':True,''no_disks_except_readonly_CD_and_disposable_UEFI_vars'':True}\ndef
+        save():(D/''firmware-ledger.json'').write_text(json.dumps(L,indent=2))\nfor mode in [''BIOS'',''UEFI'']:\n
+        E=D/mode;E.mkdir();sockpath=E/''qmp.sock'';q=None;s=None;reader=None;events=[];record={''state'':''NOTRUN'',''frames'':[],''QMP'':[]};L[''boots''][mode]=record;save()\n
+        def cmd(name,args=None):\n  req={''execute'':name,''id'':len(record[''QMP''])+1}\n  if args is not None:req[''arguments'']=args\n  s.sendall((json.dumps(req)+''\\r\\n'').encode());end=time.monotonic()+5\n  while
+        time.monotonic()<end:\n   raw=reader.readline()\n   if not raw:raise EOFError(''QMP closed'')\n   row=json.loads(raw)\n   if
+        row.get(''id'')==req[''id'']:\n    record[''QMP''].append({''request'':req,''response'':row});return row\n   events.append(row)\n  raise
+        TimeoutError(''QMP response deadline'')\n def telemetry():\n  row={''at'':time.monotonic()-start,''pid'':q.pid,''exit'':q.poll()}\n  for
+        n in [''/proc/meminfo'',''/proc/loadavg'',''/proc/self/limits'',''/proc/''+str(q.pid)+''/status'',''/proc/''+str(q.pid)+''/limits'',''/proc/''+str(q.pid)+''/cgroup'']:\n   try:row[n]=pathlib.Path(n).read_text()\n   except
+        OSError as e:row[n]=repr(e)\n  try:\n   rel=next(l.split(''::'',1)[1]for l in pathlib.Path(''/proc/self/cgroup'').read_text().splitlines()if
+        ''::''in l);cg=pathlib.Path(''/sys/fs/cgroup'')/rel.lstrip(''/'');row[''cgroups'']={}\n   while cg.is_relative_to(''/sys/fs/cgroup''):\n    row[''cgroups''][str(cg)]={n:(cg/n).read_text()for
+        n in [''pids.current'',''pids.max'',''pids.events'',''memory.current'',''memory.max'',''memory.events'']if(cg/n).exists()}\n    if
+        str(cg)==''/sys/fs/cgroup'':break\n    cg=cg.parent\n  except Exception as e:row[''cgroup_error'']=repr(e)\n  with(E/''host-telemetry.jsonl'').open(''a'')as
+        f:f.write(json.dumps(row)+''\\n'')\n argv=[a.qemu,''-machine'',''q35,accel=''+(''tcg''if a.fixture else
+        ''kvm''),''-cpu'',''qemu64''if a.fixture else ''host'',''-smp'',''1''if a.fixture else ''2'',''-m'',''256''if
+        a.fixture else ''3072'',''-no-reboot'',''-no-shutdown'',''-boot'',''order=d,strict=on'',''-nic'',''none'',''-display'',''none'',''-vga'',''none'',''-device'',''virtio-vga,xres=1280,yres=720'',''-drive'',''file=''+str(iso)+'',media=cdrom,readonly=on,format=raw,if=ide'',''-serial'',''file:''+str(E/''serial.log''),''-qmp'',''unix:''+str(sockpath)+'',server=on,wait=off'',''-monitor'',''none'',''-S'']\n
+        if a.fixture:argv+=[''-L'',str(F/''qemu'')]\n if mode==''BIOS'':argv+=[''-bios'',str(F/''seabios/bios-256k.bin'')]\n
+        else:\n  code=F/''OVMF/OVMF_CODE_4M.fd'';vars=F/''OVMF/OVMF_VARS_4M.fd'';shutil.copy2(vars,E/''OVMF_VARS.fd'');argv+=[''-drive'',''if=pflash,format=raw,unit=0,readonly=on,file=''+str(code),''-drive'',''if=pflash,format=raw,unit=1,file=''+str(E/''OVMF_VARS.fd'')];record[''firmware'']={''CODE_sha256'':sha(code),''initial_VARS_sha256'':sha(vars),''SecureBoot'':''not
+        enabled; unsigned sourceGRUB acceptance only''}\n record[''argv'']=argv;record[''RLIMIT_AS'']=''inherited,
+        no 4GiB QEMU cap'';start=time.monotonic();f=(E/''qemu.stderr'').open(''wb'')\n try:\n  qenv={k:v for k,v
+        in os.environ.items()if k not in [''GH_TOKEN'',''GITHUB_TOKEN'']};q=subprocess.Popen(argv,stdout=f,stderr=subprocess.STDOUT,start_new_session=True,env=qenv);record[''state'']=''STARTED_ONE_SHOT'';save()\n  end=time.monotonic()+15\n  while
+        not sockpath.exists()and q.poll()is None and time.monotonic()<end:time.sleep(.05)\n  assert sockpath.exists(),''no
+        QMP socket'';s=socket.socket(socket.AF_UNIX);s.settimeout(5);s.connect(str(sockpath));reader=s.makefile(''rb'');record[''greeting'']=json.loads(reader.readline());cmd(''qmp_capabilities'');record[''block_devices'']=cmd(''query-block'');cmd(''cont'');boot=time.monotonic();last=-10;lasttele=-10;duration=12
+        if a.fixture else 420\n  while q.poll()is None and time.monotonic()-boot<duration:\n   age=time.monotonic()-boot\n   if
+        age-lasttele>=5:telemetry();lasttele=age\n   if age-last>= (3 if a.fixture else 30):\n    path=E/(''frame-%04d.ppm''%int(age));r=cmd(''screendump'',{''filename'':str(path)})\n    if
+        ''return''in r and path.is_file():\n     from PIL import Image\n     png=path.with_suffix(''.png'');Image.open(path).save(png)\n     record[''frames''].append({''file'':path.name,''at'':age,''bytes'':path.stat().st_size,''sha256'':sha(path),''PNG'':{''file'':png.name,''bytes'':png.stat().st_size,''sha256'':sha(png)}})\n    record[''status'']=cmd(''query-status'');last=age;save()\n   time.sleep(.2)\n  record[''exit_before_cleanup'']=q.poll();record[''state'']=''CAPTURED_PENDING_VISUAL_REVIEW''if
+        record[''frames'']and q.poll()is None else ''FAIL_HOST_OR_GUEST_EXIT'';telemetry()\n except Exception:record[''state'']=''FAIL'';record[''exception'']=traceback.format_exc()\n
+        finally:\n  record[''elapsed'']=time.monotonic()-start\n  if q and q.poll()is None:\n   try:cmd(''quit'')\n   except
+        Exception:os.killpg(q.pid,signal.SIGTERM)\n   try:q.wait(timeout=5)\n   except subprocess.TimeoutExpired:os.killpg(q.pid,signal.SIGKILL);q.wait()\n  if
+        reader:reader.close()\n  if s:s.close()\n  f.close();record[''exit_after_cleanup'']=q.returncode if q else
+        None;(E/''qmp-events.json'').write_text(json.dumps(events,indent=2));save()\nL[''ISO_unchanged_after_both'']=sha(iso)==L[''ISO''][''sha256''];save();assert
+        L[''ISO_unchanged_after_both''];assert all(b[''state'']==''CAPTURED_PENDING_VISUAL_REVIEW''for b in L[''boots''].values())\n")
+
+        PREP
+
+        python3 /tmp/nav-firmware-driver.py --iso /tmp/NAV-development-001.iso --out /tmp/nav-firmware-evidence'
+    - name: Always bounded PNG logs originalsize SHA exporter
+      if: always()
+      run: "python3 - <<'EXPORT'\nimport pathlib,json,hashlib,gzip,base64\nD=pathlib.Path('/tmp/nav-firmware-evidence');files={};total=0\n\
+        for i,p in enumerate(sorted(D.rglob('*'))):\n if not p.is_file()or p.suffix in ['.ppm','.fd','.sock']:continue\n\
+        \ b=p.read_bytes();total+=len(b);assert total<64*1024**2,'bounded evidence export exceeded64MiB';tag='FILE_%06d'%i;files[tag]={'file':p.relative_to(D).as_posix(),'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()};z=base64.b64encode(gzip.compress(b)).decode();parts=[z[j:j+2000]for\
+        \ j in range(0,len(z),2000)]\n for n,v in enumerate(parts):print('NAV_FW_'+tag+'_GZB64 '+str(n+1)+'/'+str(len(parts))+'\
+        \ '+v,flush=True)\nb=json.dumps(files,sort_keys=True).encode();z=base64.b64encode(gzip.compress(b)).decode();parts=[z[j:j+2000]for\
+        \ j in range(0,len(z),2000)]\nfor n,v in enumerate(parts):print('NAV_FW_MANIFEST_GZB64 '+str(n+1)+'/'+str(len(parts))+'\
+        \ '+v,flush=True)\n\nEXPORT\n"
+    - name: Always exact45 protected postflight NO cache save delete
+      if: always()
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "python3 - <<'PREFLIGHT'\nimport urllib.request, urllib.error, json, time, os\nstart = time.monotonic()\n\
+        base = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\ntoken = os.environ['GH_TOKEN']\n\
+        assert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n    def redirect_request(self,\
+        \ req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url, code, 'redirect\
+        \ refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control':\
+        \ 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return json.load(response)\nc\
+        \ = req(base + '/actions/caches?per_page=100&t=' + str(time.time_ns()))\ntotal = sum((z['size_in_bytes']\
+        \ for z in c['actions_caches']))\nprint('NAV_CANDIDATE_EXACT_CURRENT_CACHE ' + json.dumps({'count': c['total_count'],\
+        \ 'bytes': total, 'headroom': 10 * 1024 ** 3 - total, 'no_save_or_delete': True, 'caches': c['actions_caches']},\
+        \ sort_keys=True), flush=True)\nimport pathlib, hashlib, urllib.request, importlib.util\nfor (url, dest,\
+        \ digest) in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/82ecdb920190e8773d7cdad577ea0d8c331b531e/build/attestations/4-nav-build-manifest45-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest() == digest\n\
+        \    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\n\
+        accepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json', '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5')\n\
+        print('NAV_MANIFEST43_READONLY_VERIFIED ' + json.dumps(verifier.verify_inventory(accepted, c), sort_keys=True),\
+        \ flush=True)\nPREFLIGHT\n"
