@@ -1,0 +1,103 @@
+name: NAV GCC missing3audit READONLY originalroot recovery no save delete
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  recovery:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - name: Read only explicit loss audit historical manifest unchanged exact40survivors
+      env: &id001
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "set -euo pipefail\ntest \"$GITHUB_RUN_NUMBER\" = 1\ntest \"$GITHUB_RUN_ATTEMPT\" = 1\npython3 - <<'PREFLIGHT'\n\
+        import urllib.request, urllib.error, json, time, os\nstart = time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
+        token = os.environ['GH_TOKEN']\nassert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n\
+        \    def redirect_request(self, req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url,\
+        \ code, 'redirect refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control':\
+        \ 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return json.load(response)\nr\
+        \ = req(base + '?t=' + str(time.time_ns()))\nassert r['private'] is False\nc = req(base + '/actions/caches?per_page=100&t='\
+        \ + str(time.time_ns()))\nimport pathlib, hashlib, urllib.request, importlib.util\nfor (url, dest, digest)\
+        \ in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/0ac4e6d349c73f219cffe00f69e2001fe7afaf7f/build/attestations/1-nav-build-manifest43-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '01d4427abeb2bac2016207284e2aafc4ee50c1ed0db01ce86b5337181a300ea5'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest() == digest\n\
+        \    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\n\
+        accepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json', '01d4427abeb2bac2016207284e2aafc4ee50c1ed0db01ce86b5337181a300ea5')\n\
+        \nmissing={'10508735204':{'key':'nav-lfs13.1-x86_64-gcc-test-c-v1','bytes':1021068},'10511354384':{'key':'nav-lfs13.1-x86_64-gcc-test-cxx-v1','bytes':1030391},'10515953327':{'key':'nav-lfs13.1-x86_64-gcc-test-runtime-v1','bytes':148732}}\n\
+        assert all(accepted['protected_caches'][k]==v for k,v in missing.items());historical=accepted['protected_caches'];actual={str(z['id']):{'key':z['key'],'bytes':z['size_in_bytes']}for\
+        \ z in c['actions_caches']};assert c['total_count']==len(actual)==40;assert not(set(missing)&set(actual));assert\
+        \ actual=={k:v for k,v in historical.items()if k not in missing};assert sum(v['bytes']for v in actual.values())==8688281905\n\
+        print('NAV_GCC_EXPLICIT_LOSS_LEDGER_JSON '+json.dumps({'historical_manifest_unchanged':True,'historical_count':43,'live_count':40,'missing':missing,'other40_exact':True,'cause':'unproven','read_only_recovery_no_save_delete':True},sort_keys=True),flush=True)\n\
+        \nPREFLIGHT\n"
+    - name: Prepare owned root restore path
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo mkdir -p /mnt/nav-lfs
+
+        sudo chown "$(id -u):$(id -g)" /mnt/nav-lfs
+
+        '
+    - name: Restore immutable surviving finalGCCroot cache10516363617 only
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-lfs
+        key: nav-lfs13.1-x86_64-final-gcc-v1
+        fail-on-cache-miss: true
+    - name: Extract retained original gccgroups and exact file hash metadata no tests
+      shell: bash
+      run: "set -euo pipefail\nsudo python3 - <<'RECOVER'\nimport pathlib,hashlib,json,os,tarfile,subprocess,gzip,base64\n\
+        root=pathlib.Path('/mnt/nav-lfs');out=pathlib.Path('/mnt/nav-gcc-recovery-evidence');out.mkdir();records={};expected={'c':('10508735204','nav-lfs13.1-x86_64-gcc-test-c-v1',1021068),'cxx':('10511354384','nav-lfs13.1-x86_64-gcc-test-cxx-v1',1030391),'runtime':('10515953327','nav-lfs13.1-x86_64-gcc-test-runtime-v1',148732)}\n\
+        def sha(p):return hashlib.file_digest(p.open('rb'),'sha256').hexdigest()\nfor group,(id,key,size)in expected.items():\n\
+        \ D=root/'nav-build-metadata/tests/gcc-groups'/group;assert D.is_dir();a=json.loads((D/'gcc-audit.json').read_text());m=json.loads((D/'build-manifest.json').read_text());assert\
+        \ a['group']==group and a['unexpected_results']==[] and m['sha256']=='78af1874f9b7dd7e9ea6d99d4e67a3fde38873dd920aaaaec7a3b308eae9f814';rows={}\n\
+        \ for p in sorted(D.rglob('*')):\n  if p.is_file():rows[str(p.relative_to(D))]={'bytes':p.stat().st_size,'sha256':sha(p),'mode':oct(p.stat().st_mode&0o777),'uid':p.stat().st_uid,'gid':p.stat().st_gid,'mtime_ns':p.stat().st_mtime_ns}\n\
+        \ arc=out/('gcc-audit-'+group+'-recovered.tar.gz');subprocess.run(['tar','-czpf',str(arc),'-C',str(D),'.'],check=True);records[group]={'missing_cache_id':id,'missing_cache_key':key,'missing_cache_storage_bytes':size,'recovered_files':rows,'recovered_file_count':len(rows),'recovered_payload_bytes':sum(v['bytes']for\
+        \ v in rows.values()),'evidence_archive_bytes':arc.stat().st_size,'evidence_archive_sha256':sha(arc),'build_manifest':m,'gcc_audit':a,'comparison_limit':'Missing\
+        \ cache storage container hash and original compressed bytes unavailable here; recovered file bytes and\
+        \ metadata retained for independent comparison. No claim that repacked archive matches vanished cache container.'}\n\
+        (out/'recovery-ledger.json').write_text(json.dumps(records,sort_keys=True));manifest={}\nfor i,p in enumerate(sorted(out.rglob('*'))):\n\
+        \ if p.is_file():\n  b=p.read_bytes();k='FILE_'+str(i).zfill(6);manifest[k]={'file':str(p.relative_to(out)),'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()};s=base64.b64encode(gzip.compress(b)).decode();parts=[s[i:i+6000]for\
+        \ i in range(0,len(s),6000)]\n  for n,v in enumerate(parts):print('NAV_FFMPEG_'+k+'_GZB64 '+str(n+1)+'/'+str(len(parts))+'\
+        \ '+v,flush=True)\nb=json.dumps({'files':manifest,'errors':[]},sort_keys=True).encode();s=base64.b64encode(gzip.compress(b)).decode();parts=[s[i:i+6000]for\
+        \ i in range(0,len(s),6000)]\nfor n,v in enumerate(parts):print('NAV_FFMPEG_EXPORT_MANIFEST_JSON_GZB64 '+str(n+1)+'/'+str(len(parts))+'\
+        \ '+v,flush=True)\n\nRECOVER\n"
+    - name: Post recovery loss unchanged40survivors no save delete
+      env: *id001
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'PREFLIGHT'\nimport urllib.request, urllib.error, json, time, os\nstart\
+        \ = time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\ntoken =\
+        \ os.environ['GH_TOKEN']\nassert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n    def\
+        \ redirect_request(self, req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url,\
+        \ code, 'redirect refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control':\
+        \ 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return json.load(response)\nr\
+        \ = req(base + '?t=' + str(time.time_ns()))\nassert r['private'] is False\nc = req(base + '/actions/caches?per_page=100&t='\
+        \ + str(time.time_ns()))\nimport pathlib, hashlib, urllib.request, importlib.util\nfor (url, dest, digest)\
+        \ in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/0ac4e6d349c73f219cffe00f69e2001fe7afaf7f/build/attestations/1-nav-build-manifest43-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '01d4427abeb2bac2016207284e2aafc4ee50c1ed0db01ce86b5337181a300ea5'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest() == digest\n\
+        \    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\n\
+        accepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json', '01d4427abeb2bac2016207284e2aafc4ee50c1ed0db01ce86b5337181a300ea5')\n\
+        \nmissing={'10508735204':{'key':'nav-lfs13.1-x86_64-gcc-test-c-v1','bytes':1021068},'10511354384':{'key':'nav-lfs13.1-x86_64-gcc-test-cxx-v1','bytes':1030391},'10515953327':{'key':'nav-lfs13.1-x86_64-gcc-test-runtime-v1','bytes':148732}}\n\
+        assert all(accepted['protected_caches'][k]==v for k,v in missing.items());historical=accepted['protected_caches'];actual={str(z['id']):{'key':z['key'],'bytes':z['size_in_bytes']}for\
+        \ z in c['actions_caches']};assert c['total_count']==len(actual)==40;assert not(set(missing)&set(actual));assert\
+        \ actual=={k:v for k,v in historical.items()if k not in missing};assert sum(v['bytes']for v in actual.values())==8688281905\n\
+        print('NAV_GCC_EXPLICIT_LOSS_LEDGER_JSON '+json.dumps({'historical_manifest_unchanged':True,'historical_count':43,'live_count':40,'missing':missing,'other40_exact':True,'cause':'unproven','read_only_recovery_no_save_delete':True},sort_keys=True),flush=True)\n\
+        \nPREFLIGHT\n"
