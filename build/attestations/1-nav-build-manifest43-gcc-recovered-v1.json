@@ -1,0 +1,664 @@
+{
+  "accepted_archives": {
+    "argcomplete-3.7.2": {
+      "bytes": 81534,
+      "cache_id": "10884897035",
+      "canonical_paths_unchanged": {},
+      "original_stage_modes": {
+        "usr/bin/activate-global-python-argcomplete": "0o755",
+        "usr/bin/register-python-argcomplete": "0o755",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/INSTALLER": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/METADATA": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/RECORD": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/REQUESTED": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/WHEEL": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/direct_url.json": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/entry_points.txt": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/licenses/LICENSE.rst": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/licenses/NOTICE": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/__init__.py": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/__init__.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/_check_console_script.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/_check_module.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/completers.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/exceptions.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/finders.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/io.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/lexers.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/shell_integration.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/_check_console_script.py": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/_check_module.py": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/bash_completion.d/_python-argcomplete": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/completers.py": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/exceptions.py": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/finders.py": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/io.py": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/lexers.py": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/packages/__init__.py": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/packages/__pycache__/__init__.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/packages/__pycache__/_argparse.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/packages/__pycache__/_shlex.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/packages/_argparse.py": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/packages/_shlex.py": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/py.typed": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/__init__.py": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/__pycache__/__init__.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/__pycache__/activate_global_python_argcomplete.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/__pycache__/register_python_argcomplete.cpython-314.pyc": "0o644",
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/activate_global_python_argcomplete.py": "0o755",
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/register_python_argcomplete.py": "0o755",
+        "usr/lib/python3.14/site-packages/argcomplete/shell_integration.py": "0o644"
+      },
+      "original_stage_paths": {
+        "usr/bin/activate-global-python-argcomplete": {
+          "bytes": 201,
+          "sha256": "edd835de829328626f69f20789f064a0ba733b57b78832d070993f7349cb1359"
+        },
+        "usr/bin/register-python-argcomplete": {
+          "bytes": 194,
+          "sha256": "a73c42733335acae7ff71ed34866175c844b673c0c8cc0a390d44aad3dd5ed47"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/INSTALLER": {
+          "bytes": 4,
+          "sha256": "ceebae7b8927a3227e5303cf5e0f1f7b34bb542ad7250ac03fbcde36ec2f1508"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/METADATA": {
+          "bytes": 16844,
+          "sha256": "6692dfd1bb24328c4caeb8bcfc22c337281b28b1bcc6a568999edaec0f15e9bb"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/RECORD": {
+          "bytes": 3421,
+          "sha256": "984080ee9267c6d0df1214950d9c8a2b9d12587852bfb8b26e7cdc1ff779bb16"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/REQUESTED": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/WHEEL": {
+          "bytes": 87,
+          "sha256": "ccec20e2307acd7da453dd7437e70c6b08e2bc3ead3bc3445af135da37b56d59"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/direct_url.json": {
+          "bytes": 278,
+          "sha256": "5ecedf33cc2e7d6861037b094b1bb43c8829d7207687d57eaab6d432a2596ee1"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/entry_points.txt": {
+          "bytes": 198,
+          "sha256": "9899cb22d5d781fb9bc8ea38d86120cc7928e273067da009cd288a0b7cb057ab"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/licenses/LICENSE.rst": {
+          "bytes": 10174,
+          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/licenses/NOTICE": {
+          "bytes": 387,
+          "sha256": "2c889c721ec8ae6d7664680afaefbb4c7620976f434b57a506ecd92f0649b6a0"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/__init__.py": {
+          "bytes": 711,
+          "sha256": "6666e1caaec07138606dbe90d4415c7082272fa1bc8739562f4f4fa082df24f7"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/__init__.cpython-314.pyc": {
+          "bytes": 1134,
+          "sha256": "0ed4577877814b5c180c73e8d62359c4433556c1eec4759451f80af89a7bd88c"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/_check_console_script.cpython-314.pyc": {
+          "bytes": 3004,
+          "sha256": "830c6cac0217ad8bf4325a9bef09edcbce217b883ab0ad0a6013646de78eb5de"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/_check_module.cpython-314.pyc": {
+          "bytes": 3560,
+          "sha256": "4844b289e541a84f1ee2c57a8cee95e1ca9ce9e5109e9113c970a9d0377f91f7"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/completers.cpython-314.pyc": {
+          "bytes": 11292,
+          "sha256": "ba76575ab19adfb8a9c9127924f83a1a9d0986ed47f7bb1b1c8c81bc7c75bc21"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/exceptions.cpython-314.pyc": {
+          "bytes": 526,
+          "sha256": "c48cb3940ed714b56cffe345fdbff4f7aad758a5e061904022885c434aa997e9"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/finders.cpython-314.pyc": {
+          "bytes": 33286,
+          "sha256": "67d5e195a3d0c3eae9420f584400153f5cf1bdbdb88fdf8c924b1b34bffcf15c"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/io.cpython-314.pyc": {
+          "bytes": 2744,
+          "sha256": "1784440236da818a6bc39252ca85e4a3ecb8223197f965639984bcadbfa04404"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/lexers.cpython-314.pyc": {
+          "bytes": 3674,
+          "sha256": "faf0f0a8b988a7633eadd5edaa2a4897e139ea52b45c152437711c71c3f5a725"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/shell_integration.cpython-314.pyc": {
+          "bytes": 7749,
+          "sha256": "7dbbc98fac15567839bf2c3449dc7dc072614e21fcfe039598e92456e34900f8"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/_check_console_script.py": {
+          "bytes": 2413,
+          "sha256": "a4bf10324fb4441dbf75a90d4c0cb968603edac0767d8d84ecfb372d22e2dac4"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/_check_module.py": {
+          "bytes": 2178,
+          "sha256": "bc11c120203fb1171db9602b72bba93629a4ba6fbd0c0a5aef387c01ab85494a"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/bash_completion.d/_python-argcomplete": {
+          "bytes": 10021,
+          "sha256": "61bc0503268cd55e29f93a83aa16d6a5b94bfe7be5864a6221aaa188699f3188"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/completers.py": {
+          "bytes": 5529,
+          "sha256": "eb71f23659c6c799a3e01820b2fc9eb9b4942de6c9054f96d813ea2c79b70d98"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/exceptions.py": {
+          "bytes": 112,
+          "sha256": "b688e97ad6ebb5c99a6cb4550bf62a8851afd31f90cc73ce200d9f106ea5f5a0"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/finders.py": {
+          "bytes": 29485,
+          "sha256": "f6f344f16d151d063c81967863af9ad86ee21bc7b1ad715af63a5487e5007679"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/io.py": {
+          "bytes": 974,
+          "sha256": "c97a510146d77f2473d1f77eff7ffbe417303bb68536355e744c1224decb960a"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/lexers.py": {
+          "bytes": 2249,
+          "sha256": "f7068ac828c4ddf2dccd084442137651d2d2c35c28b76983dd0eab03bd0cba3f"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/packages/__init__.py": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/packages/__pycache__/__init__.cpython-314.pyc": {
+          "bytes": 198,
+          "sha256": "bbebcdd1679bb43b050396041d5671023bad732c45b966323767b13ac308c135"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/packages/__pycache__/_argparse.cpython-314.pyc": {
+          "bytes": 12460,
+          "sha256": "ab819d0906ce711a2d5f63f907fbda7d04c52965e3a468174eb100c9920af571"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/packages/__pycache__/_shlex.cpython-314.pyc": {
+          "bytes": 13175,
+          "sha256": "1fcbb301544927623506d1e44b67fe92661e77e8a6f2c8f6c89edc75c89b5e81"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/packages/_argparse.py": {
+          "bytes": 16523,
+          "sha256": "3b267fe4f798b045071285afbddccc3b3cd8342eb55b073fc45ddea3f163dc0b"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/packages/_shlex.py": {
+          "bytes": 12963,
+          "sha256": "850f5ed27fe82ac6cacee21093491c0012bb7193b56d11a0fada451824e93bfe"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/py.typed": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/__init__.py": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/__pycache__/__init__.cpython-314.pyc": {
+          "bytes": 197,
+          "sha256": "1dc8daaefffb20cd843c4f9241b7c8c63dd5d2e94b6267097633a2950534a675"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/__pycache__/activate_global_python_argcomplete.cpython-314.pyc": {
+          "bytes": 13446,
+          "sha256": "63926284ef606716cf409abe71bdbe4d28b8aea4095562397b9c9da236d8bf43"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/__pycache__/register_python_argcomplete.cpython-314.pyc": {
+          "bytes": 3146,
+          "sha256": "7a02554112b253a5f79d9b4f4a6571b5a95d3a0c38ba17f5b35af26cdeacb92f"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/activate_global_python_argcomplete.py": {
+          "bytes": 6668,
+          "sha256": "66920cc77ac5889e354334e7584f92a1ad5920f1eeb9b9e3601921dc518a32ae"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/register_python_argcomplete.py": {
+          "bytes": 2286,
+          "sha256": "0adb8d5c7a4824229853fa77dae4405efa9fb56ffe4204361aa8eafed6212e92"
+        },
+        "usr/lib/python3.14/site-packages/argcomplete/shell_integration.py": {
+          "bytes": 8050,
+          "sha256": "3986cbaaa9663612661b5168f8b4ee2de261749b843976972f7baac0c62748ce"
+        }
+      },
+      "packaging_mapping": {
+        "usr/bin/activate-global-python-argcomplete": "usr/bin/activate-global-python-argcomplete",
+        "usr/bin/register-python-argcomplete": "usr/bin/register-python-argcomplete",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/INSTALLER": "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/INSTALLER",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/METADATA": "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/METADATA",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/RECORD": "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/RECORD",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/REQUESTED": "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/REQUESTED",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/WHEEL": "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/WHEEL",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/direct_url.json": "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/direct_url.json",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/entry_points.txt": "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/entry_points.txt",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/licenses/LICENSE.rst": "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/licenses/LICENSE.rst",
+        "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/licenses/NOTICE": "usr/lib/python3.14/site-packages/argcomplete-3.7.2.dist-info/licenses/NOTICE",
+        "usr/lib/python3.14/site-packages/argcomplete/__init__.py": "usr/lib/python3.14/site-packages/argcomplete/__init__.py",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/__init__.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/__pycache__/__init__.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/_check_console_script.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/__pycache__/_check_console_script.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/_check_module.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/__pycache__/_check_module.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/completers.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/__pycache__/completers.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/exceptions.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/__pycache__/exceptions.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/finders.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/__pycache__/finders.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/io.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/__pycache__/io.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/lexers.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/__pycache__/lexers.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/__pycache__/shell_integration.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/__pycache__/shell_integration.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/_check_console_script.py": "usr/lib/python3.14/site-packages/argcomplete/_check_console_script.py",
+        "usr/lib/python3.14/site-packages/argcomplete/_check_module.py": "usr/lib/python3.14/site-packages/argcomplete/_check_module.py",
+        "usr/lib/python3.14/site-packages/argcomplete/bash_completion.d/_python-argcomplete": "usr/lib/python3.14/site-packages/argcomplete/bash_completion.d/_python-argcomplete",
+        "usr/lib/python3.14/site-packages/argcomplete/completers.py": "usr/lib/python3.14/site-packages/argcomplete/completers.py",
+        "usr/lib/python3.14/site-packages/argcomplete/exceptions.py": "usr/lib/python3.14/site-packages/argcomplete/exceptions.py",
+        "usr/lib/python3.14/site-packages/argcomplete/finders.py": "usr/lib/python3.14/site-packages/argcomplete/finders.py",
+        "usr/lib/python3.14/site-packages/argcomplete/io.py": "usr/lib/python3.14/site-packages/argcomplete/io.py",
+        "usr/lib/python3.14/site-packages/argcomplete/lexers.py": "usr/lib/python3.14/site-packages/argcomplete/lexers.py",
+        "usr/lib/python3.14/site-packages/argcomplete/packages/__init__.py": "usr/lib/python3.14/site-packages/argcomplete/packages/__init__.py",
+        "usr/lib/python3.14/site-packages/argcomplete/packages/__pycache__/__init__.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/packages/__pycache__/__init__.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/packages/__pycache__/_argparse.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/packages/__pycache__/_argparse.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/packages/__pycache__/_shlex.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/packages/__pycache__/_shlex.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/packages/_argparse.py": "usr/lib/python3.14/site-packages/argcomplete/packages/_argparse.py",
+        "usr/lib/python3.14/site-packages/argcomplete/packages/_shlex.py": "usr/lib/python3.14/site-packages/argcomplete/packages/_shlex.py",
+        "usr/lib/python3.14/site-packages/argcomplete/py.typed": "usr/lib/python3.14/site-packages/argcomplete/py.typed",
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/__init__.py": "usr/lib/python3.14/site-packages/argcomplete/scripts/__init__.py",
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/__pycache__/__init__.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/scripts/__pycache__/__init__.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/__pycache__/activate_global_python_argcomplete.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/scripts/__pycache__/activate_global_python_argcomplete.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/__pycache__/register_python_argcomplete.cpython-314.pyc": "usr/lib/python3.14/site-packages/argcomplete/scripts/__pycache__/register_python_argcomplete.cpython-314.pyc",
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/activate_global_python_argcomplete.py": "usr/lib/python3.14/site-packages/argcomplete/scripts/activate_global_python_argcomplete.py",
+        "usr/lib/python3.14/site-packages/argcomplete/scripts/register_python_argcomplete.py": "usr/lib/python3.14/site-packages/argcomplete/scripts/register_python_argcomplete.py",
+        "usr/lib/python3.14/site-packages/argcomplete/shell_integration.py": "usr/lib/python3.14/site-packages/argcomplete/shell_integration.py"
+      },
+      "restore_path": "/mnt/nav-argcomplete372-accepted-original.tar.zst",
+      "sha256": "32591252aea16c840f441876b38ae6a3b6a45d05dcf8d17160895ee2a168d7d5",
+      "source_run": "https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44881828113/job/136778578381",
+      "status_ledger": {
+        "ERROR": 0,
+        "FAIL": 0,
+        "OK": 174,
+        "SKIP": 12,
+        "XFAIL": 5,
+        "bytes": 81534,
+        "collisions": {},
+        "coverage_caveat": "Original invocation omits spawned subprocess measurement; script modules show0%.",
+        "coverage_percent": 70,
+        "exports": 97,
+        "fixture_in_target": false,
+        "full_exports_exact": true,
+        "full_metadata_two_replays_exact": true,
+        "inherited_OPENs": "unchanged",
+        "no_build_test_rerun": true,
+        "original_archive_only": true,
+        "real_VM_G3": "NOTRUN",
+        "sha256": "32591252aea16c840f441876b38ae6a3b6a45d05dcf8d17160895ee2a168d7d5",
+        "source_deltas": {},
+        "source_files": 50,
+        "source_run": "https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44881828113/job/136778578381",
+        "stage_bytes": 241541,
+        "stage_paths": 43,
+        "target_install_original_bytes": true
+      }
+    },
+    "xwayland-24.1.13": {
+      "bytes": 1517958,
+      "cache_id": "10883381643",
+      "canonical_paths_unchanged": {
+        "usr/lib/xorg/protocol.txt": {
+          "bytes": 25699,
+          "sha256": "b8f6921aaf1d88c74b0cd88295bdfe28b84b432200b8d2fb5b40b0d6eef6016d"
+        },
+        "usr/share/man/man1/Xserver.1": {
+          "bytes": 24207,
+          "sha256": "9eda0ff0551a97a299f6c39d6a59f298b33f61ac6d461a903fb14fa89af53f4b"
+        }
+      },
+      "original_stage_paths": {
+        "usr/bin/Xwayland": {
+          "bytes": 3256672,
+          "sha256": "9cf8eb97cd9570e46ef11d502cd366c1232f24c18b562fc155fc5d6dc00fd4b6"
+        },
+        "usr/lib/pkgconfig/xwayland.pc": {
+          "bytes": 540,
+          "sha256": "93a66f4be4a79ab07f1e650681f9763bb89e539da031e3515c4efc59f7c458f7"
+        },
+        "usr/lib/xorg/protocol.txt": {
+          "bytes": 25162,
+          "sha256": "88b141646fc68627338443a820eeb949149ba73d4ddc925d4717d56a92e7e138"
+        },
+        "usr/share/applications/org.freedesktop.Xwayland.desktop": {
+          "bytes": 187,
+          "sha256": "9e0d766ef55267ea242f6935aadce08983e07ad29903e079876bd22aeba49f0b"
+        },
+        "usr/share/man/man1/Xserver.1": {
+          "bytes": 24753,
+          "sha256": "5bb77d62bb50c18c8a2d1c8580ec965d73505ea054edcb150e28ec40865d2960"
+        },
+        "usr/share/man/man1/Xwayland.1": {
+          "bytes": 7168,
+          "sha256": "e83a1737f953d70c47268fe16c914f3ad990f6def5faa5c86653e9cc344fa2ed"
+        }
+      },
+      "packaging_mapping": {
+        "usr/bin/Xwayland": "usr/bin/Xwayland",
+        "usr/lib/pkgconfig/xwayland.pc": "usr/lib/pkgconfig/xwayland.pc",
+        "usr/lib/xorg/protocol.txt": "usr/share/doc/xwayland-24.1.13/protocol.txt",
+        "usr/share/applications/org.freedesktop.Xwayland.desktop": "usr/share/applications/org.freedesktop.Xwayland.desktop",
+        "usr/share/man/man1/Xserver.1": "usr/share/doc/xwayland-24.1.13/Xserver.1",
+        "usr/share/man/man1/Xwayland.1": "usr/share/man/man1/Xwayland.1"
+      },
+      "restore_path": "/mnt/nav-xwayland24113-accepted-original.tar.zst",
+      "sha256": "d91daf258d67f9876259d8f864490cefd83d3f752a825868d770052f8680b702",
+      "source_run": "https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44874973786/job/136757584414",
+      "status_ledger": {
+        "Meson": {
+          "OK": 28
+        },
+        "bytes": 1517958,
+        "canonical_docs_unchanged": {
+          "usr/lib/xorg/protocol.txt": {
+            "bytes": 25699,
+            "sha256": "b8f6921aaf1d88c74b0cd88295bdfe28b84b432200b8d2fb5b40b0d6eef6016d"
+          },
+          "usr/share/man/man1/Xserver.1": {
+            "bytes": 24207,
+            "sha256": "9eda0ff0551a97a299f6c39d6a59f298b33f61ac6d461a903fb14fa89af53f4b"
+          }
+        },
+        "collision_policy": "existing canonical docs win; Xwayland original docs kept byte-identical at versioned doc locations; original stage archive never rewritten",
+        "current_rendercheck": {
+          "OK": 23
+        },
+        "fixture_exposure_removed_and_excluded": true,
+        "fixture_suites": "NOTRUN",
+        "full981exports_exact": true,
+        "full_metadata_two_extracts_exact": true,
+        "historical_configure_missing_rendercheck": "23absent-fixtureNOTRUN only in earlier discovery, superseded by native registration23OK",
+        "inherited_OPENs": "unchanged",
+        "nested_XTS": {
+          "xvfb": {
+            "UNTESTED_reasons": {
+              "The statement in the X11 specification is not specific enough to write a test": 1,
+              "There is no known portable test method for this assertion": 16,
+              "There is no known reliable test method for this assertion": 12
+            },
+            "counts": {
+              "pass": 340,
+              "skip": 110
+            },
+            "skip_tet_results": {
+              "NOTINUSE": 81,
+              "UNTESTED": 29
+            }
+          },
+          "xwayland": {
+            "UNTESTED_reasons": {
+              "The statement in the X11 specification is not specific enough to write a test": 1,
+              "There is no known portable test method for this assertion": 16,
+              "There is no known reliable test method for this assertion": 12
+            },
+            "counts": {
+              "pass": 333,
+              "skip": 110
+            },
+            "skip_tet_results": {
+              "NOTINUSE": 81,
+              "UNTESTED": 29
+            }
+          }
+        },
+        "no_build_or_test_rerun": true,
+        "original_archive_only": true,
+        "packaging_mapping": {
+          "usr/bin/Xwayland": {
+            "bytes": 3256672,
+            "destination": "usr/bin/Xwayland",
+            "sha256": "9cf8eb97cd9570e46ef11d502cd366c1232f24c18b562fc155fc5d6dc00fd4b6"
+          },
+          "usr/lib/pkgconfig/xwayland.pc": {
+            "bytes": 540,
+            "destination": "usr/lib/pkgconfig/xwayland.pc",
+            "sha256": "93a66f4be4a79ab07f1e650681f9763bb89e539da031e3515c4efc59f7c458f7"
+          },
+          "usr/lib/xorg/protocol.txt": {
+            "bytes": 25162,
+            "destination": "usr/share/doc/xwayland-24.1.13/protocol.txt",
+            "sha256": "88b141646fc68627338443a820eeb949149ba73d4ddc925d4717d56a92e7e138"
+          },
+          "usr/share/applications/org.freedesktop.Xwayland.desktop": {
+            "bytes": 187,
+            "destination": "usr/share/applications/org.freedesktop.Xwayland.desktop",
+            "sha256": "9e0d766ef55267ea242f6935aadce08983e07ad29903e079876bd22aeba49f0b"
+          },
+          "usr/share/man/man1/Xserver.1": {
+            "bytes": 24753,
+            "destination": "usr/share/doc/xwayland-24.1.13/Xserver.1",
+            "sha256": "5bb77d62bb50c18c8a2d1c8580ec965d73505ea054edcb150e28ec40865d2960"
+          },
+          "usr/share/man/man1/Xwayland.1": {
+            "bytes": 7168,
+            "destination": "usr/share/man/man1/Xwayland.1",
+            "sha256": "e83a1737f953d70c47268fe16c914f3ad990f6def5faa5c86653e9cc344fa2ed"
+          }
+        },
+        "real_VM_G3": "NOTRUN",
+        "sha256": "d91daf258d67f9876259d8f864490cefd83d3f752a825868d770052f8680b702",
+        "source_run": "https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44874973786/job/136757584414",
+        "source_unchanged": true,
+        "upstream_exclusions": {
+          "additional_xwayland_patterns": [
+            "xcleararea@6",
+            "xcleararea@7",
+            "xclearwindow@4",
+            "xclearwindow@5",
+            "xcopyarea@1",
+            "xsetfontpath@1",
+            "xsetfontpath@2"
+          ],
+          "base_patterns": [
+            "xlistfontswithinfo@3",
+            "xlistfontswithinfo@4",
+            "xloadqueryfont@1",
+            "xqueryfont@1",
+            "xqueryfont@2",
+            "xsetfontpath@1",
+            "xsetfontpath@2",
+            "rendercheck (separate Meson23currentOK)"
+          ],
+          "status": "upstream wrapper exclusions NOTRUN; pattern count is not excluded case identity count"
+        }
+      }
+    }
+  },
+  "limits": {
+    "capacity_bytes": 10737418240,
+    "reserve_bytes": 268435456
+  },
+  "migration": {
+    "other_payloads": "Existing exact inline archive/path proofs remain required until separately migrated and compared. This file does not replace omitted proofs.",
+    "payload_schema_coverage": [
+      "xwayland-24.1.13",
+      "argcomplete-3.7.2"
+    ]
+  },
+  "protected_caches": {
+    "10516363617": {
+      "bytes": 1413472049,
+      "key": "nav-lfs13.1-x86_64-final-gcc-v1"
+    },
+    "10696846187": {
+      "bytes": 1374122764,
+      "key": "nav-blfs13.1-x86_64-git-open-v1"
+    },
+    "10700939007": {
+      "bytes": 1374812746,
+      "key": "nav-blfs13.1-x86_64-giflib-open-v1"
+    },
+    "10710908926": {
+      "bytes": 1404400214,
+      "key": "nav-blfs13.1-x86_64-jxl-open-v1"
+    },
+    "10790873772": {
+      "bytes": 1414253410,
+      "key": "nav-blfs13.1-x86_64-aom-static-repair-open-v1"
+    },
+    "10803318199": {
+      "bytes": 1477765679,
+      "key": "nav-blfs13.1-x86_64-librsvg-transitional-open-v1"
+    },
+    "10804828520": {
+      "bytes": 17602045,
+      "key": "nav-linux7.1.8-userns-udmabuf-compiled-open-v1"
+    },
+    "10805037408": {
+      "bytes": 6895265,
+      "key": "nav-graphene-isocodes-hicolor-install-only-open-v1"
+    },
+    "10810498235": {
+      "bytes": 901348,
+      "key": "nav-gstgood-narrow-install-only-transitional-open-v1"
+    },
+    "10813815026": {
+      "bytes": 512022,
+      "key": "nav-opus-baseopus-install-only-open-v1"
+    },
+    "10816097588": {
+      "bytes": 283419,
+      "key": "nav-gstmatroska-original-tested-install-only-open-v1"
+    },
+    "10818008081": {
+      "bytes": 1665268,
+      "key": "nav-theora-basetheora-install-only-open-v1"
+    },
+    "10826754060": {
+      "bytes": 109875240,
+      "key": "nav-ffmpeg9.0.1-install-only-first5290-corrected31-open-v1"
+    },
+    "10827259500": {
+      "bytes": 526760,
+      "key": "nav-gstlibav1.28.6-install-only-5OK1FAIL-OPEN16channel-v1"
+    },
+    "10829907838": {
+      "bytes": 6420637,
+      "key": "nav-gstbad1.28.6-install-only-original97OK5FAIL2SKIP-Play17PASS2OPEN-v1"
+    },
+    "10833464043": {
+      "bytes": 179240,
+      "key": "nav-pango1.58.2-introspection-only-original-ledger-unchanged-v1"
+    },
+    "10843934869": {
+      "bytes": 180383,
+      "key": "nav-librsvg2.62.4-svg-pixbufloader-only-native5-decode-verified-original-ledgers-unchanged-v1"
+    },
+    "10868593577": {
+      "bytes": 314639,
+      "key": "nav-lua5.4.8-zero-source-patch-O2-PIC-embedded-OPEN-main385-v1"
+    },
+    "10869122579": {
+      "bytes": 661828,
+      "key": "nav-wireplumber0.5.15-original53OK-systemLua-docGIR-explicitOFF-v1"
+    },
+    "10869895695": {
+      "bytes": 31141567,
+      "key": "nav-gtk4.22.4-unchanged-canonical10928-OPEN-G3NOTRUN-install-only-v1"
+    },
+    "10870138327": {
+      "bytes": 2329532,
+      "key": "nav-hwdata0.410-original-check7OK-USBskip-external3NOTRUN-v1"
+    },
+    "10871175499": {
+      "bytes": 142028,
+      "key": "nav-libdex1.1.0-original12OK1envFAIL-dbusonly1OK-liburingabsent-v1"
+    },
+    "10871519908": {
+      "bytes": 5326726,
+      "key": "nav-libdw0.195-original253PASS-OPEN1OOM8SKIP34NOTRUN-narrow-v1"
+    },
+    "10872412032": {
+      "bytes": 1491910,
+      "key": "nav-sysprof50.0-original7OK-26NOTRUN-gtkhelpOFF-v1"
+    },
+    "10872912778": {
+      "bytes": 159489,
+      "key": "nav-libdisplay-info0.4.0-original68OK-referencegenNOTRUN-v1"
+    },
+    "10873903681": {
+      "bytes": 206396,
+      "key": "nav-libwacom2.19.1-original16OK1SKIP-nested3323PASS1157SKIP-OPENhw-v1"
+    },
+    "10875048082": {
+      "bytes": 330838,
+      "key": "nav-libei1.6.0-original11OK-nested2SKIP-ruff2NOTRUN-toolingexcluded-v1"
+    },
+    "10875048834": {
+      "bytes": 1051277,
+      "key": "nav-libinput1.31.3-original40-canonical11OK1FAIL28SKIP-OPENrecord-segv-v1"
+    },
+    "10875659848": {
+      "bytes": 1648948,
+      "key": "nav-atspi2.60.6-original9OK-registryd27PASS-brokerNOTRUN-realdesktopOPEN-v1"
+    },
+    "10876928655": {
+      "bytes": 25760507,
+      "key": "nav-gtk3.24.43-canonical192OK2FAIL-hiddenTAPFAIL-45NOTRUN-OPEN-v1"
+    },
+    "10877275610": {
+      "bytes": 551620,
+      "key": "nav-gnomedesktop51-original6OK-44PASS1SKIP-qrcodegen521PASS-realdesktopOPEN-v1"
+    },
+    "10877807804": {
+      "bytes": 149452,
+      "key": "nav-libgusb0.4.9-canonical2OK1FAIL-realUSBsigabrtOPEN-6NOTRUN-v1"
+    },
+    "10878681236": {
+      "bytes": 250911,
+      "key": "nav-bashcompletion2.18.0-original1771PASS460SKIP14XFAIL3XPASS-v1"
+    },
+    "10879229098": {
+      "bytes": 1409499,
+      "key": "nav-colord1.4.8-original3OK1FAIL-importOPEN-76PASS5hardwareSKIP-v1"
+    },
+    "10880575516": {
+      "bytes": 8588780,
+      "key": "nav-glycin2.1.5-original5installconfigOK-2cargoBLOCKED-NOTRUN-v1"
+    },
+    "10881014184": {
+      "bytes": 256016,
+      "key": "nav-libcanberra0.30-originalplumbingOK-audioNOTRUN-absentdefaultALSApulse-v1"
+    },
+    "10881014406": {
+      "bytes": 142423,
+      "key": "nav-startupnotification0.12-originalcheckFAIL-APItypeOPEN-manualNOTRUN-v1"
+    },
+    "10881461821": {
+      "bytes": 897343,
+      "key": "nav-libtirpc1.3.7-originalplumbingOK-GSSAPIapprovedOFF-networkNOTRUN-v1"
+    },
+    "10883381643": {
+      "bytes": 1519658,
+      "key": "nav-xwayland24.1.13-original28OK-XTS673P220S-docmapped-fixturesNOTRUN-v1"
+    },
+    "10884897035": {
+      "bytes": 82029,
+      "key": "nav-argcomplete3.7.2-original174OK12SKIP5XFAIL-sha32591252aea16c840f441876b38ae6a3b6a45d05dcf8d17160895ee2a168d7d5-v1"
+    },
+    "10886076920": {
+      "bytes": 1021700,
+      "key": "nav-gcc16.2.0-c-recovered-evidence-sha62e84a2e3e7849c8e0e932b9a7786cd29c2c2d5d972d138dd763d1d10f993e6d-v1"
+    },
+    "10886077045": {
+      "bytes": 1165371,
+      "key": "nav-gcc16.2.0-cxx-recovered-evidence-sha7e577bd0ddefb74ebc496882f4aff78b9cd46ee42de45e8811fa884f4dddfddf-v1"
+    },
+    "10886077143": {
+      "bytes": 145107,
+      "key": "nav-gcc16.2.0-runtime-recovered-evidence-sha466a86f9478532c52eda12a79d986bd92f69e2c39ee8ecaa9d8328aaec8bb7f6-v1"
+    }
+  },
+  "provenance": {
+    "accepted_save_run": "https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44882714763/job/136781312076",
+    "authority": "Explicit reviewed addition of cache10884897035 key/82029B only. Never observed-state autoacceptance.",
+    "previous_manifest_commit": "556ab36848748407e42c6cca865caf2eca03b8d4",
+    "previous_manifest_sha256": "c88c1a460c25ef23adcb0547784600fd7c0a3c24042175102c1879041c9126a6"
+  },
+  "revision": "nav-accepted-state-43-argcomplete372-v1",
+  "schema_version": 1
+}
