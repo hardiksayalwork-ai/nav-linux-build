@@ -1,0 +1,168 @@
+name: NAV GCC recovered3 saveonly owned-directory repair lost3ledger
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  recovery:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - name: Read only explicit loss audit historical manifest unchanged exact40survivors
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "set -euo pipefail\ntest \"$GITHUB_RUN_NUMBER\" = 1\ntest \"$GITHUB_RUN_ATTEMPT\" = 1\npython3 - <<'PREFLIGHT'\n\
+        import urllib.request, urllib.error, json, time, os\nstart = time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
+        token = os.environ['GH_TOKEN']\nassert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n\
+        \    def redirect_request(self, req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url,\
+        \ code, 'redirect refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control':\
+        \ 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return json.load(response)\nr\
+        \ = req(base + '?t=' + str(time.time_ns()))\nassert r['private'] is False\nc = req(base + '/actions/caches?per_page=100&t='\
+        \ + str(time.time_ns()))\nimport pathlib, hashlib, urllib.request, importlib.util\nfor (url, dest, digest)\
+        \ in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/0ac4e6d349c73f219cffe00f69e2001fe7afaf7f/build/attestations/1-nav-build-manifest43-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '01d4427abeb2bac2016207284e2aafc4ee50c1ed0db01ce86b5337181a300ea5'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest() == digest\n\
+        \    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\n\
+        accepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json', '01d4427abeb2bac2016207284e2aafc4ee50c1ed0db01ce86b5337181a300ea5')\n\
+        \nmissing={'10508735204':{'key':'nav-lfs13.1-x86_64-gcc-test-c-v1','bytes':1021068},'10511354384':{'key':'nav-lfs13.1-x86_64-gcc-test-cxx-v1','bytes':1030391},'10515953327':{'key':'nav-lfs13.1-x86_64-gcc-test-runtime-v1','bytes':148732}}\n\
+        assert all(accepted['protected_caches'][k]==v for k,v in missing.items());historical=accepted['protected_caches'];actual={str(z['id']):{'key':z['key'],'bytes':z['size_in_bytes']}for\
+        \ z in c['actions_caches']};assert c['total_count']==len(actual)==40;assert not(set(missing)&set(actual));assert\
+        \ actual=={k:v for k,v in historical.items()if k not in missing};assert sum(v['bytes']for v in actual.values())==8688281905\n\
+        print('NAV_GCC_EXPLICIT_LOSS_LEDGER_JSON '+json.dumps({'historical_manifest_unchanged':True,'historical_count':43,'live_count':40,'missing':missing,'other40_exact':True,'cause':'unproven','read_only_recovery_no_save_delete':True},sort_keys=True),flush=True)\n\
+        \nPREFLIGHT\n"
+    - name: Approved prepare owned recovery archive directory only
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo mkdir -p /mnt/nav-gcc-recovered3
+
+        sudo chown "$(id -u):$(id -g)" /mnt/nav-gcc-recovered3
+
+        '
+    - name: Fetch pinned recovered original18files verify all hashes reserve no tests
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: "set -euo pipefail\npython3 - <<'CHECK'\nimport urllib.request, urllib.error, json, time, os\nstart =\
+        \ time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\ntoken = os.environ['GH_TOKEN']\n\
+        assert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n    def redirect_request(self,\
+        \ req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url, code, 'redirect\
+        \ refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control':\
+        \ 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return json.load(response)\nr\
+        \ = req(base + '?t=' + str(time.time_ns()))\nassert r['private'] is False\nc = req(base + '/actions/caches?per_page=100&t='\
+        \ + str(time.time_ns()))\nimport pathlib, hashlib, urllib.request, importlib.util\nfor (url, dest, digest)\
+        \ in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/0ac4e6d349c73f219cffe00f69e2001fe7afaf7f/build/attestations/1-nav-build-manifest43-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '01d4427abeb2bac2016207284e2aafc4ee50c1ed0db01ce86b5337181a300ea5'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest() == digest\n\
+        \    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\n\
+        accepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json', '01d4427abeb2bac2016207284e2aafc4ee50c1ed0db01ce86b5337181a300ea5')\n\
+        \nimport tarfile,io\nb=urllib.request.urlopen('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/5909a776d740b18dd746a880a524fe4f47f2c618/build/1-nav-gcc-recovered3-original-audits.tar.gz',timeout=60).read();assert\
+        \ len(b)==2249659 and hashlib.sha256(b).hexdigest()=='418c3b02f9a2526e33e9760e08aa20af2dd0b18025d564c8eb35faa573b6f616'\n\
+        dest=pathlib.Path('/mnt/nav-gcc-recovered3');dest.mkdir(exist_ok=True);t=tarfile.open(fileobj=io.BytesIO(b));t.extractall(dest,filter='data')\n\
+        proof=json.loads((dest/'recovery-ledger.json').read_text())\nfor group,v in proof.items():\n p=dest/('gcc-audit-'+group+'-recovered.tar.gz');assert\
+        \ p.stat().st_size==v['evidence_archive_bytes'] and hashlib.sha256(p.read_bytes()).hexdigest()==v['evidence_archive_sha256']\n\
+        \ with tarfile.open(p)as arc:\n  for name,a in v['recovered_files'].items():\n   z=arc.extractfile('./'+name).read();assert\
+        \ len(z)==a['bytes'] and hashlib.sha256(z).hexdigest()==a['sha256']\nassert 10*1024**3-sum(z['size_in_bytes']for\
+        \ z in c['actions_caches'])-3000000>256*1024**2\nprint('NAV_GCC_RECOVERY_SAVE_BYTES_EXACT_READY',flush=True)\n\
+        \nCHECK\n"
+    - name: Save NEW recovered c evidence never old key
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-gcc-recovered3/gcc-audit-c-recovered.tar.gz
+        key: nav-gcc16.2.0-c-recovered-evidence-sha62e84a2e3e7849c8e0e932b9a7786cd29c2c2d5d972d138dd763d1d10f993e6d-v1
+    - name: Save NEW recovered cxx evidence never old key
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-gcc-recovered3/gcc-audit-cxx-recovered.tar.gz
+        key: nav-gcc16.2.0-cxx-recovered-evidence-sha7e577bd0ddefb74ebc496882f4aff78b9cd46ee42de45e8811fa884f4dddfddf-v1
+    - name: Save NEW recovered runtime evidence never old key
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-gcc-recovered3/gcc-audit-runtime-recovered.tar.gz
+        key: nav-gcc16.2.0-runtime-recovered-evidence-sha466a86f9478532c52eda12a79d986bd92f69e2c39ee8ecaa9d8328aaec8bb7f6-v1
+    - name: Verify only3NEW identities all40exact original3remainlost manifestunchanged
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: "set -euo pipefail\npython3 - <<'CHECK'\nimport urllib.request, urllib.error, json, time, os\nstart =\
+        \ time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\ntoken = os.environ['GH_TOKEN']\n\
+        assert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n    def redirect_request(self,\
+        \ req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url, code, 'redirect\
+        \ refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control':\
+        \ 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return json.load(response)\nr\
+        \ = req(base + '?t=' + str(time.time_ns()))\nassert r['private'] is False\nc = req(base + '/actions/caches?per_page=100&t='\
+        \ + str(time.time_ns()))\nimport pathlib, hashlib, urllib.request, importlib.util\nfor (url, dest, digest)\
+        \ in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/0ac4e6d349c73f219cffe00f69e2001fe7afaf7f/build/attestations/1-nav-build-manifest43-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '01d4427abeb2bac2016207284e2aafc4ee50c1ed0db01ce86b5337181a300ea5'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest() == digest\n\
+        \    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\n\
+        accepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json', '01d4427abeb2bac2016207284e2aafc4ee50c1ed0db01ce86b5337181a300ea5')\n\
+        \nexpected={'10516363617': {'bytes': 1413472049, 'key': 'nav-lfs13.1-x86_64-final-gcc-v1'}, '10696846187':\
+        \ {'bytes': 1374122764, 'key': 'nav-blfs13.1-x86_64-git-open-v1'}, '10700939007': {'bytes': 1374812746,\
+        \ 'key': 'nav-blfs13.1-x86_64-giflib-open-v1'}, '10710908926': {'bytes': 1404400214, 'key': 'nav-blfs13.1-x86_64-jxl-open-v1'},\
+        \ '10790873772': {'bytes': 1414253410, 'key': 'nav-blfs13.1-x86_64-aom-static-repair-open-v1'}, '10803318199':\
+        \ {'bytes': 1477765679, 'key': 'nav-blfs13.1-x86_64-librsvg-transitional-open-v1'}, '10804828520': {'bytes':\
+        \ 17602045, 'key': 'nav-linux7.1.8-userns-udmabuf-compiled-open-v1'}, '10805037408': {'bytes': 6895265,\
+        \ 'key': 'nav-graphene-isocodes-hicolor-install-only-open-v1'}, '10810498235': {'bytes': 901348, 'key':\
+        \ 'nav-gstgood-narrow-install-only-transitional-open-v1'}, '10813815026': {'bytes': 512022, 'key': 'nav-opus-baseopus-install-only-open-v1'},\
+        \ '10816097588': {'bytes': 283419, 'key': 'nav-gstmatroska-original-tested-install-only-open-v1'}, '10818008081':\
+        \ {'bytes': 1665268, 'key': 'nav-theora-basetheora-install-only-open-v1'}, '10826754060': {'bytes': 109875240,\
+        \ 'key': 'nav-ffmpeg9.0.1-install-only-first5290-corrected31-open-v1'}, '10827259500': {'bytes': 526760,\
+        \ 'key': 'nav-gstlibav1.28.6-install-only-5OK1FAIL-OPEN16channel-v1'}, '10829907838': {'bytes': 6420637,\
+        \ 'key': 'nav-gstbad1.28.6-install-only-original97OK5FAIL2SKIP-Play17PASS2OPEN-v1'}, '10833464043': {'bytes':\
+        \ 179240, 'key': 'nav-pango1.58.2-introspection-only-original-ledger-unchanged-v1'}, '10843934869': {'bytes':\
+        \ 180383, 'key': 'nav-librsvg2.62.4-svg-pixbufloader-only-native5-decode-verified-original-ledgers-unchanged-v1'},\
+        \ '10868593577': {'bytes': 314639, 'key': 'nav-lua5.4.8-zero-source-patch-O2-PIC-embedded-OPEN-main385-v1'},\
+        \ '10869122579': {'bytes': 661828, 'key': 'nav-wireplumber0.5.15-original53OK-systemLua-docGIR-explicitOFF-v1'},\
+        \ '10869895695': {'bytes': 31141567, 'key': 'nav-gtk4.22.4-unchanged-canonical10928-OPEN-G3NOTRUN-install-only-v1'},\
+        \ '10870138327': {'bytes': 2329532, 'key': 'nav-hwdata0.410-original-check7OK-USBskip-external3NOTRUN-v1'},\
+        \ '10871175499': {'bytes': 142028, 'key': 'nav-libdex1.1.0-original12OK1envFAIL-dbusonly1OK-liburingabsent-v1'},\
+        \ '10871519908': {'bytes': 5326726, 'key': 'nav-libdw0.195-original253PASS-OPEN1OOM8SKIP34NOTRUN-narrow-v1'},\
+        \ '10872412032': {'bytes': 1491910, 'key': 'nav-sysprof50.0-original7OK-26NOTRUN-gtkhelpOFF-v1'}, '10872912778':\
+        \ {'bytes': 159489, 'key': 'nav-libdisplay-info0.4.0-original68OK-referencegenNOTRUN-v1'}, '10873903681':\
+        \ {'bytes': 206396, 'key': 'nav-libwacom2.19.1-original16OK1SKIP-nested3323PASS1157SKIP-OPENhw-v1'}, '10875048082':\
+        \ {'bytes': 330838, 'key': 'nav-libei1.6.0-original11OK-nested2SKIP-ruff2NOTRUN-toolingexcluded-v1'}, '10875048834':\
+        \ {'bytes': 1051277, 'key': 'nav-libinput1.31.3-original40-canonical11OK1FAIL28SKIP-OPENrecord-segv-v1'},\
+        \ '10875659848': {'bytes': 1648948, 'key': 'nav-atspi2.60.6-original9OK-registryd27PASS-brokerNOTRUN-realdesktopOPEN-v1'},\
+        \ '10876928655': {'bytes': 25760507, 'key': 'nav-gtk3.24.43-canonical192OK2FAIL-hiddenTAPFAIL-45NOTRUN-OPEN-v1'},\
+        \ '10877275610': {'bytes': 551620, 'key': 'nav-gnomedesktop51-original6OK-44PASS1SKIP-qrcodegen521PASS-realdesktopOPEN-v1'},\
+        \ '10877807804': {'bytes': 149452, 'key': 'nav-libgusb0.4.9-canonical2OK1FAIL-realUSBsigabrtOPEN-6NOTRUN-v1'},\
+        \ '10878681236': {'bytes': 250911, 'key': 'nav-bashcompletion2.18.0-original1771PASS460SKIP14XFAIL3XPASS-v1'},\
+        \ '10879229098': {'bytes': 1409499, 'key': 'nav-colord1.4.8-original3OK1FAIL-importOPEN-76PASS5hardwareSKIP-v1'},\
+        \ '10880575516': {'bytes': 8588780, 'key': 'nav-glycin2.1.5-original5installconfigOK-2cargoBLOCKED-NOTRUN-v1'},\
+        \ '10881014184': {'bytes': 256016, 'key': 'nav-libcanberra0.30-originalplumbingOK-audioNOTRUN-absentdefaultALSApulse-v1'},\
+        \ '10881014406': {'bytes': 142423, 'key': 'nav-startupnotification0.12-originalcheckFAIL-APItypeOPEN-manualNOTRUN-v1'},\
+        \ '10881461821': {'bytes': 897343, 'key': 'nav-libtirpc1.3.7-originalplumbingOK-GSSAPIapprovedOFF-networkNOTRUN-v1'},\
+        \ '10883381643': {'bytes': 1519658, 'key': 'nav-xwayland24.1.13-original28OK-XTS673P220S-docmapped-fixturesNOTRUN-v1'},\
+        \ '10884897035': {'bytes': 82029, 'key': 'nav-argcomplete3.7.2-original174OK12SKIP5XFAIL-sha32591252aea16c840f441876b38ae6a3b6a45d05dcf8d17160895ee2a168d7d5-v1'}}\n\
+        keys={'c': 'nav-gcc16.2.0-c-recovered-evidence-sha62e84a2e3e7849c8e0e932b9a7786cd29c2c2d5d972d138dd763d1d10f993e6d-v1',\
+        \ 'cxx': 'nav-gcc16.2.0-cxx-recovered-evidence-sha7e577bd0ddefb74ebc496882f4aff78b9cd46ee42de45e8811fa884f4dddfddf-v1',\
+        \ 'runtime': 'nav-gcc16.2.0-runtime-recovered-evidence-sha466a86f9478532c52eda12a79d986bd92f69e2c39ee8ecaa9d8328aaec8bb7f6-v1'}\n\
+        \nactual={str(z['id']):{'key':z['key'],'bytes':z['size_in_bytes']}for z in c['actions_caches']};new={g:[z\
+        \ for z in c['actions_caches']if z['key']==k]for g,k in keys.items()};assert all(len(v)==1 for v in new.values());new={g:v[0]for\
+        \ g,v in new.items()};ids={str(v['id'])for v in new.values()};assert {k:v for k,v in actual.items()if k\
+        \ not in ids}==expected and c['total_count']==len(actual)==43;assert not(set(['10508735204','10511354384','10515953327'])&set(actual));total=sum(z['size_in_bytes']for\
+        \ z in c['actions_caches']);assert 10*1024**3-total>256*1024**2;print('NAV_GCC_RECOVERY_SAVED_NEW_IDENTITIES_JSON\
+        \ '+json.dumps({'new_caches':new,'all40survivors_unchanged':True,'old3remain_lost':True,'old_manifest_unchanged':True,'total_bytes':total,'headroom':10*1024**3-total},sort_keys=True),flush=True)\n\
+        \nCHECK\n"
