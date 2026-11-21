@@ -1,0 +1,209 @@
+name: NAV accepted libei11OK libinputOPENsegv originalarchives pair saveonly
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  save:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+    - name: Exact29protected reconciled externalaccessloss causeunproven no save delete
+      shell: bash
+      run: "test \"$GITHUB_RUN_NUMBER\" = 1\ntest \"$GITHUB_RUN_ATTEMPT\" = 1\nset -euo pipefail\npython3 - <<'PREFLIGHT'\n\
+        import urllib.request, urllib.error, json, time, os\nstart = time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
+        token = os.environ['GH_TOKEN']\nassert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n\
+        \    def redirect_request(self, req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url,\
+        \ code, 'redirect refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control':\
+        \ 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return json.load(response)\nr\
+        \ = req(base + '?t=' + str(time.time_ns()))\nassert r['private'] is False\nc = req(base + '/actions/caches?per_page=100&t='\
+        \ + str(time.time_ns()))\nexpected = {'10827259500': {'key': 'nav-gstlibav1.28.6-install-only-5OK1FAIL-OPEN16channel-v1',\
+        \ 'bytes': 526760}, '10826754060': {'key': 'nav-ffmpeg9.0.1-install-only-first5290-corrected31-open-v1',\
+        \ 'bytes': 109875240}, '10818008081': {'key': 'nav-theora-basetheora-install-only-open-v1', 'bytes': 1665268},\
+        \ '10816097588': {'key': 'nav-gstmatroska-original-tested-install-only-open-v1', 'bytes': 283419}, '10813815026':\
+        \ {'key': 'nav-opus-baseopus-install-only-open-v1', 'bytes': 512022}, '10810498235': {'key': 'nav-gstgood-narrow-install-only-transitional-open-v1',\
+        \ 'bytes': 901348}, '10803318199': {'key': 'nav-blfs13.1-x86_64-librsvg-transitional-open-v1', 'bytes':\
+        \ 1477765679}, '10805037408': {'key': 'nav-graphene-isocodes-hicolor-install-only-open-v1', 'bytes': 6895265},\
+        \ '10804828520': {'key': 'nav-linux7.1.8-userns-udmabuf-compiled-open-v1', 'bytes': 17602045}, '10790873772':\
+        \ {'key': 'nav-blfs13.1-x86_64-aom-static-repair-open-v1', 'bytes': 1414253410}, '10710908926': {'key':\
+        \ 'nav-blfs13.1-x86_64-jxl-open-v1', 'bytes': 1404400214}, '10700939007': {'key': 'nav-blfs13.1-x86_64-giflib-open-v1',\
+        \ 'bytes': 1374812746}, '10696846187': {'key': 'nav-blfs13.1-x86_64-git-open-v1', 'bytes': 1374122764},\
+        \ '10516363617': {'key': 'nav-lfs13.1-x86_64-final-gcc-v1', 'bytes': 1413472049}, '10515953327': {'key':\
+        \ 'nav-lfs13.1-x86_64-gcc-test-runtime-v1', 'bytes': 148732}, '10511354384': {'key': 'nav-lfs13.1-x86_64-gcc-test-cxx-v1',\
+        \ 'bytes': 1030391}, '10508735204': {'key': 'nav-lfs13.1-x86_64-gcc-test-c-v1', 'bytes': 1021068}, '10829907838':\
+        \ {'key': 'nav-gstbad1.28.6-install-only-original97OK5FAIL2SKIP-Play17PASS2OPEN-v1', 'bytes': 6420637},\
+        \ '10833464043': {'key': 'nav-pango1.58.2-introspection-only-original-ledger-unchanged-v1', 'bytes': 179240},\
+        \ '10843934869': {'key': 'nav-librsvg2.62.4-svg-pixbufloader-only-native5-decode-verified-original-ledgers-unchanged-v1',\
+        \ 'bytes': 180383}, '10868593577': {'key': 'nav-lua5.4.8-zero-source-patch-O2-PIC-embedded-OPEN-main385-v1',\
+        \ 'bytes': 314639}, '10869122579': {'key': 'nav-wireplumber0.5.15-original53OK-systemLua-docGIR-explicitOFF-v1',\
+        \ 'bytes': 661828}, '10869895695': {'key': 'nav-gtk4.22.4-unchanged-canonical10928-OPEN-G3NOTRUN-install-only-v1',\
+        \ 'bytes': 31141567}, '10870138327': {'key': 'nav-hwdata0.410-original-check7OK-USBskip-external3NOTRUN-v1',\
+        \ 'bytes': 2329532}, '10871175499': {'key': 'nav-libdex1.1.0-original12OK1envFAIL-dbusonly1OK-liburingabsent-v1',\
+        \ 'bytes': 142028}, '10871519908': {'key': 'nav-libdw0.195-original253PASS-OPEN1OOM8SKIP34NOTRUN-narrow-v1',\
+        \ 'bytes': 5326726}, '10872412032': {'key': 'nav-sysprof50.0-original7OK-26NOTRUN-gtkhelpOFF-v1', 'bytes':\
+        \ 1491910}, '10872912778': {'key': 'nav-libdisplay-info0.4.0-original68OK-referencegenNOTRUN-v1', 'bytes':\
+        \ 159489}, '10873903681': {'key': 'nav-libwacom2.19.1-original16OK1SKIP-nested3323PASS1157SKIP-OPENhw-v1',\
+        \ 'bytes': 206396}}\nactual = {str(z['id']): {'key': z['key'], 'bytes': z['size_in_bytes']} for z in c['actions_caches']}\n\
+        assert c['total_count'] == len(actual) == len(expected) and actual == expected\nassert sum((z['bytes'] for\
+        \ z in actual.values())) < 10 * 1024 ** 3\nprint('NAV_FFMPEG_PUBLIC_STANDARD_RUNNER_FREE_CACHE_EXACT ' +\
+        \ json.dumps({'public': True, 'standard_runner': 'ubuntu-24.04', 'cache_count': len(actual), 'cache_bytes':\
+        \ sum((z['bytes'] for z in actual.values())), 'no_cache_save_or_delete': True, 'elapsed': time.monotonic()\
+        \ - start}), flush=True)\nPREFLIGHT\n"
+      env:
+        GH_TOKEN: ${{ github.token }}
+    - name: Recover exact27plus28plus32 exports originalarchives fullmetadata and OPEN proof no rebuild
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "set -euo pipefail\nsudo --preserve-env=GH_TOKEN python3 - <<'CHECK'\nimport os,json,time,urllib.request,hashlib,base64,gzip,re\n\
+        from pathlib import Path\nTOKEN=os.environ['GH_TOKEN'];assert TOKEN\nBASE='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build/'\n\
+        class SafeRedirect(urllib.request.HTTPRedirectHandler):\n def redirect_request(self,req,fp,code,msg,headers,newurl):\n\
+        \  new=super().redirect_request(req,fp,code,msg,headers,newurl)\n  if new is not None and not newurl.startswith('https://api.github.com/'):new.remove_header('Authorization')\n\
+        \  return new\nOPENER=urllib.request.build_opener(SafeRedirect())\n_probe=urllib.request.Request('https://api.github.com/synthetic',headers={'Authorization':'Bearer\
+        \ SYNTHETIC_NOT_A_SECRET'})\n_cross=SafeRedirect().redirect_request(_probe,None,302,'Found',{},'https://example.invalid/synthetic-log')\n\
+        _same=SafeRedirect().redirect_request(_probe,None,302,'Found',{},'https://api.github.com/synthetic-next')\n\
+        assert not _cross.has_header('Authorization') and _same.get_header('Authorization')=='Bearer SYNTHETIC_NOT_A_SECRET'\n\
+        print('NAV_SAFE_REDIRECT_HEADER_SCOPE_SYNTHETIC_SELFTEST_PASS',flush=True)\ndef get(path):\n url=path if\
+        \ path.startswith('https://api.github.com/')else BASE+path\n req=urllib.request.Request(url,headers={'Authorization':'Bearer\
+        \ '+TOKEN,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'})\n\
+        \ with OPENER.open(req,timeout=90)as r:return r.read()\ndef inventory():\n d=json.loads(get('actions/caches?per_page=100'));assert\
+        \ d['total_count']==len(d['actions_caches']);return {str(x['id']):{k:x[k]for k in ['key','ref','version','size_in_bytes']}for\
+        \ x in d['actions_caches']}\ndef unique_record(text,marker):\n rows=[]\n for l in text.splitlines():\n \
+        \ l=re.sub(r'^\\S+Z ','',l)\n  if l.startswith(marker+' '):rows.append(json.loads(l.split(' ',1)[1]))\n\
+        \ assert len(rows)==1,(marker,len(rows));return rows[0]\n\nimport collections,stat,subprocess\n\ndef recover(job,dest,count):\n\
+        \ raw=get('actions/jobs/'+str(job)+'/logs').decode();parts=collections.defaultdict(dict);tot={}\n for m\
+        \ in re.finditer(r'NAV_FFMPEG_([A-Z0-9_]+)_GZB64 (\\d+)/(\\d+) ([A-Za-z0-9+/=]+)',raw):\n  k=m[1];i=int(m[2]);assert\
+        \ i not in parts[k]or parts[k][i]==m[4];parts[k][i]=m[4];tot[k]=int(m[3])\n assert all(set(v)==set(range(1,tot[k]+1))for\
+        \ k,v in parts.items())\n def dec(k):return gzip.decompress(base64.b64decode(''.join(parts[k][i]for i in\
+        \ sorted(parts[k]))))\n m=json.loads(dec('EXPORT_MANIFEST_JSON'));assert len(m['files'])==count and not\
+        \ m['errors'];A=Path(dest);A.mkdir()\n for k,x in m['files'].items():\n  b=dec(k);assert len(b)==x['bytes']and\
+        \ hashlib.sha256(b).hexdigest()==x['sha256'];p=A/x['file'];assert p.is_relative_to(A);p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(b)\n\
+        \ return A\n\ndef roundtrip(A,name,size,digest,paths):\n l=json.loads((A/'native-evidence/ledger.json').read_text());b=(A/(name+'-stage-measure-only.tar.zst')).read_bytes();assert\
+        \ len(b)==size and hashlib.sha256(b).hexdigest()==digest\n bundle=Path('/mnt/nav-'+name+'-accepted-original.tar.zst');bundle.write_bytes(b)\n\
+        \ def payload(P):return {str(p.relative_to(P)):({'symlink':os.readlink(p)}if p.is_symlink()else{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})for\
+        \ p in P.rglob('*')if p.is_file()or p.is_symlink()}\n def meta(P):return {str(p.relative_to(P)):{'mode':stat.S_IMODE(p.lstat().st_mode),'uid':p.lstat().st_uid,'gid':p.lstat().st_gid,'mtime':p.lstat().st_mtime_ns}for\
+        \ p in [P]+list(P.rglob('*'))}\n P=Path('/mnt/nav-'+name+'-replay');Q=Path('/mnt/nav-'+name+'-replay2');P.mkdir();Q.mkdir()\n\
+        \ for d in [P,Q]:subprocess.run(['tar','--zstd','-xpf',str(bundle),'-C',str(d)],check=True)\n assert payload(P)==payload(Q)==l['stage']and\
+        \ len(l['stage'])==paths and meta(P)==meta(Q)\n return {'bytes':len(b),'sha256':digest,'paths':paths,'stage_bytes':l['stage_bytes'],'two_metadata_replays_exact':True,'original_archive':True,'no_rebuild_retest_target_install':True}\n\
+        \nE=recover(136654515834,'/mnt/nav-libei-evidence',27);I=recover(136646826274,'/mnt/nav-libinput-evidence',28);C=recover(136655174037,'/mnt/nav-libinput-correction-evidence',32)\n\
+        e=json.loads((E/'native-evidence/ledger.json').read_text());i=json.loads((I/'native-evidence/ledger.json').read_text());c=json.loads((C/'native-evidence/ledger.json').read_text())\n\
+        assert e['counts']=={'OK':11}and e['selected']==e['recorded']==11 and e['NOTRUN']==0 and e['identity_commands_exact']and\
+        \ e['source_original_unchanged']and e['tooling_original_files_unchanged']and e['source_original_files']==173\n\
+        assert set(e['stage_tooling_excluded'])=={'usr/lib/libmunit.so'}and not any('munit'in k or 'structlog'in\
+        \ k for k in e['stage'])\nassert i['counts']=={'OK':10,'FAIL':2,'SKIP':28}and i['selected']==i['recorded']==40\
+        \ and i['NOTRUN']==0 and i['identity_commands_exact']and i['source_original_unchanged']and i['source_original_files']==518\n\
+        assert c['counts']=={'OK':1}and c['selected']==c['recorded']==1 and c['other39_NOT_REPLAYED']and c['source_original_unchanged']and\
+        \ c['stage']==i['stage']\nfor f in ['ledger','testlog']:assert (C/('native-evidence/original40-'+f+'.json')).read_bytes()==(I/('native-evidence/'+f+'.json')).read_bytes()\n\
+        gdb=(C/'native-evidence/record-debugger-once.log').read_text();assert 'SIGSEGV'in gdb and 'mem=0x100'in\
+        \ gdb and 'select_device'in gdb and 'ndev = -1'in gdb\nproof=json.loads((C/'devfd-only-correction.json').read_text());assert\
+        \ proof=={'path':'/dev/fd','link':'/proc/self/fd','no_dev_input':True,'no_hostdevices':True}\nmeasures={\n\
+        \ 'libei':roundtrip(E,'libei',329271,'dbdf294e2df12b07b5b03a0733ffd3c495baba82fc99a6b2768f7ae209f1e524',16),\n\
+        \ 'libinput':roundtrip(I,'libinput',1049688,'34451ac2ab8edb7d89469ab2955a3f35ddebdd6c8b0bda14f471ad43e2df3752',110)}\n\
+        measures['libei'].update(native={'OK':11},nested_munit_PASS=237,nested_pytest_PASS=107,nested_collection_SKIP=2,optional_ruff2_NOTRUN=True,tooling_own_suites_NOTRUN=True,tooling_excluded=e['stage_tooling_excluded'])\n\
+        measures['libinput'].update(original_native=i['counts'],final_native={'OK':11,'FAIL':1,'SKIP':28},original40_retained=True,symbols_env_correction_only={'OK':1},tool_options_nested={'FAIL':7,'PASS':41,'SKIP':25},real_upstream_defect_OPEN='uninitialized\
+        \ cleanup namelist,free0x100,select_device after scandir-1 missing/dev/input',own_VM_hardware='OPEN',inherited_OPENs=i['scope_decision'],gdb_evidence_run='https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44842681837/job/136655174037',original_source_run='https://github.com/hardiksayalwork-ai/nav-linux-build/actions/runs/44840332702/job/136646826274')\n\
+        Path('/mnt/nav-input-pair-measure.json').write_text(json.dumps(measures,sort_keys=True));print('NAV_INPUT_PAIR_MEASURE_JSON\
+        \ '+json.dumps(measures,sort_keys=True),flush=True)\n\nCHECK\n"
+    - name: Exact29protected900MiB256MiBreserve pair gate
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'CHECK'\nimport urllib.request, urllib.error, json, time, os\nstart =\
+        \ time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\ntoken = os.environ['GH_TOKEN']\n\
+        assert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n    def redirect_request(self,\
+        \ req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url, code, 'redirect\
+        \ refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control':\
+        \ 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return json.load(response)\nexpected={'10827259500':\
+        \ {'key': 'nav-gstlibav1.28.6-install-only-5OK1FAIL-OPEN16channel-v1', 'bytes': 526760}, '10826754060':\
+        \ {'key': 'nav-ffmpeg9.0.1-install-only-first5290-corrected31-open-v1', 'bytes': 109875240}, '10818008081':\
+        \ {'key': 'nav-theora-basetheora-install-only-open-v1', 'bytes': 1665268}, '10816097588': {'key': 'nav-gstmatroska-original-tested-install-only-open-v1',\
+        \ 'bytes': 283419}, '10813815026': {'key': 'nav-opus-baseopus-install-only-open-v1', 'bytes': 512022}, '10810498235':\
+        \ {'key': 'nav-gstgood-narrow-install-only-transitional-open-v1', 'bytes': 901348}, '10803318199': {'key':\
+        \ 'nav-blfs13.1-x86_64-librsvg-transitional-open-v1', 'bytes': 1477765679}, '10805037408': {'key': 'nav-graphene-isocodes-hicolor-install-only-open-v1',\
+        \ 'bytes': 6895265}, '10804828520': {'key': 'nav-linux7.1.8-userns-udmabuf-compiled-open-v1', 'bytes': 17602045},\
+        \ '10790873772': {'key': 'nav-blfs13.1-x86_64-aom-static-repair-open-v1', 'bytes': 1414253410}, '10710908926':\
+        \ {'key': 'nav-blfs13.1-x86_64-jxl-open-v1', 'bytes': 1404400214}, '10700939007': {'key': 'nav-blfs13.1-x86_64-giflib-open-v1',\
+        \ 'bytes': 1374812746}, '10696846187': {'key': 'nav-blfs13.1-x86_64-git-open-v1', 'bytes': 1374122764},\
+        \ '10516363617': {'key': 'nav-lfs13.1-x86_64-final-gcc-v1', 'bytes': 1413472049}, '10515953327': {'key':\
+        \ 'nav-lfs13.1-x86_64-gcc-test-runtime-v1', 'bytes': 148732}, '10511354384': {'key': 'nav-lfs13.1-x86_64-gcc-test-cxx-v1',\
+        \ 'bytes': 1030391}, '10508735204': {'key': 'nav-lfs13.1-x86_64-gcc-test-c-v1', 'bytes': 1021068}, '10829907838':\
+        \ {'key': 'nav-gstbad1.28.6-install-only-original97OK5FAIL2SKIP-Play17PASS2OPEN-v1', 'bytes': 6420637},\
+        \ '10833464043': {'key': 'nav-pango1.58.2-introspection-only-original-ledger-unchanged-v1', 'bytes': 179240},\
+        \ '10843934869': {'key': 'nav-librsvg2.62.4-svg-pixbufloader-only-native5-decode-verified-original-ledgers-unchanged-v1',\
+        \ 'bytes': 180383}, '10868593577': {'key': 'nav-lua5.4.8-zero-source-patch-O2-PIC-embedded-OPEN-main385-v1',\
+        \ 'bytes': 314639}, '10869122579': {'key': 'nav-wireplumber0.5.15-original53OK-systemLua-docGIR-explicitOFF-v1',\
+        \ 'bytes': 661828}, '10869895695': {'key': 'nav-gtk4.22.4-unchanged-canonical10928-OPEN-G3NOTRUN-install-only-v1',\
+        \ 'bytes': 31141567}, '10870138327': {'key': 'nav-hwdata0.410-original-check7OK-USBskip-external3NOTRUN-v1',\
+        \ 'bytes': 2329532}, '10871175499': {'key': 'nav-libdex1.1.0-original12OK1envFAIL-dbusonly1OK-liburingabsent-v1',\
+        \ 'bytes': 142028}, '10871519908': {'key': 'nav-libdw0.195-original253PASS-OPEN1OOM8SKIP34NOTRUN-narrow-v1',\
+        \ 'bytes': 5326726}, '10872412032': {'key': 'nav-sysprof50.0-original7OK-26NOTRUN-gtkhelpOFF-v1', 'bytes':\
+        \ 1491910}, '10872912778': {'key': 'nav-libdisplay-info0.4.0-original68OK-referencegenNOTRUN-v1', 'bytes':\
+        \ 159489}, '10873903681': {'key': 'nav-libwacom2.19.1-original16OK1SKIP-nested3323PASS1157SKIP-OPENhw-v1',\
+        \ 'bytes': 206396}}\n\nfrom pathlib import Path\nm=json.loads(Path('/mnt/nav-input-pair-measure.json').read_text());c=req(base+'/actions/caches?per_page=100&t='+str(time.time_ns()));actual={str(z['id']):{'key':z['key'],'bytes':z['size_in_bytes']}for\
+        \ z in c['actions_caches']};assert c['total_count']==len(actual)==29 and actual==expected;total=sum(z['bytes']for\
+        \ z in actual.values());size=sum(x['bytes']for x in m.values());assert size==1378959 and size<=900*1024**2\
+        \ and 10*1024**3-total-size>=256*1024**2;print('NAV_INPUT_PAIR_GATE_JSON '+json.dumps({'all29retained':True,'before_bytes':total,'bundle_bytes':size,'headroom_after_estimate':10*1024**3-total-size},sort_keys=True),flush=True)\n\
+        \nCHECK\n"
+    - name: Save accepted original libei narrowbundle allOPEN retained
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-libei-accepted-original.tar.zst
+        key: nav-libei1.6.0-original11OK-nested2SKIP-ruff2NOTRUN-toolingexcluded-v1
+    - name: Save accepted original libinput narrowbundle allOPEN retained
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-libinput-accepted-original.tar.zst
+        key: nav-libinput1.31.3-original40-canonical11OK1FAIL28SKIP-OPENrecord-segv-v1
+    - name: Verify exactlytwo new all29oldretained
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'CHECK'\nimport urllib.request, urllib.error, json, time, os\nstart =\
+        \ time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\ntoken = os.environ['GH_TOKEN']\n\
+        assert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n    def redirect_request(self,\
+        \ req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url, code, 'redirect\
+        \ refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control':\
+        \ 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return json.load(response)\nexpected={'10827259500':\
+        \ {'key': 'nav-gstlibav1.28.6-install-only-5OK1FAIL-OPEN16channel-v1', 'bytes': 526760}, '10826754060':\
+        \ {'key': 'nav-ffmpeg9.0.1-install-only-first5290-corrected31-open-v1', 'bytes': 109875240}, '10818008081':\
+        \ {'key': 'nav-theora-basetheora-install-only-open-v1', 'bytes': 1665268}, '10816097588': {'key': 'nav-gstmatroska-original-tested-install-only-open-v1',\
+        \ 'bytes': 283419}, '10813815026': {'key': 'nav-opus-baseopus-install-only-open-v1', 'bytes': 512022}, '10810498235':\
+        \ {'key': 'nav-gstgood-narrow-install-only-transitional-open-v1', 'bytes': 901348}, '10803318199': {'key':\
+        \ 'nav-blfs13.1-x86_64-librsvg-transitional-open-v1', 'bytes': 1477765679}, '10805037408': {'key': 'nav-graphene-isocodes-hicolor-install-only-open-v1',\
+        \ 'bytes': 6895265}, '10804828520': {'key': 'nav-linux7.1.8-userns-udmabuf-compiled-open-v1', 'bytes': 17602045},\
+        \ '10790873772': {'key': 'nav-blfs13.1-x86_64-aom-static-repair-open-v1', 'bytes': 1414253410}, '10710908926':\
+        \ {'key': 'nav-blfs13.1-x86_64-jxl-open-v1', 'bytes': 1404400214}, '10700939007': {'key': 'nav-blfs13.1-x86_64-giflib-open-v1',\
+        \ 'bytes': 1374812746}, '10696846187': {'key': 'nav-blfs13.1-x86_64-git-open-v1', 'bytes': 1374122764},\
+        \ '10516363617': {'key': 'nav-lfs13.1-x86_64-final-gcc-v1', 'bytes': 1413472049}, '10515953327': {'key':\
+        \ 'nav-lfs13.1-x86_64-gcc-test-runtime-v1', 'bytes': 148732}, '10511354384': {'key': 'nav-lfs13.1-x86_64-gcc-test-cxx-v1',\
+        \ 'bytes': 1030391}, '10508735204': {'key': 'nav-lfs13.1-x86_64-gcc-test-c-v1', 'bytes': 1021068}, '10829907838':\
+        \ {'key': 'nav-gstbad1.28.6-install-only-original97OK5FAIL2SKIP-Play17PASS2OPEN-v1', 'bytes': 6420637},\
+        \ '10833464043': {'key': 'nav-pango1.58.2-introspection-only-original-ledger-unchanged-v1', 'bytes': 179240},\
+        \ '10843934869': {'key': 'nav-librsvg2.62.4-svg-pixbufloader-only-native5-decode-verified-original-ledgers-unchanged-v1',\
+        \ 'bytes': 180383}, '10868593577': {'key': 'nav-lua5.4.8-zero-source-patch-O2-PIC-embedded-OPEN-main385-v1',\
+        \ 'bytes': 314639}, '10869122579': {'key': 'nav-wireplumber0.5.15-original53OK-systemLua-docGIR-explicitOFF-v1',\
+        \ 'bytes': 661828}, '10869895695': {'key': 'nav-gtk4.22.4-unchanged-canonical10928-OPEN-G3NOTRUN-install-only-v1',\
+        \ 'bytes': 31141567}, '10870138327': {'key': 'nav-hwdata0.410-original-check7OK-USBskip-external3NOTRUN-v1',\
+        \ 'bytes': 2329532}, '10871175499': {'key': 'nav-libdex1.1.0-original12OK1envFAIL-dbusonly1OK-liburingabsent-v1',\
+        \ 'bytes': 142028}, '10871519908': {'key': 'nav-libdw0.195-original253PASS-OPEN1OOM8SKIP34NOTRUN-narrow-v1',\
+        \ 'bytes': 5326726}, '10872412032': {'key': 'nav-sysprof50.0-original7OK-26NOTRUN-gtkhelpOFF-v1', 'bytes':\
+        \ 1491910}, '10872912778': {'key': 'nav-libdisplay-info0.4.0-original68OK-referencegenNOTRUN-v1', 'bytes':\
+        \ 159489}, '10873903681': {'key': 'nav-libwacom2.19.1-original16OK1SKIP-nested3323PASS1157SKIP-OPENhw-v1',\
+        \ 'bytes': 206396}}\nkeys={'libei': 'nav-libei1.6.0-original11OK-nested2SKIP-ruff2NOTRUN-toolingexcluded-v1',\
+        \ 'libinput': 'nav-libinput1.31.3-original40-canonical11OK1FAIL28SKIP-OPENrecord-segv-v1'}\n\nc=req(base+'/actions/caches?per_page=100&t='+str(time.time_ns()));new=[z\
+        \ for z in c['actions_caches']if z['key']in keys.values()];old=[z for z in c['actions_caches']if z not in\
+        \ new];assert len(new)==2 and set(z['key']for z in new)==set(keys.values())and len(old)==29 and c['total_count']==31\
+        \ and {str(z['id']):{'key':z['key'],'bytes':z['size_in_bytes']}for z in old}==expected;total=sum(z['size_in_bytes']for\
+        \ z in c['actions_caches']);assert 10*1024**3-total>=256*1024**2;print('NAV_INPUT_PAIR_VERIFIED_JSON '+json.dumps({'caches':{n:next(z\
+        \ for z in new if z['key']==k)for n,k in keys.items()},'all29retained':True,'no_deletions':True,'total_bytes':total,'headroom':10*1024**3-total},sort_keys=True),flush=True)\n\
+        \nCHECK\n"
