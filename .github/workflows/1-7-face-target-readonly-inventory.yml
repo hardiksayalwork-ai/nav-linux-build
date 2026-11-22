@@ -1,0 +1,168 @@
+name: NAV read-only target Face prerequisite inventory v2 ownership fix
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  inventory:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+    - name: Exact45 free public one-shot preflight
+      shell: bash
+      run: "set -euo pipefail\ntest \"$GITHUB_RUN_NUMBER\" = 1\ntest \"$GITHUB_RUN_ATTEMPT\" = 1\npython3 - <<'PREFLIGHT'\n\
+        import urllib.request, urllib.error, json, time, os\nstart = time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
+        token = os.environ['GH_TOKEN']\nassert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n    def redirect_request(self,\
+        \ req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url, code, 'redirect refused\
+        \ for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\ndef req(u):\n\
+        \    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization': 'Bearer ' + token, 'Accept':\
+        \ 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control': 'no-store'})\n    with opener.open(q,\
+        \ timeout=30) as response:\n        return json.load(response)\nr = req(base + '?t=' + str(time.time_ns()))\nassert\
+        \ r['private'] is False\nc = req(base + '/actions/caches?per_page=100&t=' + str(time.time_ns()))\nimport pathlib,\
+        \ hashlib, urllib.request, importlib.util\nfor (url, dest, digest) in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/82ecdb920190e8773d7cdad577ea0d8c331b531e/build/attestations/4-nav-build-manifest45-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5'), ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n    b = urllib.request.urlopen(url,\
+        \ timeout=60).read()\n    assert hashlib.sha256(b).hexdigest() == digest\n    pathlib.Path(dest).write_bytes(b)\n\
+        spec = importlib.util.spec_from_file_location('nav_readonly_verifier', '/tmp/nav-build-verify-v1.py')\nverifier =\
+        \ importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\naccepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json',\
+        \ '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5')\nexpected = accepted['protected_caches']\nactual\
+        \ = {str(z['id']): {'key': z['key'], 'bytes': z['size_in_bytes']} for z in c['actions_caches']}\nassert c['total_count']\
+        \ == len(actual) == len(expected) and actual == expected\nassert sum((z['bytes'] for z in actual.values())) < 10 *\
+        \ 1024 ** 3\nprint('NAV_FFMPEG_PUBLIC_STANDARD_RUNNER_FREE_CACHE_EXACT ' + json.dumps({'public': True, 'standard_runner':\
+        \ 'ubuntu-24.04', 'cache_count': len(actual), 'cache_bytes': sum((z['bytes'] for z in actual.values())), 'no_cache_save_or_delete':\
+        \ True, 'elapsed': time.monotonic() - start}), flush=True)\nprint('NAV_MANIFEST43_READONLY_VERIFIED ' + json.dumps(verifier.verify_inventory(accepted,\
+        \ c), sort_keys=True), flush=True)\nPREFLIGHT\n"
+      env:
+        GH_TOKEN: ${{ github.token }}
+    - name: Ephemeral host reader only
+      run: 'set -euo pipefail
+
+        test $(df --output=avail -B1 /mnt | tail -1) -ge 4294967296
+
+        sudo apt-get update
+
+        sudo apt-get install -y --no-install-recommends xorriso
+
+        '
+    - name: Fetch exact draft asset only
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: "python3 - <<'FETCH'\nimport json,subprocess,pathlib,hashlib\nrepo='hardiksayalwork-ai/nav-linux-build';release=453724002;asset=775726636;expected='09cf7f18940f8f84b9301050d98ee004a401a212a18c1abbadb18a547db83467'\n\
+        r=json.loads(subprocess.check_output(['gh','api','repos/'+repo+'/releases/'+str(release)],timeout=45));assert r['draft']is\
+        \ True and r['published_at']is None and r['tag_name']=='nav-development-packaging-44910263539';a=next(x for x in r['assets']if\
+        \ x['id']==asset);assert a['name']=='NAV-development-001.iso' and a['size']==1734334464 and a['digest']=='sha256:'+expected\
+        \ and a['state']=='uploaded'\np=pathlib.Path('/tmp/NAV-development-001.iso')\nwith p.open('wb')as f:subprocess.run(['gh','api','repos/'+repo+'/releases/assets/'+str(asset),'-H','Accept:\
+        \ application/octet-stream'],stdout=f,check=True,timeout=240)\nh=hashlib.sha256()\nwith p.open('rb')as f:\n for b\
+        \ in iter(lambda:f.read(1048576),b''):h.update(b)\nassert p.stat().st_size==1734334464 and h.hexdigest()==expected;p.chmod(0o444);print(json.dumps({'exact_retained_asset':asset,'bytes':p.stat().st_size,'sha256':h.hexdigest(),'draft':True}))\n\
+        \nFETCH\n"
+    - name: ONE read-only retained target inventory, no build or boot
+      timeout-minutes: 4
+      run: "cat > /tmp/nav-face-inventory.py <<'NAVINVENTORY'\n#!/usr/bin/python3\n# Fresh public-safe diagnostic. No models,\
+        \ camera access, login, build or auth changes.\nfrom pathlib import Path\nimport os,json,hashlib,subprocess,traceback,time\n\
+        D=Path('/mnt/nav-face-inventory-evidence');D.mkdir();ISO=Path('/tmp/NAV-development-001.iso');SQ=Path('/mnt/nav-face-source.squashfs');R=Path('/mnt/nav-face-readonly-root');R.mkdir();mounted=False\n\
+        L={'scope':'READ_ONLY_RETAINED_TARGET_ABI_INVENTORY','result':'STARTED','CI_attempts':1,'build_performed':False,'VM_boot_performed':False,'camera_access':False,'models_loaded':False,'login_or_PAM_changes':False,'cache_write':False,'commands':{}}\n\
+        def sha(p):\n h=hashlib.sha256()\n with p.open('rb')as f:\n  for b in iter(lambda:f.read(1048576),b''):h.update(b)\n\
+        \ return h.hexdigest()\ndef save():(D/'inventory-ledger.json').write_text(json.dumps(L,indent=2))\ndef run(a,n,required=True):\n\
+        \ t=time.monotonic();p=subprocess.run(a,capture_output=True,timeout=60,env={'PATH':'/usr/sbin:/usr/bin:/sbin:/bin','LC_ALL':'C.UTF-8'});(D/(n+'.stdout')).write_bytes(p.stdout);(D/(n+'.stderr')).write_bytes(p.stderr);L['commands'][n]={'argv':a,'exit':p.returncode,'seconds':time.monotonic()-t};save()\n\
+        \ if required:assert p.returncode==0,(n,p.returncode)\n return p\nprobe=r'''\nimport sys,sysconfig,json,os,struct,pathlib\n\
+        P=pathlib.Path\npaths=sysconfig.get_paths()\npackages={}\nfor k in ['purelib','platlib']:\n p=P(paths[k]);packages[k]={'path':str(p),'exists':p.is_dir(),'matching_names':sorted({x.name\
+        \ for pattern in ['numpy*','cv2*','dlib*','_dlib*','meson*','setuptools*','wheel*','pip*','packaging*','Cython*','cython*','pybind11*']\
+        \ for x in p.glob(pattern)})if p.is_dir()else []}\nheaders={n:(P(n).is_file()or P(n).is_dir())for n in ['/usr/include/linux/videodev2.h','/usr/include/libevdev-1.0/libevdev/libevdev.h','/usr/include/INIReader.h','/usr/include/security/pam_appl.h',str(P(paths['include'])/'Python.h'),'/usr/include/jpeglib.h','/usr/include/png.h','/usr/include/openblas','/usr/include/cblas.h']}\n\
+        pcdirs=['/usr/lib/pkgconfig','/usr/lib64/pkgconfig','/usr/share/pkgconfig','/opt/qt6/lib/pkgconfig']\npc={str(p):p.read_text()for\
+        \ d in pcdirs for p in P(d).glob('*.pc')if p.name.lower().startswith(('python','numpy','opencv','dlib','inih','inireader','libevdev','pam','openblas','blas','lapack','libjpeg','libpng','zlib'))}\n\
+        print(json.dumps({'python':sys.version,'executable':sys.executable,'machine':os.uname().machine,'pointer_bytes':struct.calcsize('P'),'paths':paths,'abi':{k:sysconfig.get_config_var(k)for\
+        \ k in ['SOABI','EXT_SUFFIX','LDLIBRARY','LIBDIR','CONFIG_ARGS','CC','CXX','CFLAGS','Py_GIL_DISABLED']},'package_presence_only_no_import':packages,'headers':headers,'pkg_config_metadata':pc},indent=2))\n\
+        '''\ntry:\n assert os.getuid()==0 and ISO.stat().st_size==1734334464 and sha(ISO)=='09cf7f18940f8f84b9301050d98ee004a401a212a18c1abbadb18a547db83467'\n\
+        \ run(['xorriso','-osirrox','on','-indev',str(ISO),'-extract','/live/filesystem.squashfs',str(SQ)],'extract-squashfs')\n\
+        \ # Read-only kernel squashfs mount; no extracted target tree, writable overlay or bind of host devices.\n run(['mount','-t','squashfs','-o','loop,ro,nosuid,nodev',str(SQ),str(R)],'mount-readonly');mounted=True\n\
+        \ mountline=next(l for l in Path('/proc/self/mountinfo').read_text().splitlines()if l.split()[4]==str(R));assert 'ro'in\
+        \ mountline.split()[5].split(',');L['mount_readonly_verified']=True;L['target_squashfs_sha256']=sha(SQ);save()\n prefix=['chroot',str(R),'/usr/bin/env','-i','PATH=/opt/qt6/bin:/usr/bin:/usr/sbin:/bin:/sbin','LD_LIBRARY_PATH=/opt/qt6/lib','HOME=/nonexistent','LC_ALL=C.UTF-8','PYTHONDONTWRITEBYTECODE=1']\n\
+        \ p=run(prefix+['/usr/bin/python3','-I','-S','-B','-c',probe],'python-abi');json.loads(p.stdout)\n for n,a in [('compiler',['/usr/bin/g++','--version']),('cmake',['/usr/bin/cmake','--version']),('ninja',['/usr/bin/ninja','--version']),('pkgconf',['/usr/bin/pkg-config','--version'])]:run(prefix+a,n,False)\n\
+        \ for pkg in ['libevdev','INIReader','inih','opencv4','opencv5','dlib-1','python3','python3-embed','openblas','blas','lapack','libjpeg','libpng','zlib']:\n\
+        \  run(prefix+['/usr/bin/pkg-config','--modversion',pkg],'pkg-'+pkg,False)\n assert sha(ISO)=='09cf7f18940f8f84b9301050d98ee004a401a212a18c1abbadb18a547db83467';L['retained_ISO_bytes_unchanged']=True;L['result']='INVENTORY_CAPTURED_NOT_DEPENDENCY_BUILD_OR_AUTH_ACCEPTANCE'\n\
+        except Exception:\n L['result']='FAIL';L['error']=traceback.format_exc();raise\nfinally:\n if os.path.ismount(R):run(['umount',str(R)],'unmount-readonly')\n\
+        \ L['target_mount_released']=not os.path.ismount(R);save()\n\nNAVINVENTORY\nsudo python3 /tmp/nav-face-inventory.py\n"
+    - name: Always draft-only inventory evidence with exact-byte readback
+      if: always()
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: 'sudo -E python3 - <<''RETAIN''
+
+        # Draft-only retention and actual downloaded-byte readback, on success or failure.
+
+        import pathlib,subprocess,json,os,hashlib,tarfile,io
+
+        assert os.getuid()==0,''root-created evidence requires privileged host retention''
+
+        D=pathlib.Path(''/mnt/nav-face-inventory-evidence'');assert D.is_dir();repo=''hardiksayalwork-ai/nav-linux-build'';assert
+        os.environ[''GITHUB_REPOSITORY'']==repo;runid=os.environ[''GITHUB_RUN_ID''];tag=''nav-face-inventory-evidence-''+runid
+
+        # Never export image/recording bytes or guest logs into public CI output.
+
+        for p in list(D.rglob(''*.ppm'')):p.unlink()
+
+        files=[p for p in D.rglob(''*'')if p.is_file()];assert sum(p.stat().st_size for p in files)<64*1024**2
+
+        M={p.relative_to(D).as_posix():{''bytes'':p.stat().st_size,''sha256'':hashlib.sha256(p.read_bytes()).hexdigest()}for
+        p in files};(D/''bundle-manifest.json'').write_text(json.dumps(M,indent=2));archive=pathlib.Path(''/tmp/NAV-Face-inventory-evidence.tar.gz'')
+
+        with tarfile.open(archive,''w:gz'')as t:t.add(D,arcname=''NAV-Face-inventory-evidence'')
+
+        assert archive.stat().st_size<64*1024**2;digest=hashlib.sha256(archive.read_bytes()).hexdigest();notes=pathlib.Path(''/tmp/nav-ui-draft-notes.md'');notes.write_text(''Draft-only
+        read-only NAV target ABI and package prerequisite inventory. No new source build, VM boot, camera access, model loading,
+        enrollment, authentication/PAM changes, cache writes or ISO writes. Missing prerequisites are expected diagnostic
+        results, not dependency acceptance. Do not publish.\n'')
+
+        p=subprocess.run([''gh'',''release'',''create'',tag,''--repo'',repo,''--draft'',''--prerelease'',''--target'',os.environ[''GITHUB_SHA''],''--title'',''DRAFT
+        ONLY: NAV Face prerequisite inventory ''+runid,''--notes-file'',str(notes),str(archive)],capture_output=True,text=True,timeout=180);assert
+        p.returncode==0,''draft creation failed; no fallback/public export permitted''
+
+        r=next(x for x in json.loads(subprocess.check_output([''gh'',''api'',''repos/''+repo+''/releases?per_page=100''],timeout=45))if
+        x[''tag_name'']==tag);assert r[''draft'']is True and r[''published_at'']is None and len(r[''assets''])==1;a=r[''assets''][0];assert
+        a[''size'']==archive.stat().st_size and a[''state'']==''uploaded''and a[''digest'']==''sha256:''+digest
+
+        copy=pathlib.Path(''/tmp/nav-ui-evidence-readback.tar.gz'')
+
+        with copy.open(''wb'')as f:subprocess.run([''gh'',''api'',''repos/''+repo+''/releases/assets/''+str(a[''id'']),''-H'',''Accept:
+        application/octet-stream''],stdout=f,check=True,timeout=120)
+
+        assert copy.stat().st_size==archive.stat().st_size and hashlib.sha256(copy.read_bytes()).hexdigest()==digest
+
+        result={''draft'':True,''published_at'':None,''release_id'':r[''id''],''url'':r[''html_url''],''asset_id'':a[''id''],''asset_name'':a[''name''],''bytes'':a[''size''],''sha256'':digest,''downloaded_bytes_exact'':True,''retention'':''draft
+        only, no auto expiry; no publishing/deleting without decision'',''UI_bytes_in_public_logs'':False,''candidate_ISO_retained'':False}
+
+        print(''NAV_UI_DRAFT_EVIDENCE ''+json.dumps(result),flush=True)
+
+
+        RETAIN
+
+        '
+    - name: Always exact45 protected postflight no cache writes
+      if: always()
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: "python3 - <<'PREFLIGHT'\nimport urllib.request, urllib.error, json, time, os\nstart = time.monotonic()\nbase =\
+        \ 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\ntoken = os.environ['GH_TOKEN']\nassert token\n\
+        \nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\n    def redirect_request(self, req, fp, code, msg, headers,\
+        \ newurl):\n        raise urllib.error.HTTPError(req.full_url, code, 'redirect refused for scoped authenticated preflight',\
+        \ headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\ndef req(u):\n    assert u.startswith(base)\n\
+        \    q = urllib.request.Request(u, headers={'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json',\
+        \ 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control': 'no-store'})\n    with opener.open(q, timeout=30) as response:\n\
+        \        return json.load(response)\nc = req(base + '/actions/caches?per_page=100&t=' + str(time.time_ns()))\ntotal\
+        \ = sum((z['size_in_bytes'] for z in c['actions_caches']))\nprint('NAV_CANDIDATE_EXACT_CURRENT_CACHE ' + json.dumps({'count':\
+        \ c['total_count'], 'bytes': total, 'headroom': 10 * 1024 ** 3 - total, 'no_save_or_delete': True, 'caches': c['actions_caches']},\
+        \ sort_keys=True), flush=True)\nimport pathlib, hashlib, urllib.request, importlib.util\nfor (url, dest, digest) in\
+        \ [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/82ecdb920190e8773d7cdad577ea0d8c331b531e/build/attestations/4-nav-build-manifest45-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5'), ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n    b = urllib.request.urlopen(url,\
+        \ timeout=60).read()\n    assert hashlib.sha256(b).hexdigest() == digest\n    pathlib.Path(dest).write_bytes(b)\n\
+        spec = importlib.util.spec_from_file_location('nav_readonly_verifier', '/tmp/nav-build-verify-v1.py')\nverifier =\
+        \ importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\naccepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json',\
+        \ '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5')\nprint('NAV_MANIFEST43_READONLY_VERIFIED ' +\
+        \ json.dumps(verifier.verify_inventory(accepted, c), sort_keys=True), flush=True)\nPREFLIGHT\n"
