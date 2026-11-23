@@ -1,0 +1,35 @@
+#!/bin/sh
+export PATH=/usr/bin:/usr/sbin:/bin:/sbin
+fail() {
+ case "$1" in
+ devtmpfs|proc|sysfs|run|media-not-found|iso-mount|missing-squashfs|squashfs|cow|live-dirs|overlay-dirs|overlay|move-run|move-proc|move-sys|move-dev|switch-root-returned) reason="$1" ;;
+ *) reason=unspecified ;;
+ esac
+ printf 'NAV INITRAMFS FAILURE: %s; STOPPING\n' "$reason" >&2
+ exit 1
+}
+mount -t devtmpfs devtmpfs /dev || fail devtmpfs
+mount -t proc proc /proc || fail proc
+mount -t sysfs sysfs /sys || fail sysfs
+mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run || fail run
+mkdir -p /run/live/media /run/live/lower /run/live/cow || fail live-dirs
+n=0
+while [ "$n" -lt 30 ]; do
+ media=$(blkid -L NAV_DEV_001 2>/dev/null)
+ [ -n "$media" ] && break
+ n=$((n+1)); sleep 1
+done
+[ -n "$media" ] || fail media-not-found
+mount -t iso9660 -o ro "$media" /run/live/media || fail iso-mount
+[ -f /run/live/media/live/filesystem.squashfs ] || fail missing-squashfs
+mount -t squashfs -o loop,ro /run/live/media/live/filesystem.squashfs /run/live/lower || fail squashfs
+mount -t tmpfs -o size=768M,mode=0755 tmpfs /run/live/cow || fail cow
+mkdir /run/live/cow/upper /run/live/cow/work || fail overlay-dirs
+mount -t overlay overlay -o lowerdir=/run/live/lower,upperdir=/run/live/cow/upper,workdir=/run/live/cow/work /newroot || fail overlay
+mkdir -p /newroot/run/live /newroot/proc /newroot/sys /newroot/dev
+mount --move /run /newroot/run || fail move-run
+mount --move /proc /newroot/proc || fail move-proc
+mount --move /sys /newroot/sys || fail move-sys
+mount --move /dev /newroot/dev || fail move-dev
+exec switch_root /newroot /sbin/init
+fail switch-root-returned
