@@ -1,0 +1,6 @@
+auth requisite pam_listfile.so item=user sense=allow onerr=fail file=/run/nav-test/user-allow
+auth required pam_unix.so
+account requisite pam_listfile.so item=user sense=allow onerr=fail file=/run/nav-test/user-allow
+account required pam_unix.so
+password requisite pam_deny.so
+session required pam_systemd.so class=user-light type=tty
