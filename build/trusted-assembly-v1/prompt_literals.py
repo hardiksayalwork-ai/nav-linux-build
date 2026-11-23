@@ -1,0 +1,6 @@
+USERNAME='Username: '
+START='Authentication completed. Type START: '
+DENIED='Login not completed.'
+SCHEDULED='Session scheduled.'
+UNCERTAIN='Session handoff uncertain.'
+PASSWORD='Password: '
