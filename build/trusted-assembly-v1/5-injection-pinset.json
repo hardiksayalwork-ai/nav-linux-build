@@ -1,0 +1,189 @@
+{
+  "scope": "SOURCE_CANDIDATE_NOT_INSTALLED",
+  "files": {
+    "/usr/libexec/nav-test/native_lifecycle.py": {
+      "source": "native_lifecycle.py",
+      "bytes": 3962,
+      "sha256": "1e87b7690fc46bd8e510244daeabcebd05ad25e9d65e3d274a46e3d6ba1665b2",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/manager_authority.py": {
+      "source": "manager_authority.py",
+      "bytes": 3454,
+      "sha256": "9867f24266f8197bd31425da027f3947e322fa6d5da6ef91fb54f50feb877f98",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/session_discovery.py": {
+      "source": "session_discovery.py",
+      "bytes": 4605,
+      "sha256": "7681871d11d495f2b2f89c9d96e67ca5e09b39bcc282be8e38c6775102ca238e",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/session_cleanup.py": {
+      "source": "session_cleanup.py",
+      "bytes": 4149,
+      "sha256": "575d5964f8b076dc77a24e2765b2c75afa4adba54001820de2e4c6cd76a08b9d",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/input_gate.py": {
+      "source": "input_gate.py",
+      "bytes": 1738,
+      "sha256": "67be156b81fb45a3405fc53e369455bb44424963a41eb8580df636f80c05d56e",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/quiesce.py": {
+      "source": "quiesce.py",
+      "bytes": 1772,
+      "sha256": "05e040591bcd8fcb73bb42f1d34fe8e890c4b909284378627693b296ec472a89",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/overlay_binding.py": {
+      "source": "overlay_binding.py",
+      "bytes": 2765,
+      "sha256": "6c8326434564b38818afe2d50ea7891777a367f248a0285d7012e92aae7eeed3",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/guest_gate.py": {
+      "source": "guest_gate.py",
+      "bytes": 2678,
+      "sha256": "f3dcce6ab36273d1a1fc6f9fe1deec725186b4426c1775d0af2fb9afc6ecbdaa",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/provisioner.py": {
+      "source": "provisioner.py",
+      "bytes": 3814,
+      "sha256": "ffdab063bfcade3d709e014fcf950ee190acb9c314364c861662c72b2a855634",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/daemon_owner.py": {
+      "source": "daemon_owner.py",
+      "bytes": 3238,
+      "sha256": "ba6d5e650c8c8ed58c494c71120aaf65fc41e1d0552ba06dc4dec01bf1b1f064",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/collector.py": {
+      "source": "collector.py",
+      "bytes": 7948,
+      "sha256": "463d8275a103e45a3097c926009d9f8966f0d8e0eea5a13b23baa92fcac466bb",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/teardown.py": {
+      "source": "teardown.py",
+      "bytes": 3171,
+      "sha256": "66255ca85eadc7a3f90e765426da3b043898037e4fae7b74438147475a2500c5",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/terminal_driver.py": {
+      "source": "terminal_driver.py",
+      "bytes": 3774,
+      "sha256": "680bb1b3e898948512af5956c5c119c9c48d49cba1e4e1b1281fc276873a9148",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/prompt_literals.py": {
+      "source": "prompt_literals.py",
+      "bytes": 191,
+      "sha256": "0d494a890154afa763aabc375e218f91743ee6124edfe39d8530026aa69f2e2e",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-login-terminal": {
+      "source": "nav-login-terminal.py",
+      "bytes": 6520,
+      "sha256": "261a8852585541fe935719691d1f5aa26cdf85cd86a640dd0a1e780df322314f",
+      "mode": 493,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-user-session": {
+      "source": "nav-user-session.py",
+      "bytes": 2896,
+      "sha256": "8e857b8f284f96fa4382193ccb6b7c54e15e3e99eb6dd88ff0de2391c52e01db",
+      "mode": 493,
+      "uid": 0,
+      "gid": 0
+    },
+    "/etc/pam.d/nav-test-user": {
+      "source": "policies/nav-test-user",
+      "bytes": 335,
+      "sha256": "ad1606fb1711362f2e14124600f587d520b1fc4834b05484b2a022f590d848ff",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/etc/pam.d/nav-test-greeter": {
+      "source": "policies/nav-test-greeter",
+      "bytes": 213,
+      "sha256": "9eac23fe0834f8a26fbae3027c242459f9d0fd4904ed5f0e768186ad50cec62b",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/etc/greetd/nav-test.conf": {
+      "source": "config/nav-test.conf",
+      "bytes": 249,
+      "sha256": "2de089ab4054cc4ec6091bbae9331cf123e4d634482e111787ca602d7272de2d",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/runtime-input-binding.json": {
+      "source": "runtime-input-binding.json",
+      "bytes": 1556172,
+      "sha256": "0c2ce550bb906c9abb626fe6be94c1c3de47037a93fd126d1055c397896399e5",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/sbin/nav-test-greetd": {
+      "source": "VERIFIED_HOSTED_ASSEMBLY_ONLY_NO_LOCAL_MEMBER",
+      "bytes": 3269688,
+      "sha256": "980455303b71eaf77b0920974b7deb02b1ebd5db717397e5b6f672d35740d302",
+      "mode": 493,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-login/prompt_literals.py": {
+      "source": "prompt_literals.py",
+      "bytes": 191,
+      "sha256": "0d494a890154afa763aabc375e218f91743ee6124edfe39d8530026aa69f2e2e",
+      "mode": 420,
+      "uid": 0,
+      "gid": 0
+    },
+    "/usr/libexec/nav-test/trusted_entry.py": {
+      "source": "trusted_entry.py",
+      "mode": 384,
+      "uid": 0,
+      "gid": 0,
+      "bytes": 968,
+      "sha256": "5f5367f0cd97404695022ab4ee8378d82d07eba6c3df923abcd655b548fb47c5"
+    }
+  }
+}
