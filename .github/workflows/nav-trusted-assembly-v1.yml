@@ -32,7 +32,7 @@ jobs:
         \ 'ba6d5e650c8c8ed58c494c71120aaf65fc41e1d0552ba06dc4dec01bf1b1f064', 'guest_gate.py':\
         \ 'f3dcce6ab36273d1a1fc6f9fe1deec725186b4426c1775d0af2fb9afc6ecbdaa', 'init.failclosed':\
         \ '46d30f9648482e47423edd771115ec291ad0edbded90bd3d8dfbbfbe65698c5f', 'injection-pinset.json':\
-        \ '984ed4d768ce5e1678410aeeadc94255fd8d95baef66c6937f463bf275f02822', 'injection_inputs.py':\
+        \ '5e19ebd83c0923a85f180c28ac02e24861a12f480f72ef827ed0543c3e99bbb5', 'injection_inputs.py':\
         \ '172c6569d6b3de7d952cb7cd024944808ce775752bbb70bb749bba1d5eb463fb', 'input_gate.py':\
         \ '67be156b81fb45a3405fc53e369455bb44424963a41eb8580df636f80c05d56e', 'manager_authority.py':\
         \ '9867f24266f8197bd31425da027f3947e322fa6d5da6ef91fb54f50feb877f98', 'native_lifecycle.py':\
