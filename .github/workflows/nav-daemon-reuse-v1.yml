@@ -1,0 +1,116 @@
+name: NAV daemon reuse and private terminal-source assembly review v1
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  reuse:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private
+      == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+    - name: Exact immutable helper source, no credentials
+      run: "sudo -E python3 - <<'PY_BOOT'\nimport pathlib,urllib.request,hashlib,os,re\n\
+        D=pathlib.Path('/mnt/nav-greetd');assert not D.exists();D.mkdir(mode=0o700)\n\
+        commit=os.environ['GITHUB_SHA'];assert re.fullmatch('[0-9a-f]{40}',commit)\n\
+        assert os.environ['GITHUB_REPOSITORY']=='hardiksayalwork-ai/nav-linux-build'\n\
+        pins={'artifact.py': 'ff3c87aba4c19d99105bd748e6d840735f71fc0db8cdeb0ded262b8574305749',\
+        \ 'reuse.py': '081950c3ef165aa9e281e246727395e79bdd2637098aa1647b59cbdb3d431849',\
+        \ 'retention_transport.py': '316197f06a60c1e89f49c0686667c6a68275331970b050ffc0873b2b3a1a6a18',\
+        \ 'compile_ledger.py': 'e8d0b9d1a7bd4f2dd4202e6a5a712c94335e2c0b047238c151bdad85dc5e5b16',\
+        \ 'compile_validate.py': 'fbafc111ed97498ce83206b13aebd81b392d4492266f65d9db86979610b43605',\
+        \ 'nav-login-terminal.py': 'da935dcf8d910f8fd5cfc43484cc691c331f0a38339f6367470e3c87aabc8bf3',\
+        \ 'prompt_literals.py': '0d494a890154afa763aabc375e218f91743ee6124edfe39d8530026aa69f2e2e'}\n\
+        class NoRedirect(urllib.request.HTTPRedirectHandler):\n def redirect_request(self,*a):return\
+        \ None\nop=urllib.request.build_opener(NoRedirect())\nfor name,digest in pins.items():\n\
+        \ url='https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/'+commit+'/build/daemon-reuse-v1/'+name\n\
+        \ with op.open(url,timeout=30)as r:b=r.read(2*1024*1024+1)\n assert len(b)<=2*1024*1024\
+        \ and hashlib.sha256(b).hexdigest()==digest\n (D/name).write_bytes(b)\n(D/'ledger.py').write_bytes((D/'compile_ledger.py').read_bytes())\n\
+        import sys;sys.path.insert(0,str(D))\nfrom compile_ledger import initialize\n\
+        initialize(D/'outer.json')\nPY_BOOT\n"
+    - name: Public standard zero-cost exact45 and owner audience guard
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: "set +e\nsudo python3 /mnt/nav-greetd/ledger.py preflight started\n(\n\
+        set -euo pipefail\ntest \"$GITHUB_RUN_NUMBER\" = 1\ntest \"$GITHUB_RUN_ATTEMPT\"\
+        \ = 1\npython3 - <<'PREFLIGHT'\nimport urllib.request, urllib.error, json,\
+        \ time, os\nstart = time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
+        token = os.environ['GH_TOKEN']\nassert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\
+        \n    def redirect_request(self, req, fp, code, msg, headers, newurl):\n \
+        \       raise urllib.error.HTTPError(req.full_url, code, 'redirect refused\
+        \ for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u,\
+        \ headers={'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json',\
+        \ 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control': 'no-store'})\n  \
+        \  with opener.open(q, timeout=30) as response:\n        return json.load(response)\n\
+        r = req(base + '?t=' + str(time.time_ns()))\nassert r['private'] is False\n\
+        c = req(base + '/actions/caches?per_page=100&t=' + str(time.time_ns()))\n\
+        import pathlib, hashlib, urllib.request, importlib.util\nfor (url, dest, digest)\
+        \ in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/82ecdb920190e8773d7cdad577ea0d8c331b531e/build/attestations/4-nav-build-manifest45-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest()\
+        \ == digest\n    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\n\
+        spec.loader.exec_module(verifier)\naccepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json',\
+        \ '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5')\nexpected\
+        \ = accepted['protected_caches']\nactual = {str(z['id']): {'key': z['key'],\
+        \ 'bytes': z['size_in_bytes']} for z in c['actions_caches']}\nassert c['total_count']\
+        \ == len(actual) == len(expected) and actual == expected\nassert sum((z['bytes']\
+        \ for z in actual.values())) < 10 * 1024 ** 3\nprint('NAV_FFMPEG_PUBLIC_STANDARD_RUNNER_FREE_CACHE_EXACT\
+        \ ' + json.dumps({'public': True, 'standard_runner': 'ubuntu-24.04', 'cache_count':\
+        \ len(actual), 'cache_bytes': sum((z['bytes'] for z in actual.values())),\
+        \ 'no_cache_save_or_delete': True, 'elapsed': time.monotonic() - start}),\
+        \ flush=True)\nprint('NAV_MANIFEST43_READONLY_VERIFIED ' + json.dumps(verifier.verify_inventory(accepted,\
+        \ c), sort_keys=True), flush=True)\nPREFLIGHT\n\nsudo -E python3 - <<'PY_AUDIENCE'\n\
+        import sys,os\nsys.path.insert(0,'/mnt/nav-greetd')\nfrom ledger import audience_guard\n\
+        audience_guard('/mnt/nav-greetd/outer.json',os.environ['GH_TOKEN'])\nprint('NAV_AUDIENCE_OWNER_ONLY_VERIFIED')\n\
+        PY_AUDIENCE\n\n)\ns=$?\nsudo python3 /mnt/nav-greetd/ledger.py preflight ended\
+        \ $s || exit 90\nexit $s\n"
+    - name: ONE exact retained daemon read and private frontend assembly, no target
+        execution
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: 'set -euo pipefail
+
+        sudo -E python3 /mnt/nav-greetd/reuse.py
+
+        '
+    - name: Always exact45 cache postflight, no saves or deletes
+      if: ${{ always() }}
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: "set +e\nsudo python3 /mnt/nav-greetd/ledger.py postflight started\n(\n\
+        python3 - <<'PREFLIGHT'\nimport urllib.request, urllib.error, json, time,\
+        \ os\nstart = time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
+        token = os.environ['GH_TOKEN']\nassert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\
+        \n    def redirect_request(self, req, fp, code, msg, headers, newurl):\n \
+        \       raise urllib.error.HTTPError(req.full_url, code, 'redirect refused\
+        \ for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u,\
+        \ headers={'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json',\
+        \ 'X-GitHub-Api-Version': '2022-11-28', 'Cache-Control': 'no-store'})\n  \
+        \  with opener.open(q, timeout=30) as response:\n        return json.load(response)\n\
+        c = req(base + '/actions/caches?per_page=100&t=' + str(time.time_ns()))\n\
+        total = sum((z['size_in_bytes'] for z in c['actions_caches']))\nprint('NAV_CANDIDATE_EXACT_CURRENT_CACHE\
+        \ ' + json.dumps({'count': c['total_count'], 'bytes': total, 'headroom': 10\
+        \ * 1024 ** 3 - total, 'no_save_or_delete': True, 'caches': c['actions_caches']},\
+        \ sort_keys=True), flush=True)\nimport pathlib, hashlib, urllib.request, importlib.util\n\
+        for (url, dest, digest) in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/82ecdb920190e8773d7cdad577ea0d8c331b531e/build/attestations/4-nav-build-manifest45-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest()\
+        \ == digest\n    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\n\
+        spec.loader.exec_module(verifier)\naccepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json',\
+        \ '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5')\nprint('NAV_MANIFEST43_READONLY_VERIFIED\
+        \ ' + json.dumps(verifier.verify_inventory(accepted, c), sort_keys=True),\
+        \ flush=True)\nPREFLIGHT\n\n)\ns=$?\nsudo python3 /mnt/nav-greetd/ledger.py\
+        \ postflight ended $s || exit 90\nexit $s\n"
