@@ -1,0 +1,285 @@
+name: NAV greetd compile-only single-run review v8
+'on':
+  workflow_dispatch:
+    inputs:
+      source_release_id:
+        required: true
+        type: string
+        description: Reviewed draft source input identity, must match exact allowlisted digest
+      source_asset_id:
+        required: true
+        type: string
+        description: Reviewed draft source input identity, must match exact allowlisted digest
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: nav-source-build
+  cancel-in-progress: false
+jobs:
+  compile:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private ==
+      false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+    - name: Fetch exact hash-pinned public helpers at workflow commit, no credentials
+      run: "sudo -E python3 - <<'STAGE'\nimport pathlib,urllib.request,urllib.error,hashlib,os,re\nD=pathlib.Path('/mnt/nav-greetd');assert\
+        \ not D.exists();D.mkdir(mode=0o700)\ncommit=os.environ['GITHUB_SHA'];assert re.fullmatch('[0-9a-f]{40}',commit)\n\
+        assert os.environ['GITHUB_REPOSITORY']=='hardiksayalwork-ai/nav-linux-build'\npins={'extract.py':\
+        \ 'a4dbd4ee2e6eb0c83c8039a30676500181e8a942a0445a3963b215d04e5e4109', 'inputs.json': '555ac5743a3deaa3c7dfbeeb0653ef717e3f048508f10cf369719ddf303084ae',\
+        \ 'capability.py': 'c06e30d34553297904c2e70fbbd74da3124e31b43e326fd4442f4a522f3e0339', 'ledger.py':\
+        \ 'e8d0b9d1a7bd4f2dd4202e6a5a712c94335e2c0b047238c151bdad85dc5e5b16', 'sysroot-members.json':\
+        \ '845fc340b5635e3639d841a618d65710817c8b3dea434e31577e0aa3c73901a6', 'compile.py': 'db92d68938fcda455aa82b6d5a7162852a94a1eb67aed275ae12979551b0a3d3',\
+        \ 'validate.py': 'fbafc111ed97498ce83206b13aebd81b392d4492266f65d9db86979610b43605', 'retain.py':\
+        \ '66777cef2e0b1c6bb6c0cb3539aa80e279e5b19ac6c08fce018e37f4f9eab3bf'}\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\
+        \ def redirect_request(self,*a):return None\nopener=urllib.request.build_opener(NoRedirect())\n\
+        # No token used or forwarded. Immutable current commit plus source-reviewed per-file hashes.\n\
+        for name,digest in pins.items():\n url='https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/'+commit+'/build/greetd-compile-v8/'+name\n\
+        \ with opener.open(urllib.request.Request(url,headers={'User-Agent':'NAV-compile-source-fetch'}),timeout=45)as\
+        \ r:\n  assert r.status==200;b=r.read(2*1024*1024+1)\n assert len(b)<=2*1024*1024 and hashlib.sha256(b).hexdigest()==digest\n\
+        \ (D/name).write_bytes(b)\nimport sys;sys.path.insert(0,str(D))\nfrom ledger import initialize\n\
+        initialize(D/'outer.json')\nSTAGE\n"
+    - name: Public standard zero-cost exact45 and owner audience guard
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: "set +e\nsudo python3 /mnt/nav-greetd/ledger.py preflight started\n(\nset -euo pipefail\ntest\
+        \ \"$GITHUB_RUN_NUMBER\" = 1\ntest \"$GITHUB_RUN_ATTEMPT\" = 1\npython3 - <<'PREFLIGHT'\nimport\
+        \ urllib.request, urllib.error, json, time, os\nstart = time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
+        token = os.environ['GH_TOKEN']\nassert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\
+        \n    def redirect_request(self, req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url,\
+        \ code, 'redirect refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',\
+        \ 'Cache-Control': 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return\
+        \ json.load(response)\nr = req(base + '?t=' + str(time.time_ns()))\nassert r['private'] is False\n\
+        c = req(base + '/actions/caches?per_page=100&t=' + str(time.time_ns()))\nimport pathlib, hashlib,\
+        \ urllib.request, importlib.util\nfor (url, dest, digest) in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/82ecdb920190e8773d7cdad577ea0d8c331b531e/build/attestations/4-nav-build-manifest45-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest()\
+        \ == digest\n    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\n\
+        accepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json', '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5')\n\
+        expected = accepted['protected_caches']\nactual = {str(z['id']): {'key': z['key'], 'bytes': z['size_in_bytes']}\
+        \ for z in c['actions_caches']}\nassert c['total_count'] == len(actual) == len(expected) and actual\
+        \ == expected\nassert sum((z['bytes'] for z in actual.values())) < 10 * 1024 ** 3\nprint('NAV_FFMPEG_PUBLIC_STANDARD_RUNNER_FREE_CACHE_EXACT\
+        \ ' + json.dumps({'public': True, 'standard_runner': 'ubuntu-24.04', 'cache_count': len(actual),\
+        \ 'cache_bytes': sum((z['bytes'] for z in actual.values())), 'no_cache_save_or_delete': True,\
+        \ 'elapsed': time.monotonic() - start}), flush=True)\nprint('NAV_MANIFEST43_READONLY_VERIFIED\
+        \ ' + json.dumps(verifier.verify_inventory(accepted, c), sort_keys=True), flush=True)\nPREFLIGHT\n\
+        \nsudo -E python3 - <<'PY_AUDIENCE'\nimport sys,os\nsys.path.insert(0,'/mnt/nav-greetd')\nfrom\
+        \ ledger import audience_guard\naudience_guard('/mnt/nav-greetd/outer.json',os.environ['GH_TOKEN'])\n\
+        print('NAV_AUDIENCE_OWNER_ONLY_VERIFIED')\nPY_AUDIENCE\n\n)\ns=$?\nsudo python3 /mnt/nav-greetd/ledger.py\
+        \ preflight ended $s || exit 90\nexit $s\n"
+    - name: Host tools, not target distro binaries
+      run: 'set +e
+
+        sudo python3 /mnt/nav-greetd/ledger.py tools started
+
+        (
+
+        set -euo pipefail
+
+        sudo apt-get update -qq > /tmp/nav-host-setup.log 2>&1
+
+        sudo apt-get install -y --no-install-recommends squashfs-tools bubblewrap binutils >> /tmp/nav-host-setup.log
+        2>&1
+
+        test $(df --output=avail -B1 /mnt | tail -1) -ge 12884901888
+
+
+        )
+
+        s=$?
+
+        sudo python3 /mnt/nav-greetd/ledger.py tools ended $s || exit 90
+
+        exit $s
+
+        '
+    - name: Fail-closed namespace and cgroup probe before target extraction
+      run: 'set +e
+
+        sudo python3 /mnt/nav-greetd/ledger.py capability started
+
+        (
+
+        set -euo pipefail
+
+        sudo env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin python3 /mnt/nav-greetd/capability.py > /tmp/nav-capability.log
+        2>&1 || { echo NAV_CAPABILITY_FAILED_NO_FALLBACK; exit 1; }
+
+        echo NAV_CAPABILITY_PASSED
+
+
+        )
+
+        s=$?
+
+        sudo python3 /mnt/nav-greetd/ledger.py capability ended $s || exit 90
+
+        exit $s
+
+        '
+    - name: Fetch exact draft asset only
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: "set +e\nsudo python3 /mnt/nav-greetd/ledger.py base-fetch started\n(\npython3 - <<'FETCH'\n\
+        #!/usr/bin/env python3\n\"\"\"Bounded exact base-asset transfer. Never retries metadata, HTTP,\
+        \ auth or hash failures.\"\"\"\nimport os,json,pathlib,hashlib,time,socket,http.client,urllib.request,urllib.error,signal\n\
+        from urllib.parse import urlsplit\nAPI='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
+        RELEASE=453724002\nASSET=775726636\nSIZE=1734334464\nSHA='09cf7f18940f8f84b9301050d98ee004a401a212a18c1abbadb18a547db83467'\n\
+        HOSTS={'release-assets.githubusercontent.com','objects.githubusercontent.com','github-releases.githubusercontent.com'}\n\
+        class Failure(Exception):pass\nclass Retryable(Exception):pass\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\
+        \ def redirect_request(self,*a):return None\ndef is_retryable(e):\n if isinstance(e,urllib.error.HTTPError):return\
+        \ False\n if isinstance(e,urllib.error.URLError):e=e.reason\n return isinstance(e,(ConnectionResetError,socket.timeout,TimeoutError,http.client.IncompleteRead))\n\
+        def metadata(x):\n if type(x)is not dict or x.get('id')!=RELEASE or x.get('draft')is not True\
+        \ or x.get('published_at')is not None or x.get('tag_name')!='nav-development-packaging-44910263539':raise\
+        \ Failure('metadata')\n rows=x.get('assets')\n if type(rows)is not list:raise Failure('metadata')\n\
+        \ a=[a for a in rows if type(a)is dict and a.get('id')==ASSET]\n if len(a)!=1:raise Failure('metadata')\n\
+        \ a=a[0]\n if a.get('name')!='NAV-development-001.iso'or type(a.get('size'))is not int or a['size']!=SIZE\
+        \ or a.get('digest')!='sha256:'+SHA or a.get('state')!='uploaded':raise Failure('metadata')\n\
+        \ return True\ndef signed_url(url):\n p=urlsplit(url)\n if p.scheme!='https'or p.hostname not\
+        \ in HOSTS or p.netloc!=p.hostname or p.username or p.password or p.fragment or not p.path.startswith('/'):raise\
+        \ Failure('redirect')\n return url\ndef transfer(token,destination,opener=None,clock=time.monotonic):\n\
+        \ # A maximum of two full-body attempts within one 240-second budget.\n # No partial resume/Range\
+        \ acceptance and no overwrite of an existing final file.\n if type(token)is not str or not token:raise\
+        \ Failure('auth')\n destination=pathlib.Path(destination);part=destination.with_suffix(destination.suffix+'.part')\n\
+        \ if destination.exists()or part.exists():raise Failure('existing_path')\n opener=opener or urllib.request.build_opener(NoRedirect())\n\
+        \ deadline=clock()+240\n def budget():\n  left=deadline-clock()\n  if left<=0:raise Failure('deadline')\n\
+        \  return min(30,left)\n def req(url,binary=False,auth=True):\n  headers={'Accept':'application/octet-stream'if\
+        \ binary else'application/vnd.github+json','User-Agent':'NAV-exact-base-transfer','X-GitHub-Api-Version':'2022-11-28','Cache-Control':'no-store'}\n\
+        \  if auth:\n   if url not in (API+'/releases/'+str(RELEASE),API+'/releases/assets/'+str(ASSET)):raise\
+        \ Failure('scope')\n   headers['Authorization']='Bearer '+token\n  else:signed_url(url)\n  return\
+        \ opener.open(urllib.request.Request(url,headers=headers),timeout=budget())\n def check_metadata():\n\
+        \  try:\n   with req(API+'/releases/'+str(RELEASE))as r:\n    if r.status!=200 or r.headers.get('Link'):raise\
+        \ Failure('metadata')\n    b=r.read(1048577)\n    if len(b)>1048576:raise Failure('metadata')\n\
+        \    def unique(pairs):\n     out={}\n     for k,v in pairs:\n      if k in out:raise Failure('metadata')\n\
+        \      out[k]=v\n     return out\n    metadata(json.loads(b,object_pairs_hook=unique))\n  except\
+        \ Exception:raise Failure('metadata')from None\n def asset():\n  try:return req(API+'/releases/assets/'+str(ASSET),True)\n\
+        \  except urllib.error.HTTPError as e:\n   if e.code not in (301,302,303,307,308):raise Failure('http')from\
+        \ None\n   # Exactly one GitHub API-to-allowlisted-signed-host redirect. No token forwarded.\n\
+        \   url=signed_url(e.headers.get('Location',''))\n   try:return req(url,True,False)\n   except\
+        \ urllib.error.HTTPError:raise Failure('http')from None\n check_metadata()\n for attempt in (1,2):\n\
+        \  try:\n   h=hashlib.sha256();count=0\n   with asset()as r:\n    if r.status!=200 or r.headers.get('Content-Range')or\
+        \ r.headers.get('Content-Encoding')not in (None,'identity'):raise Failure('response')\n    length=r.headers.get('Content-Length')\n\
+        \    if length is None or not length.isdigit()or int(length)!=SIZE:raise Failure('length')\n \
+        \   fd=os.open(part,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)\n    with os.fdopen(fd,'wb')as\
+        \ f:\n     while True:\n      budget();b=r.read(min(1048576,SIZE-count+1))\n      if not b:break\n\
+        \      count+=len(b)\n      if count>SIZE:raise Failure('oversize')\n      f.write(b);h.update(b)\n\
+        \     f.flush();os.fsync(f.fileno())\n   if count!=SIZE:raise Retryable('incomplete_body')\n \
+        \  if h.hexdigest()!=SHA:raise Failure('hash')\n   check_metadata();budget();part.chmod(0o444);os.link(part,destination);part.unlink()\n\
+        \   return {'asset':ASSET,'bytes':count,'sha256':SHA,'attempts':attempt,'draft':True}\n  except\
+        \ Exception as e:\n   if part.exists():part.unlink()\n   retry=isinstance(e,Retryable)or is_retryable(e)\n\
+        \   if not retry or attempt==2:raise Failure('transport'if retry else'terminal')from None\n  \
+        \ budget()\n raise Failure('terminal')\ndef main():\n def alarm(*args):raise Failure('deadline')\n\
+        \ signal.signal(signal.SIGALRM,alarm);signal.alarm(240)\n try:r=transfer(os.environ.get('GH_TOKEN',''),'/tmp/NAV-development-001.iso')\n\
+        \ except Exception:raise SystemExit('NAV_BASE_TRANSFER_FAILED_NO_RAW_DIAGNOSTIC')from None\n print('NAV_BASE_EXACT_VERIFIED\
+        \ '+json.dumps(r,sort_keys=True))\nif __name__=='__main__':main()\n\nFETCH\n\n)\ns=$?\nsudo python3\
+        \ /mnt/nav-greetd/ledger.py base-fetch ended $s || exit 90\nexit $s\n"
+    - name: Exact allowlisted public-source input, no task evidence
+      env:
+        GH_TOKEN: ${{ github.token }}
+        INPUT_RELEASE: ${{ inputs.source_release_id }}
+        INPUT_ASSET: ${{ inputs.source_asset_id }}
+      run: "set +e\nsudo python3 /mnt/nav-greetd/ledger.py input-fetch started\n(\nsudo -E python3 - <<'INPUT'\n\
+        import json,subprocess,os,pathlib,hashlib,tarfile\nD=pathlib.Path('/mnt/nav-greetd');r=os.environ['INPUT_RELEASE'];a=os.environ['INPUT_ASSET'];assert\
+        \ r.isdigit() and a.isdigit()\nrelease=json.loads(subprocess.check_output(['gh','api','repos/hardiksayalwork-ai/nav-linux-build/releases/'+r]));assert\
+        \ release['draft'] is True and release['published_at'] is None\nasset=next(x for x in release['assets']if\
+        \ str(x['id'])==a);assert asset['size']==13857201 and asset['digest']=='sha256:ad1a5bc3ebeb43d96641efa1918ceed086e2b628ef2b14c73cd876052ffe86cb'\n\
+        p=D/'input.tar.gz'\nwith p.open('wb')as f:subprocess.run(['gh','api','repos/hardiksayalwork-ai/nav-linux-build/releases/assets/'+a,'-H','Accept:\
+        \ application/octet-stream'],stdout=f,check=True,timeout=180)\nassert p.stat().st_size==13857201\
+        \ and hashlib.sha256(p.read_bytes()).hexdigest()=='ad1a5bc3ebeb43d96641efa1918ceed086e2b628ef2b14c73cd876052ffe86cb'\n\
+        expected=json.loads((D/'inputs.json').read_text())['files']\nwith tarfile.open(p,'r:gz')as t:\n\
+        \ members=t.getmembers();assert len(members)==len(expected)\n assert {z.name for z in members}=={'input/'+x\
+        \ for x in expected}\n assert all(z.isfile() and z.size<=64*1024*1024 for z in members)\n for\
+        \ z in members:\n  b=t.extractfile(z).read();assert hashlib.sha256(b).hexdigest()==expected[z.name[6:]]\n\
+        \  q=D/z.name;q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(b);q.chmod(0o444)\n\nINPUT\n\
+        \n)\ns=$?\nsudo python3 /mnt/nav-greetd/ledger.py input-fetch ended $s || exit 90\nexit $s\n"
+    - name: Extract exact286 hash-verified toolchain/sysroot files, not full trees
+      run: 'set +e
+
+        sudo python3 /mnt/nav-greetd/ledger.py extract started
+
+        (
+
+        set -euo pipefail
+
+        sudo env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin python3 /mnt/nav-greetd/extract.py > /tmp/nav-extract-host.log
+        2>&1
+
+        )
+
+        s=$?
+
+        sudo python3 /mnt/nav-greetd/ledger.py extract ended $s || exit 90
+
+        exit $s
+
+        '
+    - name: ONE offline compile only, no greetd execution
+      run: "set +e\nsudo python3 /mnt/nav-greetd/ledger.py compile started\n(\nset +e\nsudo env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin\
+        \ python3 /mnt/nav-greetd/compile.py > /tmp/nav-compile-host.log 2>&1\ns=$?\nsudo python3 - <<'FIXED'\n\
+        import json,sys\nsys.path.insert(0,'/mnt/nav-greetd')\nfrom ledger import validate\ntry:\n x=validate(json.load(open('/mnt/nav-greetd/outer.json')))\n\
+        \ print('NAV_COMPILE_RECOVERABLE '+json.dumps({'compile':x['compile_diagnostic'],'build':x['build_diagnostic']},sort_keys=True))\n\
+        except Exception:\n print('NAV_COMPILE_DIAGNOSTIC_UNAVAILABLE')\nFIXED\necho NAV_HOST_COMPILE_EXIT_$s\n\
+        exit $s\n\n)\ns=$?\nsudo python3 /mnt/nav-greetd/ledger.py compile ended $s || exit 90\nexit $s\n"
+    - name: Always exact45 cache postflight, no saves or deletes
+      if: ${{ always() }}
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: "set +e\nsudo python3 /mnt/nav-greetd/ledger.py postflight started\n(\npython3 - <<'PREFLIGHT'\n\
+        import urllib.request, urllib.error, json, time, os\nstart = time.monotonic()\nbase = 'https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
+        token = os.environ['GH_TOKEN']\nassert token\n\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\
+        \n    def redirect_request(self, req, fp, code, msg, headers, newurl):\n        raise urllib.error.HTTPError(req.full_url,\
+        \ code, 'redirect refused for scoped authenticated preflight', headers, fp)\nopener = urllib.request.build_opener(NoRedirect())\n\
+        \ndef req(u):\n    assert u.startswith(base)\n    q = urllib.request.Request(u, headers={'Authorization':\
+        \ 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',\
+        \ 'Cache-Control': 'no-store'})\n    with opener.open(q, timeout=30) as response:\n        return\
+        \ json.load(response)\nc = req(base + '/actions/caches?per_page=100&t=' + str(time.time_ns()))\n\
+        total = sum((z['size_in_bytes'] for z in c['actions_caches']))\nprint('NAV_CANDIDATE_EXACT_CURRENT_CACHE\
+        \ ' + json.dumps({'count': c['total_count'], 'bytes': total, 'headroom': 10 * 1024 ** 3 - total,\
+        \ 'no_save_or_delete': True, 'caches': c['actions_caches']}, sort_keys=True), flush=True)\nimport\
+        \ pathlib, hashlib, urllib.request, importlib.util\nfor (url, dest, digest) in [('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/82ecdb920190e8773d7cdad577ea0d8c331b531e/build/attestations/4-nav-build-manifest45-v1.json',\
+        \ '/tmp/nav-build-manifest-v1.json', '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5'),\
+        \ ('https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/556ab36848748407e42c6cca865caf2eca03b8d4/build/attestations/2-nav-build-verify-v1.py',\
+        \ '/tmp/nav-build-verify-v1.py', '36c19d80ab45a7cffd34fcf09e278c8948678b554e92ae864658a1afd93f2375')]:\n\
+        \    b = urllib.request.urlopen(url, timeout=60).read()\n    assert hashlib.sha256(b).hexdigest()\
+        \ == digest\n    pathlib.Path(dest).write_bytes(b)\nspec = importlib.util.spec_from_file_location('nav_readonly_verifier',\
+        \ '/tmp/nav-build-verify-v1.py')\nverifier = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(verifier)\n\
+        accepted = verifier.load_manifest('/tmp/nav-build-manifest-v1.json', '678ed61b4bdb6eb2cee53cbd2d7b0a2cdebd4d169d59d55c2652cd5fc7b75cc5')\n\
+        print('NAV_MANIFEST43_READONLY_VERIFIED ' + json.dumps(verifier.verify_inventory(accepted, c),\
+        \ sort_keys=True), flush=True)\nPREFLIGHT\n\n)\ns=$?\nsudo python3 /mnt/nav-greetd/ledger.py postflight\
+        \ ended $s || exit 90\nexit $s\n"
+    - name: Draft-only bounded output and authenticated byte readback
+      if: ${{ always() }}
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: 'set +e
+
+        sudo python3 /mnt/nav-greetd/ledger.py retention started
+
+        (
+
+        set +e
+
+        sudo -E python3 /mnt/nav-greetd/retain.py > /tmp/nav-retention-host.log 2>&1
+
+        s=$?
+
+        if [ $s -eq 0 ]; then tail -1 /tmp/nav-retention-host.log; else echo NAV_RETENTION_FAILED; fi
+
+        exit $s
+
+
+        )
+
+        s=$?
+
+        sudo python3 /mnt/nav-greetd/ledger.py retention ended $s || exit 90
+
+        exit $s
+
+        '
