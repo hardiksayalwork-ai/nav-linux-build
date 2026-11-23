@@ -1,0 +1,4 @@
+auth requisite pam_deny.so
+account requisite pam_listfile.so item=user sense=allow onerr=fail file=/run/nav-test/greeter-allow
+password requisite pam_deny.so
+session required pam_systemd.so class=greeter type=tty
