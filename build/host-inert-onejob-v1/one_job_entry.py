@@ -22,7 +22,7 @@ def durable(path,value):
 def main(setup):
  # All checks up to mkdir are reads only. Workflow bootstrap has independently
  # pinned exact source bytes and performed the same admission before staging.
- if os.environ.get('GITHUB_REPOSITORY')!='hardiksayalwork-ai/nav-linux-build'or os.environ.get('GITHUB_EVENT_NAME')!='workflow_dispatch'or os.environ.get('GITHUB_RUN_NUMBER')!='2'or os.environ.get('GITHUB_RUN_ATTEMPT')!='1':raise ValueError('single_exact_first_dispatch_only')
+ if os.environ.get('GITHUB_REPOSITORY')!='hardiksayalwork-ai/nav-linux-build'or os.environ.get('GITHUB_EVENT_NAME')!='workflow_dispatch'or os.environ.get('GITHUB_RUN_NUMBER')!='3'or os.environ.get('GITHUB_RUN_ATTEMPT')!='1':raise ValueError('single_exact_first_dispatch_only')
  commit=os.environ['GITHUB_SHA'];run=os.environ['GITHUB_RUN_ID']
  if len(commit)!=40 or any(c not in '0123456789abcdef'for c in commit)or not run.isdigit():raise ValueError('run_identity')
  token=os.environ.pop('GH_TOKEN');cache=(D/'protected-caches.json').read_bytes()
@@ -30,7 +30,7 @@ def main(setup):
  from delegated_scope_setup import verify_setup
  parent,cgpath=verify_setup(setup)
  host_admission=fresh_admission(parent,'/usr/bin/gcc')
- root=Path('/mnt/nav-host-normal-v2')
+ root=Path('/mnt/nav-host-normal-v3')
  if root.exists():raise ValueError('fresh_private_receipt_root_required')
  raw=(D/'source-manifest.json').read_bytes()
  from source_anchor import SOURCE_MANIFEST_SHA
@@ -45,13 +45,16 @@ def main(setup):
   receipt['result']=_combined_UNREACHABLE(reviewed,root/'build');receipt['complete']=True;status=True
  except BaseException as e:
   receipt['failure_class']=type(e).__name__
+  allowed={'retainedobjectexists','compilephasefailed','linkphasefailed','retainedobjectchanged','retainedobjectnottraced','unsupportedlinktraceentry','linktraceunsupported','staticELFrequired','activemustbestaticELF','unsupporteddepfileescaping','depfileescape','compilertoolchanged','headerorlinkinputchanged','buildinputchanged','compilerchanged','tooltimeout','tooldiagnosticcap','toolnotreaped'}
+  reason=e.args[0]if len(e.args)==1 and isinstance(e.args[0],str)else None
+  receipt['failure_reason_code']=reason if reason in allowed else 'UNCLASSIFIED_FAILURE_NO_RAW_DETAILS'
   if isinstance(getattr(e,'receipt',None),dict):receipt['cleanup']=e.receipt
  durable(root/'case-receipt.json',receipt)
  # Success is not announced yet. Retention includes JSON and capped compiler
  # diagnostics only. No ELF, private inputs, source repository or environment.
  out=io.BytesIO()
  with tarfile.open(fileobj=out,mode='w:')as t:
-  files=[root/'case-receipt.json']+[p for p in (root/'build').rglob('*')if p.is_file()and (p.name=='receipt.json'or p.suffix=='.compiler-stdout'or p.suffix=='.compiler-stderr'or p.name in ('compiler.stdout','compiler.stderr'))]
+  files=[root/'case-receipt.json']+[p for p in (root/'build').rglob('*')if p.is_file()and (p.name=='receipt.json'or p.suffix=='.compiler-stdout'or p.suffix=='.compiler-stderr'or p.suffix in ('.compile-stdout','.compile-stderr')or p.name in ('compiler.stdout','compiler.stderr'))]
   for p in sorted(files):
    b=p.read_bytes()
    if len(b)>4*1024*1024:raise ValueError('receipt_member_cap')
