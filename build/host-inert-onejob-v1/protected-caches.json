@@ -1,0 +1,188 @@
+{
+  "limits": {
+    "capacity_bytes": 10737418240,
+    "reserve_bytes": 268435456
+  },
+  "protected_caches": {
+    "10516363617": {
+      "bytes": 1413472049,
+      "key": "nav-lfs13.1-x86_64-final-gcc-v1"
+    },
+    "10696846187": {
+      "bytes": 1374122764,
+      "key": "nav-blfs13.1-x86_64-git-open-v1"
+    },
+    "10700939007": {
+      "bytes": 1374812746,
+      "key": "nav-blfs13.1-x86_64-giflib-open-v1"
+    },
+    "10710908926": {
+      "bytes": 1404400214,
+      "key": "nav-blfs13.1-x86_64-jxl-open-v1"
+    },
+    "10790873772": {
+      "bytes": 1414253410,
+      "key": "nav-blfs13.1-x86_64-aom-static-repair-open-v1"
+    },
+    "10803318199": {
+      "bytes": 1477765679,
+      "key": "nav-blfs13.1-x86_64-librsvg-transitional-open-v1"
+    },
+    "10804828520": {
+      "bytes": 17602045,
+      "key": "nav-linux7.1.8-userns-udmabuf-compiled-open-v1"
+    },
+    "10805037408": {
+      "bytes": 6895265,
+      "key": "nav-graphene-isocodes-hicolor-install-only-open-v1"
+    },
+    "10810498235": {
+      "bytes": 901348,
+      "key": "nav-gstgood-narrow-install-only-transitional-open-v1"
+    },
+    "10813815026": {
+      "bytes": 512022,
+      "key": "nav-opus-baseopus-install-only-open-v1"
+    },
+    "10816097588": {
+      "bytes": 283419,
+      "key": "nav-gstmatroska-original-tested-install-only-open-v1"
+    },
+    "10818008081": {
+      "bytes": 1665268,
+      "key": "nav-theora-basetheora-install-only-open-v1"
+    },
+    "10826754060": {
+      "bytes": 109875240,
+      "key": "nav-ffmpeg9.0.1-install-only-first5290-corrected31-open-v1"
+    },
+    "10827259500": {
+      "bytes": 526760,
+      "key": "nav-gstlibav1.28.6-install-only-5OK1FAIL-OPEN16channel-v1"
+    },
+    "10829907838": {
+      "bytes": 6420637,
+      "key": "nav-gstbad1.28.6-install-only-original97OK5FAIL2SKIP-Play17PASS2OPEN-v1"
+    },
+    "10833464043": {
+      "bytes": 179240,
+      "key": "nav-pango1.58.2-introspection-only-original-ledger-unchanged-v1"
+    },
+    "10843934869": {
+      "bytes": 180383,
+      "key": "nav-librsvg2.62.4-svg-pixbufloader-only-native5-decode-verified-original-ledgers-unchanged-v1"
+    },
+    "10868593577": {
+      "bytes": 314639,
+      "key": "nav-lua5.4.8-zero-source-patch-O2-PIC-embedded-OPEN-main385-v1"
+    },
+    "10869122579": {
+      "bytes": 661828,
+      "key": "nav-wireplumber0.5.15-original53OK-systemLua-docGIR-explicitOFF-v1"
+    },
+    "10869895695": {
+      "bytes": 31141567,
+      "key": "nav-gtk4.22.4-unchanged-canonical10928-OPEN-G3NOTRUN-install-only-v1"
+    },
+    "10870138327": {
+      "bytes": 2329532,
+      "key": "nav-hwdata0.410-original-check7OK-USBskip-external3NOTRUN-v1"
+    },
+    "10871175499": {
+      "bytes": 142028,
+      "key": "nav-libdex1.1.0-original12OK1envFAIL-dbusonly1OK-liburingabsent-v1"
+    },
+    "10871519908": {
+      "bytes": 5326726,
+      "key": "nav-libdw0.195-original253PASS-OPEN1OOM8SKIP34NOTRUN-narrow-v1"
+    },
+    "10872412032": {
+      "bytes": 1491910,
+      "key": "nav-sysprof50.0-original7OK-26NOTRUN-gtkhelpOFF-v1"
+    },
+    "10872912778": {
+      "bytes": 159489,
+      "key": "nav-libdisplay-info0.4.0-original68OK-referencegenNOTRUN-v1"
+    },
+    "10873903681": {
+      "bytes": 206396,
+      "key": "nav-libwacom2.19.1-original16OK1SKIP-nested3323PASS1157SKIP-OPENhw-v1"
+    },
+    "10875048082": {
+      "bytes": 330838,
+      "key": "nav-libei1.6.0-original11OK-nested2SKIP-ruff2NOTRUN-toolingexcluded-v1"
+    },
+    "10875048834": {
+      "bytes": 1051277,
+      "key": "nav-libinput1.31.3-original40-canonical11OK1FAIL28SKIP-OPENrecord-segv-v1"
+    },
+    "10875659848": {
+      "bytes": 1648948,
+      "key": "nav-atspi2.60.6-original9OK-registryd27PASS-brokerNOTRUN-realdesktopOPEN-v1"
+    },
+    "10876928655": {
+      "bytes": 25760507,
+      "key": "nav-gtk3.24.43-canonical192OK2FAIL-hiddenTAPFAIL-45NOTRUN-OPEN-v1"
+    },
+    "10877275610": {
+      "bytes": 551620,
+      "key": "nav-gnomedesktop51-original6OK-44PASS1SKIP-qrcodegen521PASS-realdesktopOPEN-v1"
+    },
+    "10877807804": {
+      "bytes": 149452,
+      "key": "nav-libgusb0.4.9-canonical2OK1FAIL-realUSBsigabrtOPEN-6NOTRUN-v1"
+    },
+    "10878681236": {
+      "bytes": 250911,
+      "key": "nav-bashcompletion2.18.0-original1771PASS460SKIP14XFAIL3XPASS-v1"
+    },
+    "10879229098": {
+      "bytes": 1409499,
+      "key": "nav-colord1.4.8-original3OK1FAIL-importOPEN-76PASS5hardwareSKIP-v1"
+    },
+    "10880575516": {
+      "bytes": 8588780,
+      "key": "nav-glycin2.1.5-original5installconfigOK-2cargoBLOCKED-NOTRUN-v1"
+    },
+    "10881014184": {
+      "bytes": 256016,
+      "key": "nav-libcanberra0.30-originalplumbingOK-audioNOTRUN-absentdefaultALSApulse-v1"
+    },
+    "10881014406": {
+      "bytes": 142423,
+      "key": "nav-startupnotification0.12-originalcheckFAIL-APItypeOPEN-manualNOTRUN-v1"
+    },
+    "10881461821": {
+      "bytes": 897343,
+      "key": "nav-libtirpc1.3.7-originalplumbingOK-GSSAPIapprovedOFF-networkNOTRUN-v1"
+    },
+    "10883381643": {
+      "bytes": 1519658,
+      "key": "nav-xwayland24.1.13-original28OK-XTS673P220S-docmapped-fixturesNOTRUN-v1"
+    },
+    "10884897035": {
+      "bytes": 82029,
+      "key": "nav-argcomplete3.7.2-original174OK12SKIP5XFAIL-sha32591252aea16c840f441876b38ae6a3b6a45d05dcf8d17160895ee2a168d7d5-v1"
+    },
+    "10886076920": {
+      "bytes": 1021700,
+      "key": "nav-gcc16.2.0-c-recovered-evidence-sha62e84a2e3e7849c8e0e932b9a7786cd29c2c2d5d972d138dd763d1d10f993e6d-v1"
+    },
+    "10886077045": {
+      "bytes": 1165371,
+      "key": "nav-gcc16.2.0-cxx-recovered-evidence-sha7e577bd0ddefb74ebc496882f4aff78b9cd46ee42de45e8811fa884f4dddfddf-v1"
+    },
+    "10886077143": {
+      "bytes": 145107,
+      "key": "nav-gcc16.2.0-runtime-recovered-evidence-sha466a86f9478532c52eda12a79d986bd92f69e2c39ee8ecaa9d8328aaec8bb7f6-v1"
+    },
+    "10886398434": {
+      "bytes": 14590913,
+      "key": "nav-mutter50.4-original281OK5XFAIL1TIMEOUTOPEN-sha675cd49674e2334308b28967f887b2198f60095a28059a9d5516bc7a5b7a5f20-v1"
+    },
+    "10890213765": {
+      "bytes": 22625486,
+      "key": "nav-login-PAM172-systemd2612PAM-1836OK1FAILOPEN-PAM104OK2FAILOPEN-v1"
+    }
+  }
+}
