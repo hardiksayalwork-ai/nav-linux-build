@@ -11,7 +11,7 @@ class SetupBlocked(Exception):pass
 
 def prepare_scope(unit):
  if os.geteuid()!=0 or len(os.listdir('/proc/self/task'))!=1:raise SetupBlocked('root_single_thread')
- if not re.fullmatch(r'nav-inert-[0-9]+-2-1\.scope',unit):raise SetupBlocked('literal_unit_identity')
+ if not re.fullmatch(r'nav-inert-[0-9]+-3-1\.scope',unit):raise SetupBlocked('literal_unit_identity')
  full_cgroup_mount(Path('/proc/self/mountinfo').read_text())
  cg=unified_path(Path('/proc/self/cgroup').read_text())
  # Scope name supplied to systemd-run, no inferred/guessed slice mapping.
