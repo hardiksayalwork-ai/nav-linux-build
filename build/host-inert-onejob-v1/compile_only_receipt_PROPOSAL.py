@@ -13,6 +13,22 @@ class BuildBlocked(Exception):pass
 def digest(p):
  b=Path(p).read_bytes();return {'path':str(p),'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest()}
 
+def compile_and_link_retained(compiler,source,exe,dep,prefix):
+ # Intermediate lives in private fresh output tree, survives GCC exit, never runs.
+ obj=Path(str(exe)+'.o')
+ if obj.exists():raise BuildBlocked('retainedobjectexists')
+ c=bounded_tool([compiler,'-std=gnu11','-O2','-Wall','-Wextra','-Werror','-MD','-MF',str(dep),'-c',str(source),'-o',str(obj)])
+ Path(str(prefix)+'.compile-stdout').write_bytes(c['stdout']);Path(str(prefix)+'.compile-stderr').write_bytes(c['stderr'])
+ if c['returncode']:raise BuildBlocked('compilephasefailed')
+ identity=digest(obj)
+ link=bounded_tool([compiler,'-static','-Wl,-t',str(obj),'-o',str(exe)])
+ Path(str(prefix)+'.compiler-stdout').write_bytes(link['stdout']);Path(str(prefix)+'.compiler-stderr').write_bytes(link['stderr'])
+ if link['returncode']:raise BuildBlocked('linkphasefailed')
+ if digest(obj)!=identity:raise BuildBlocked('retainedobjectchanged')
+ trace=[x.strip()for x in link['stdout'].decode('utf-8',errors='strict').splitlines()if x.strip()]
+ if str(obj)not in trace:raise BuildBlocked('retainedobjectnottraced')
+ return link,identity
+
 def compile_only_UNINVOKED(source_dir,output_dir,expected_source_pins,compiler):
  src=Path(source_dir);out=Path(output_dir)
  if out.exists():raise BuildBlocked('freshoutputdirectoryrequired')
@@ -40,10 +56,8 @@ def compile_only_UNINVOKED(source_dir,output_dir,expected_source_pins,compiler):
  for n,artifact in zip(names,['guard-inert119','fixture-inert0']):
   # -MD recordsactualnon-systemANDsystemheadersusedbythiscompile.
   dep=out/(artifact+'.d');exe=out/artifact
-  argv=[compiler,'-std=gnu11','-O2','-static','-Wall','-Wextra','-Werror','-Wl,-t','-MD','-MF',str(dep),str(src/n),'-o',str(exe)]
-  r=bounded_tool(argv)
-  (out/(artifact+'.compiler-stdout')).write_bytes(r['stdout']);(out/(artifact+'.compiler-stderr')).write_bytes(r['stderr'])
-  if r['returncode']:raise BuildBlocked('compilefailure;privatecompilerdiagnosticsretained')
+  r,object_identity=compile_and_link_retained(compiler,src/n,exe,dep,out/artifact)
+  receipt.setdefault('retained_objects',{})[artifact]=object_identity
   for line in r['stdout'].decode('utf-8',errors='strict').splitlines():
    path=line.strip()
    if path.startswith('/')and Path(path).is_file():receipt['linked_inputs'][path]=digest(path)
