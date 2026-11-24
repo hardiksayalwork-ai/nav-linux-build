@@ -37,6 +37,10 @@
       "bytes": 4244,
       "sha256": "7dcf3d57d038b713d2c5c7fbb0f7b59a3cdb194f8bfdc10470502832878d81a6"
     },
+    "delegated_scope_setup.py": {
+      "bytes": 3599,
+      "sha256": "6f916c41760b9d6c22fdbc618df90177886c2d02f5565349454cc9ea33003aac"
+    },
     "fd_group_admission.py": {
       "bytes": 1886,
       "sha256": "44af9c90e57058a54ceb039e4e711fd9889ce0f991d3ec5a7df9882143c21318"
@@ -99,7 +103,7 @@
     },
     "one_job_entry.py": {
       "bytes": 5288,
-      "sha256": "e34dc8f3519464da7a2d8e4e39496e3fbc364b775abc6f892b75fd21152d2edd"
+      "sha256": "69e444a211312aee16c0b7397b4cd06179fcd7f74f1d5cd02c7d20598b4b0f39"
     },
     "outer_stopped_guard_PROPOSAL.c": {
       "bytes": 5137,
