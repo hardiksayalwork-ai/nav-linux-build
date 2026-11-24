@@ -10,8 +10,8 @@
       "sha256": "14f859b62fb6e865ba7c083e107aaf41a463905771f2fffe5a84adbb49959b21"
     },
     "active_build_receipt_PROPOSAL.py": {
-      "bytes": 2346,
-      "sha256": "eac25ca470f9382553c49e6dc663ed1a0a55e06bf5602fa92aa7d3dd13642c95"
+      "bytes": 2157,
+      "sha256": "65d7d49573997493f5f7fe35e6e11e89d4fd2593f4803096ea2ee540c27b5e12"
     },
     "audience_decision.py": {
       "bytes": 1551,
@@ -34,12 +34,12 @@
       "sha256": "53cc89b16a79260544ad752fa337568f413ad8ef5bf547bd88b3a475b781fe38"
     },
     "compile_only_receipt_PROPOSAL.py": {
-      "bytes": 4244,
-      "sha256": "7dcf3d57d038b713d2c5c7fbb0f7b59a3cdb194f8bfdc10470502832878d81a6"
+      "bytes": 5119,
+      "sha256": "34fb32c61901d8c92be566f0020cc454973ca70fd4f72e9d88246c96d449fb8d"
     },
     "delegated_scope_setup.py": {
       "bytes": 3599,
-      "sha256": "6f916c41760b9d6c22fdbc618df90177886c2d02f5565349454cc9ea33003aac"
+      "sha256": "905522ecd6cecd4b8508c77244107f28c6255c65e81a9dac82baaa090080d0a1"
     },
     "fd_group_admission.py": {
       "bytes": 1886,
@@ -102,8 +102,8 @@
       "sha256": "ca865f6e85d9181079ce56b3f399d43313ef9e7f7b13ecb46231fb246dd09a44"
     },
     "one_job_entry.py": {
-      "bytes": 5288,
-      "sha256": "69e444a211312aee16c0b7397b4cd06179fcd7f74f1d5cd02c7d20598b4b0f39"
+      "bytes": 5920,
+      "sha256": "54933ca3ca377e7eded3dc647fced35015d95539334e718c9347a26e7adf36c2"
     },
     "outer_stopped_guard_PROPOSAL.c": {
       "bytes": 5137,
