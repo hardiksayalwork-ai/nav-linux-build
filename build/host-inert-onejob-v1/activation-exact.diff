@@ -1,0 +1,11 @@
+--- guard-inert119.c
++++ guard-active-HOSTONLY.c
+@@ -29,7 +29,7 @@
+  return n==1&&b==0xA5&&!dying; /* EOF or wrong byte never releases */
+ }
+ int main(int argc,char **argv){
+- if(argc>=0)return 119; /* NONNEGOTIABLE SOURCE-REVIEW HARDSTOP */
++ /* Activevariant:REVIEWLABELONLY;NOauthority;fixedHOSTONLYscope. */
+  if(argc<3)return 120;
+  close(8); /* guardELFconsumedbyposixspawn,notinheritableinput */
+  char *end=0;long expected=strtol(argv[1],&end,10);
