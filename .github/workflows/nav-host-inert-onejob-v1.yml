@@ -1,4 +1,4 @@
-name: NAV one fixed inert host normal case v1
+name: NAV one fixed inert host normal case v2 delegated
 'on':
   workflow_dispatch: {}
 permissions:
@@ -9,78 +9,71 @@ concurrency:
   cancel-in-progress: false
 jobs:
   host-normal:
-    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private
-      == false && github.run_number == 1 && github.run_attempt == 1
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false &&
+      github.run_number == 2 && github.run_attempt == 1
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
-    - name: Exact memory-only source fetch and fresh read-only admission before staging
+    - name: One exact delegated host case with bounded fresh scope
       env:
         GH_TOKEN: ${{ github.token }}
-      run: "sudo --preserve-env=GH_TOKEN,GITHUB_REPOSITORY,GITHUB_EVENT_NAME,GITHUB_RUN_NUMBER,GITHUB_RUN_ATTEMPT,GITHUB_SHA\
+      run: "set -euo pipefail\nexport NAV_TEST_SCOPE=nav-inert-${GITHUB_RUN_ID}-2-1.scope\nsudo --preserve-env=GH_TOKEN,GITHUB_REPOSITORY,GITHUB_EVENT_NAME,GITHUB_RUN_NUMBER,GITHUB_RUN_ATTEMPT,GITHUB_SHA,GITHUB_RUN_ID,NAV_TEST_SCOPE\
+        \ systemd-run --scope --collect --unit=\"$NAV_TEST_SCOPE\" -p 'Delegate=memory pids' -p MemoryMax=1G -p\
+        \ MemorySwapMax=0 -p TasksMax=64 -p CPUQuota=100% -p RuntimeMaxSec=600 -p TimeoutStopSec=10 -p KillMode=control-group\
         \ python3 -I -B - <<'ADMISSION'\nimport os,sys,re,json,hashlib,urllib.request,importlib.abc,importlib.util\n\
         from pathlib import Path\nassert os.environ['GITHUB_REPOSITORY']=='hardiksayalwork-ai/nav-linux-build'\n\
-        assert os.environ['GITHUB_EVENT_NAME']=='workflow_dispatch'\nassert os.environ['GITHUB_RUN_NUMBER']=='1'\
-        \ and os.environ['GITHUB_RUN_ATTEMPT']=='1'\ncommit=os.environ['GITHUB_SHA'];assert\
-        \ re.fullmatch('[0-9a-f]{40}',commit)\nclass NoRedirect(urllib.request.HTTPRedirectHandler):\n\
-        \ def redirect_request(self,*a):return None\nop=urllib.request.build_opener(NoRedirect());sources={}\n\
-        pins={'activation-exact.diff': '4529b51a5081564d78b692b94ce0030e98c163ec3f031c59e6d57b0ca1dbe974',\
-        \ 'activation_delta.py': '14f859b62fb6e865ba7c083e107aaf41a463905771f2fffe5a84adbb49959b21',\
-        \ 'active_build_receipt_PROPOSAL.py': 'eac25ca470f9382553c49e6dc663ed1a0a55e06bf5602fa92aa7d3dd13642c95',\
-        \ 'audience_decision.py': 'b8dbef862d5cc270c9cec5c7b3d3c7187120f4297f78ae929ecd93708e3e0ca4',\
+        assert os.environ['GITHUB_EVENT_NAME']=='workflow_dispatch'\nassert os.environ['GITHUB_RUN_NUMBER']=='2'\
+        \ and os.environ['GITHUB_RUN_ATTEMPT']=='1'\ncommit=os.environ['GITHUB_SHA'];assert re.fullmatch('[0-9a-f]{40}',commit)\n\
+        class NoRedirect(urllib.request.HTTPRedirectHandler):\n def redirect_request(self,*a):return None\nop=urllib.request.build_opener(NoRedirect());sources={}\n\
+        pins={'activation-exact.diff': '4529b51a5081564d78b692b94ce0030e98c163ec3f031c59e6d57b0ca1dbe974', 'activation_delta.py':\
+        \ '14f859b62fb6e865ba7c083e107aaf41a463905771f2fffe5a84adbb49959b21', 'active_build_receipt_PROPOSAL.py':\
+        \ 'eac25ca470f9382553c49e6dc663ed1a0a55e06bf5602fa92aa7d3dd13642c95', 'audience_decision.py': 'b8dbef862d5cc270c9cec5c7b3d3c7187120f4297f78ae929ecd93708e3e0ca4',\
         \ 'bounded_build_tool_PROPOSAL.py': 'd4226b1ade195b00b430d2e9fd6e5ee288cf5ee04253e4a5809be48349771823',\
-        \ 'cgroup_controller_PROPOSAL.py': '47c4adf9227b8a94d3dba498247e21287199a646fa9bcf547ba16bcd6382122a',\
-        \ 'combined_driver_PROPOSAL.py': '61decb2d03abd8619b7c913839510b55a4cd63deba77dc8b391b4ed4092df448',\
-        \ 'combined_phase_gate.py': '53cc89b16a79260544ad752fa337568f413ad8ef5bf547bd88b3a475b781fe38',\
+        \ 'cgroup_controller_PROPOSAL.py': '47c4adf9227b8a94d3dba498247e21287199a646fa9bcf547ba16bcd6382122a', 'combined_driver_PROPOSAL.py':\
+        \ '61decb2d03abd8619b7c913839510b55a4cd63deba77dc8b391b4ed4092df448', 'combined_phase_gate.py': '53cc89b16a79260544ad752fa337568f413ad8ef5bf547bd88b3a475b781fe38',\
         \ 'compile_only_receipt_PROPOSAL.py': '7dcf3d57d038b713d2c5c7fbb0f7b59a3cdb194f8bfdc10470502832878d81a6',\
-        \ 'fd_group_admission.py': '44af9c90e57058a54ceb039e4e711fd9889ce0f991d3ec5a7df9882143c21318',\
-        \ 'fd_identity_snapshot.py': '21a6dbaa56d070cd7886130be93c17793a764767f6be969fbe88554cf2a01bcf',\
-        \ 'filesystem_identity.py': '658182371c90af431c77534445f0a88e89095953c08b5ae4001bf66d0d34b44e',\
-        \ 'first_fixture_delegation_PROPOSAL.py': 'db6d83eefc906482253f05975fa37b66c123f3beb7a795e94f2651a9a9a6e146',\
-        \ 'fixture_completion.py': '30d30cc7468877a09867823ce6c2ad4a5c8c93372cf1768ec2adfbb49aef5e7c',\
+        \ 'delegated_scope_setup.py': '6f916c41760b9d6c22fdbc618df90177886c2d02f5565349454cc9ea33003aac', 'fd_group_admission.py':\
+        \ '44af9c90e57058a54ceb039e4e711fd9889ce0f991d3ec5a7df9882143c21318', 'fd_identity_snapshot.py': '21a6dbaa56d070cd7886130be93c17793a764767f6be969fbe88554cf2a01bcf',\
+        \ 'filesystem_identity.py': '658182371c90af431c77534445f0a88e89095953c08b5ae4001bf66d0d34b44e', 'first_fixture_delegation_PROPOSAL.py':\
+        \ 'db6d83eefc906482253f05975fa37b66c123f3beb7a795e94f2651a9a9a6e146', 'fixture_completion.py': '30d30cc7468877a09867823ce6c2ad4a5c8c93372cf1768ec2adfbb49aef5e7c',\
         \ 'fresh_host_admission_PROPOSAL.py': '07bfdc01d19a570830c28e239d595a444079f51f71d4a92cba8ab30d17c90eac',\
-        \ 'guard_fd_abi.py': '8b68ee74c3e04c8c233409869c8714626dab060d10cd1b5379afc76f4fbcf872',\
-        \ 'guard_handoff.py': '99c56d59a76e1b3d01b8a342a30576c40a6e183dad9d7e69358ec993eaa4ff98',\
-        \ 'host_launch.py': '1939713407e3194aaec68ec011375cab6938cf9008553863c168cb0fd4df4601',\
-        \ 'immutable_small.py': '198d20ff666fac8025599d90c932a686a7f6b3821f708383ccbf8fa5be6bdd28',\
-        \ 'inert_host_fixture.c': '7e9ada4c2525d8cdef8c07265857e27f7720e2a591b626a93c76f8ce6e607de5',\
-        \ 'integrated_host_lifecycle_PROPOSAL.py': '2b2ab03dd21ea938f644fea6c66f2376653333fc40c167a01bbcdc00e5242224',\
-        \ 'linux_controller_adapter_PROPOSAL.py': 'e434ebce4f07aedfcd4af4f16e4827a6a9ba1996ebe2f5a03641e2f90ed5d4b6',\
-        \ 'literal_combined_source.py': 'fa9eeecac71b7b0a6a8ff2d879e145bc92381b71b4c9e079a09648ddc30fb737',\
-        \ 'literal_host_manifest.py': 'ca865f6e85d9181079ce56b3f399d43313ef9e7f7b13ecb46231fb246dd09a44',\
-        \ 'one_job_entry.py': 'e34dc8f3519464da7a2d8e4e39496e3fbc364b775abc6f892b75fd21152d2edd',\
-        \ 'outer_stopped_guard_PROPOSAL.c': '831ce3cde1e85e3accfd281a466ce29b823a8a258f5718168e324c548bcf775d',\
-        \ 'pidfd_identity.py': 'b1d73d596fd5b8e59b0148a634dacd1751232fbbbdc2fd5f4b1a509a96e6a643',\
-        \ 'placement_observation.py': '6063979e705f75eaa1410cf5077312db2b811407d4cf9d9d98a6184cc1461481',\
-        \ 'protected-caches.json': 'ffb152e98b8d58a8364100c023a543e72445b8e189736e33efb17102f212fe33',\
-        \ 'read_only_github_guard.py': 'bee216922b1f59b36f6ead513d91d4da60f74f8d30e86994d20aae242c1af047',\
-        \ 'release_transaction.py': 'e3f40e122017843948d9b34a9706224e1e0079f03c854156068d46cebec868b8',\
-        \ 'resource_collect.py': '8ff59b24a726fe0734d442901b1f71fb81c02f685d1a4224e6f6681df070be15',\
-        \ 'retention_transport.py': 'c61aa4f748ff18970ca032e91e8df083ad27038b4f7c5cd907ee1fe9c85bd5fa',\
-        \ 'source-manifest.json': '01e4d40ce5b63a7cb77d7aa81e2e850ad27545902a460f6c8fdb6fd6c39d8838',\
-        \ 'source_anchor.py': '07766b761610ea2b282b6ec25f915569b7b5d51d6398dc353e0063c53d88f6ff',\
-        \ 'toolchain_closure_PROPOSAL.py': 'a68ee877dd330d020b99dd949f661096bd33be39d9e3df7360ea899d47c23fb6'}\n\
+        \ 'guard_fd_abi.py': '8b68ee74c3e04c8c233409869c8714626dab060d10cd1b5379afc76f4fbcf872', 'guard_handoff.py':\
+        \ '99c56d59a76e1b3d01b8a342a30576c40a6e183dad9d7e69358ec993eaa4ff98', 'host_launch.py': '1939713407e3194aaec68ec011375cab6938cf9008553863c168cb0fd4df4601',\
+        \ 'immutable_small.py': '198d20ff666fac8025599d90c932a686a7f6b3821f708383ccbf8fa5be6bdd28', 'inert_host_fixture.c':\
+        \ '7e9ada4c2525d8cdef8c07265857e27f7720e2a591b626a93c76f8ce6e607de5', 'integrated_host_lifecycle_PROPOSAL.py':\
+        \ '2b2ab03dd21ea938f644fea6c66f2376653333fc40c167a01bbcdc00e5242224', 'linux_controller_adapter_PROPOSAL.py':\
+        \ 'e434ebce4f07aedfcd4af4f16e4827a6a9ba1996ebe2f5a03641e2f90ed5d4b6', 'literal_combined_source.py': 'fa9eeecac71b7b0a6a8ff2d879e145bc92381b71b4c9e079a09648ddc30fb737',\
+        \ 'literal_host_manifest.py': 'ca865f6e85d9181079ce56b3f399d43313ef9e7f7b13ecb46231fb246dd09a44', 'one_job_entry.py':\
+        \ '69e444a211312aee16c0b7397b4cd06179fcd7f74f1d5cd02c7d20598b4b0f39', 'outer_stopped_guard_PROPOSAL.c':\
+        \ '831ce3cde1e85e3accfd281a466ce29b823a8a258f5718168e324c548bcf775d', 'pidfd_identity.py': 'b1d73d596fd5b8e59b0148a634dacd1751232fbbbdc2fd5f4b1a509a96e6a643',\
+        \ 'placement_observation.py': '6063979e705f75eaa1410cf5077312db2b811407d4cf9d9d98a6184cc1461481', 'protected-caches.json':\
+        \ 'ffb152e98b8d58a8364100c023a543e72445b8e189736e33efb17102f212fe33', 'read_only_github_guard.py': 'bee216922b1f59b36f6ead513d91d4da60f74f8d30e86994d20aae242c1af047',\
+        \ 'release_transaction.py': 'e3f40e122017843948d9b34a9706224e1e0079f03c854156068d46cebec868b8', 'resource_collect.py':\
+        \ '8ff59b24a726fe0734d442901b1f71fb81c02f685d1a4224e6f6681df070be15', 'retention_transport.py': 'c61aa4f748ff18970ca032e91e8df083ad27038b4f7c5cd907ee1fe9c85bd5fa',\
+        \ 'source-manifest.json': 'd6d140420a18af97cddfadb849f0e593b098e9cf4609f7b6f4acd0330b3626ed', 'source_anchor.py':\
+        \ 'b7815aeb0d9527bfe547f12bda4ddc3e894c6134275e3ddb8747201ef22ab10b', 'toolchain_closure_PROPOSAL.py': 'a68ee877dd330d020b99dd949f661096bd33be39d9e3df7360ea899d47c23fb6'}\n\
         for name,digest in pins.items():\n url='https://raw.githubusercontent.com/hardiksayalwork-ai/nav-linux-build/'+commit+'/build/host-inert-onejob-v1/'+name\n\
-        \ with op.open(url,timeout=45)as response:\n  assert response.status==200;raw=response.read(2097153)\n\
-        \ assert len(raw)<=2097152 and hashlib.sha256(raw).hexdigest()==digest\n sources[name]=raw\n\
-        class MemorySource(importlib.abc.MetaPathFinder,importlib.abc.Loader):\n def\
-        \ find_spec(self,name,path=None,target=None):\n  return importlib.util.spec_from_loader(name,self)if\
-        \ name+'.py'in sources else None\n def create_module(self,spec):return None\n\
-        \ def exec_module(self,module):exec(compile(sources[module.__name__+'.py'],'<reviewed-memory-source>','exec'),module.__dict__)\n\
-        sys.meta_path.insert(0,MemorySource())\nfrom resource_collect import unified_path\n\
-        from fresh_host_admission_PROPOSAL import fresh_admission\nfrom read_only_github_guard\
-        \ import guard\ncg=unified_path(Path('/proc/self/cgroup').read_text())\nassert\
-        \ cg!='/'\nfresh_admission('/sys/fs/cgroup'+cg,'/usr/bin/gcc')\nguard(os.environ['GH_TOKEN'],sources['protected-caches.json'])\n\
-        # First explicit filesystem mutation comes only after all above read admission.\n\
-        d=Path('/mnt/nav-host-source-v1');assert not d.exists();d.mkdir(mode=0o700)\n\
-        for name,raw in sources.items():\n with (d/name).open('xb')as out:out.write(raw)\n\
-        print('NAV_HOST_READ_ONLY_ADMISSION_PASSED_SOURCES_STAGED')\nADMISSION\n"
-    - name: Two compile phases then one fixed inert case and unpublished receipt readback
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: 'sudo --preserve-env=GH_TOKEN,GITHUB_REPOSITORY,GITHUB_EVENT_NAME,GITHUB_RUN_NUMBER,GITHUB_RUN_ATTEMPT,GITHUB_SHA,GITHUB_RUN_ID
-        python3 -B /mnt/nav-host-source-v1/one_job_entry.py
-
-        '
+        \ with op.open(url,timeout=45)as response:\n  assert response.status==200;raw=response.read(2097153)\n assert\
+        \ len(raw)<=2097152 and hashlib.sha256(raw).hexdigest()==digest\n sources[name]=raw\nclass MemorySource(importlib.abc.MetaPathFinder,importlib.abc.Loader):\n\
+        \ def find_spec(self,name,path=None,target=None):\n  return importlib.util.spec_from_loader(name,self)if\
+        \ name+'.py'in sources else None\n def create_module(self,spec):return None\n def exec_module(self,module):exec(compile(sources[module.__name__+'.py'],'<reviewed-memory-source>','exec'),module.__dict__)\n\
+        sys.meta_path.insert(0,MemorySource())\nfrom resource_collect import unified_path\nfrom fresh_host_admission_PROPOSAL\
+        \ import fresh_admission\nfrom read_only_github_guard import guard\nguard(os.environ['GH_TOKEN'],sources['protected-caches.json'])\n\
+        from delegated_scope_setup import prepare_scope\nsetup=prepare_scope(os.environ['NAV_TEST_SCOPE'])\nfresh_admission(setup['parent'],'/usr/bin/gcc')\n\
+        # Source staging follows explicit delegated-scope setup and full admission.\nd=Path('/mnt/nav-host-source-v2');assert\
+        \ not d.exists();d.mkdir(mode=0o700)\nfor name,raw in sources.items():\n with (d/name).open('xb')as out:out.write(raw)\n\
+        print('NAV_HOST_READ_ONLY_ADMISSION_PASSED_SOURCES_STAGED')\n# Admission modules were memory-only. Entry\
+        \ now loads exact staged bytes.\nsys.meta_path=[x for x in sys.meta_path if not isinstance(x,MemorySource)]\n\
+        sys.path.insert(0,str(d))\nimport one_job_entry\none_job_entry.main(setup)\n\nADMISSION\n"
+    - name: Always stop only this run scope and verify removal
+      if: always()
+      run: "sudo --preserve-env=GITHUB_RUN_ID python3 -I -B - <<'CLEANUP'\nimport os,re,subprocess\nfrom pathlib\
+        \ import Path\nrun=os.environ['GITHUB_RUN_ID']\nassert run.isdigit()\nunit='nav-inert-'+run+'-2-1.scope'\n\
+        def prop(name):\n return subprocess.run(['/usr/bin/systemctl','show',unit,'-p',name,'--value'],check=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True).stdout.strip()\n\
+        state=prop('LoadState');cg=prop('ControlGroup') if state!='not-found' else ''\nif cg:\n assert cg.startswith('/')\
+        \ and cg.split('/')[-1]==unit and all(x not in ('.','..')for x in cg.split('/'))\nif state!='not-found':\n\
+        \ # A race with collection is OK only when subsequent independent checks prove gone.\n subprocess.run(['/usr/bin/systemctl','stop',unit],stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=30)\n\
+        assert prop('LoadState')=='not-found','scope_unit_not_collected'\nif cg:\n assert not Path('/sys/fs/cgroup'+cg).exists(),'scope_cgroup_still_present'\n\
+        print('NAV_EXACT_SCOPE_COLLECTED_NOT_POPULATED')\nCLEANUP\n"
