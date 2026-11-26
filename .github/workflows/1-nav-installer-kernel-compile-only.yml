@@ -1,0 +1,75 @@
+name: NAV dedicated installer kernel compile only no boot no tests
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: nav-dedicated-installer-kernel-once
+  cancel-in-progress: false
+jobs:
+  kernel:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 125
+    steps:
+    - name: Prepare fixed writable build input file
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo mkdir -p /mnt/nav-lfs
+
+        sudo chown "$(id -u):$(id -g)" /mnt/nav-lfs
+
+        sudo install -o "$(id -u)" -g "$(id -g)" -m 0600 /dev/null /mnt/nav-rsvg-root.tar.zst
+
+        '
+    - name: Restore existing native build input without changing original cache
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-rsvg-root.tar.zst
+        key: nav-blfs13.1-x86_64-librsvg-transitional-open-v1
+        fail-on-cache-miss: true
+      env:
+        TAR_OPTIONS: --overwrite
+    - name: Compile separate helper-disabled installer kernel only
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'PREPARE'\nfrom pathlib import Path\nimport shutil,hashlib,tarfile,urllib.request\n\
+        assert shutil.disk_usage('/mnt').free>12*1024**3\narchive=Path('/mnt/nav-rsvg-root.tar.zst')\nassert hashlib.file_digest(archive.open('rb'),'sha256').hexdigest()=='b18303bde2a0da1f126fd595f21fd56ae353e1f2561adc0616337c380f21d2de'\n\
+        PREPARE\nmkdir -p /mnt/nav-lfs\ntar --zstd -xf /mnt/nav-rsvg-root.tar.zst -C /mnt/nav-lfs\npython3 - <<'SOURCE'\n\
+        from pathlib import Path\nimport urllib.request,hashlib,tarfile\nr=Path('/mnt/nav-lfs');cfg=r/'boot/config-7.1.8-nav1'\n\
+        assert hashlib.sha256(cfg.read_bytes()).hexdigest()=='8353d5ca03a30b4e4141155d683260e8130300e883db577755fa206707ae3e23'\n\
+        p=r/'sources';p.mkdir(exist_ok=True)\nf=p/'linux-7.1.8.tar.xz'\nwith urllib.request.urlopen('https://www.kernel.org/pub/linux/kernel/v7.x/linux-7.1.8.tar.xz',timeout=120)as\
+        \ response:b=response.read(158434925)\nassert len(b)==158434924 and hashlib.sha256(b).hexdigest()=='ff01dcb449279d5b4cfccdb01fee639cf5ff1803f1749a77844dd33915422c49'\n\
+        f.write_bytes(b)\nwith tarfile.open(f)as t:\n for m in t:assert not m.name.startswith('/')and '..'not in\
+        \ Path(m.name).parts\n t.extractall(p,filter='data')\n(p/'installer-inner.sh').write_text('set -euo pipefail\\\
+        numask 022\\nulimit -v 4194304\\ncd /sources/linux-7.1.8\\ncp /boot/config-7.1.8-nav1 .config\\nscripts/config\
+        \ --enable STATIC_USERMODEHELPER --set-str STATIC_USERMODEHELPER_PATH \\'\\' --set-str LOCALVERSION \\'-nav-installer1\\\
+        '\\nmake olddefconfig\\npython3 - <<\\'CONFIG\\'\\nfrom pathlib import Path\\nimport json\\np=Path(\\'/sources/installer-output\\\
+        ');p.mkdir(exist_ok=True)\\ndef parse(s):\\n d={}\\n for l in s.splitlines():\\n  if l.startswith(\\'CONFIG_\\\
+        '):k,v=l.split(\\'=\\',1);d[k]=v\\n  elif l.startswith(\\'# CONFIG_\\')and l.endswith(\\' is not set\\'):d[l[2:-11]]=\\\
+        'n\\'\\n return d\\nold=parse(Path(\\'/boot/config-7.1.8-nav1\\').read_text());new=parse(Path(\\'.config\\\
+        ').read_text())\\ndiff={k:[old.get(k),new.get(k)]for k in sorted(old.keys()|new.keys())if old.get(k)!=new.get(k)}\\\
+        nassert set(diff)=={\\'CONFIG_STATIC_USERMODEHELPER\\',\\'CONFIG_STATIC_USERMODEHELPER_PATH\\',\\'CONFIG_LOCALVERSION\\\
+        '},diff\\nassert new[\\'CONFIG_STATIC_USERMODEHELPER\\']==\\'y\\'and new[\\'CONFIG_STATIC_USERMODEHELPER_PATH\\\
+        ']==\\'\"\"\\'\\nassert new[\\'CONFIG_LOCALVERSION\\']==\\'\"-nav-installer1\"\\'\\nassert new.get(\\'CONFIG_UEVENT_HELPER\\\
+        ')==\\'n\\'and new.get(\\'CONFIG_FW_LOADER_USER_HELPER\\')==\\'n\\'\\n(p/\\'config-diff.json\\').write_text(json.dumps(diff,indent=2))\\\
+        nCONFIG\\nmake -j2 bzImage\\ncp arch/x86/boot/bzImage /sources/installer-output/vmlinuz-7.1.8-nav-installer1\\\
+        ncp .config /sources/installer-output/config-7.1.8-nav-installer1\\nreadelf -h vmlinux > /sources/installer-output/vmlinux-header.txt\\\
+        nmake -s kernelrelease > /sources/installer-output/kernelrelease.txt\\n')\nSOURCE\nsudo chown -hR root:root\
+        \ /mnt/nav-lfs\nsudo env LFS=/mnt/nav-lfs unshare --mount --propagation private /bin/bash <<'BUILD'\nset\
+        \ -euo pipefail\nmount --bind \"$LFS\" \"$LFS\"\nmount --bind /dev \"$LFS/dev\"\nmount -t devpts devpts\
+        \ -o gid=5,mode=0620 \"$LFS/dev/pts\"\nmount -t proc proc \"$LFS/proc\"\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\
+        \nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\nchroot \"$LFS\" /usr/bin/env -i HOME=/root LC_ALL=C\
+        \ PATH=/usr/bin:/usr/sbin:/bin:/sbin /bin/bash /sources/installer-inner.sh\nBUILD\nsudo chown -R \"$(id\
+        \ -u):$(id -g)\" /mnt/nav-lfs/sources/installer-output\nmkdir -p installer-output\ncp /mnt/nav-lfs/sources/installer-output/*\
+        \ installer-output/\npython3 - <<'RECEIPT'\nfrom pathlib import Path\nimport hashlib,json,os\np=Path('installer-output');assert\
+        \ (p/'kernelrelease.txt').read_text().strip()=='7.1.8-nav-installer1'\nd={'scope':'DEDICATED_INSTALLER_KERNEL_COMPILED_ONLY','booted':False,'tested':False,'installed':False,'source_sha256':'ff01dcb449279d5b4cfccdb01fee639cf5ff1803f1749a77844dd33915422c49','base_config_sha256':'8353d5ca03a30b4e4141155d683260e8130300e883db577755fa206707ae3e23','run_id':os.environ['GITHUB_RUN_ID'],'files':{x.name:{'bytes':x.stat().st_size,'sha256':hashlib.sha256(x.read_bytes()).hexdigest()}for\
+        \ x in p.iterdir()if x.is_file()}}\n(p/'receipt.json').write_text(json.dumps(d,indent=2))\nprint(json.dumps(d,indent=2))\n\
+        RECEIPT\n"
+    - name: Preserve compiled kernel only not an OS delivery
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: nav-installer-kernel-compiled-only
+        path: installer-output/
+        if-no-files-found: error
+        retention-days: 7
