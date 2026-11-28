@@ -24,7 +24,7 @@ jobs:
         def get(s):
          with urllib.request.urlopen(urllib.request.Request(base+s,headers={'Accept':'application/vnd.github+json','Authorization':'Bearer '+os.environ['GH_READ_TOKEN']}),timeout=30)as r:return json.load(r)
         r=get('');assert r['private'] is False
-        assert os.environ['GITHUB_RUN_NUMBER']=='2' and os.environ['GITHUB_RUN_ATTEMPT']=='1'
+        assert os.environ['GITHUB_RUN_NUMBER']=='3' and os.environ['GITHUB_RUN_ATTEMPT']=='1'
         a=get('/actions/artifacts?per_page=100');assert a['total_count']<=100
         assert sum(x['size_in_bytes']for x in a['artifacts']if not x['expired'])<100*1024**2
         c=get('/actions/caches?per_page=100');assert any(x['key']=='nav-blfs13.1-x86_64-librsvg-transitional-open-v1' and x['size_in_bytes']==1477765679 for x in c['actions_caches'])
@@ -147,7 +147,17 @@ jobs:
         c=Path('nav-build/CMakeCache.txt').read_text()
         for flag in ['QT_BUILD_TESTS:BOOL=OFF','QT_BUILD_EXAMPLES:BOOL=OFF']:
          assert flag in c,flag
-        assert not list(Path('nav-build').rglob('CTestTestfile.cmake')),'Unexpected test setup'
+        # QtBuildOptionsHelpers6.11.2 unconditionally emits empty CTest metadata.
+        # Reject actual registered cases and test source build directories, not filename.
+        import re,json
+        metadata={str(p):p.read_text()for p in Path('nav-build').rglob('CTestTestfile.cmake')}
+        print(json.dumps({'generic_ctest_metadata':metadata},indent=2),flush=True)
+        for path,text in metadata.items():
+         assert not re.search(r'^\s*add_test\s*\(',text,re.M),path
+        assert not Path('nav-build/tests').exists(),'Unexpected test source tree'
+        ninja=Path('nav-build/build.ninja').read_text()
+        assert not re.search(r'^build (?:[^\n]*?/)?tst_[^\n]*:',ninja,re.M),'Unexpected test target'
+        print(Path('nav-build/config.summary').read_text(),flush=True)
         BUILD_BOUNDARY
         # These are production targets. Never all/check/test or a suite target.
         cmake --build nav-build --parallel 3 --target WebEngineQuick qtwebenginequickplugin qtwebenginequickdelegatesplugin QtWebEngineProcess qwebengine_convert_dict
@@ -199,6 +209,17 @@ jobs:
 
         PUBLIC_ENGINE_INPUT
         sudo --preserve-env=GITHUB_WORKSPACE,GITHUB_RUN_ID python3 /tmp/nav-public-webengine.py
+    - name: Retain public configure metadata for boundary diagnosis only
+      if: always()
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p webengine-output/configure-evidence
+        for name in config.summary CMakeCache.txt;do
+         p=/mnt/nav-lfs/sources/nav-webengine-public/qtwebengine-everywhere-src-6.11.3/nav-build/$name
+         if [ -f "$p" ];then sudo cp "$p" webengine-output/configure-evidence/;fi
+        done
+        sudo chown -R "$(id -u):$(id -g)" webengine-output
     - name: Retain public engine development output only
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
       with:
@@ -206,3 +227,4 @@ jobs:
         path: webengine-output/
         if-no-files-found: error
         retention-days: 1
+      if: always()
