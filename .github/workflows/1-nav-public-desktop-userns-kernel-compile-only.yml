@@ -1,0 +1,100 @@
+name: NAV public desktop userns kernel compile only no tests
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: nav-public-desktop-userns-kernel-once
+  cancel-in-progress: false
+jobs:
+  desktop-kernel:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private
+      == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 125
+    steps:
+    - name: One-shot free public input and storage guard
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'PYGUARD'\nimport json,urllib.request,os,shutil\nbase='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
+        def get(s):\n with urllib.request.urlopen(urllib.request.Request(base+s,headers={'Accept':'application/vnd.github+json'}),timeout=30)as\
+        \ r:return json.load(r)\nr=get('');assert r['private'] is False\nassert os.environ['GITHUB_RUN_NUMBER']=='1'\
+        \ and os.environ['GITHUB_RUN_ATTEMPT']=='1'\na=get('/actions/artifacts?per_page=100');assert\
+        \ a['total_count']<=100\nassert sum(x['size_in_bytes']for x in a['artifacts']if not x['expired'])<100*1024**2\n\
+        c=get('/actions/caches?per_page=100');assert any(x['key']=='nav-blfs13.1-x86_64-librsvg-transitional-open-v1'\
+        \ and x['size_in_bytes']==1477765679 for x in c['actions_caches'])\nassert shutil.disk_usage('/mnt').free>18*1024**3\n\
+        print('Public standard runner. No tests, cache writes, private source or paid capacity.')\n\
+        PYGUARD\n"
+    - name: Prepare isolated build input destination
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo mkdir -p /mnt/nav-lfs
+
+        sudo chown "$(id -u):$(id -g)" /mnt/nav-lfs
+
+        sudo install -o "$(id -u)" -g "$(id -g)" -m0600 /dev/null /mnt/nav-rsvg-root.tar.zst
+
+        '
+    - name: Restore existing native input readonly no cache update
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-rsvg-root.tar.zst
+        key: nav-blfs13.1-x86_64-librsvg-transitional-open-v1
+        fail-on-cache-miss: true
+      env:
+        TAR_OPTIONS: --overwrite
+    - name: Compile source desktop namespace kernel only no tests
+      shell: bash
+      run: "set -euo pipefail\ncat > /tmp/nav-desktop-kernel.py <<'PUBLIC_KERNEL_INPUT'\n#!/usr/bin/env\
+        \ python3\n\"\"\"Public desktop-kernel prerequisite build only. Not dispatched by this file.\n\
+        No NAV product source, tests, boot, cache write, signing or activation.\n\"\"\"\nfrom pathlib\
+        \ import Path\nimport hashlib,tarfile,urllib.request,subprocess,shutil,os,json\nROOT=Path('/mnt/nav-lfs')\n\
+        CACHE=Path('/mnt/nav-rsvg-root.tar.zst')\nif hashlib.file_digest(CACHE.open('rb'),'sha256').hexdigest()!='b18303bde2a0da1f126fd595f21fd56ae353e1f2561adc0616337c380f21d2de':raise\
+        \ SystemExit('Native cache differs')\nsubprocess.run(['tar','--zstd','-xf',str(CACHE),'-C',str(ROOT)],check=True)\n\
+        if shutil.disk_usage(ROOT).free<12*1024**3:raise SystemExit('Insufficient actual space')\n\
+        cfg=ROOT/'boot/config-7.1.8-nav1'\nif hashlib.sha256(cfg.read_bytes()).hexdigest()!='8353d5ca03a30b4e4141155d683260e8130300e883db577755fa206707ae3e23':raise\
+        \ SystemExit('Base config differs')\nS=ROOT/'sources/nav-desktop-kernel';S.mkdir(parents=True,exist_ok=False)\n\
+        A=S/'linux-7.1.8.tar.xz'\nwith urllib.request.urlopen('https://www.kernel.org/pub/linux/kernel/v7.x/linux-7.1.8.tar.xz',timeout=120)as\
+        \ response,A.open('xb')as f:shutil.copyfileobj(response,f)\nif A.stat().st_size!=158434924\
+        \ or hashlib.file_digest(A.open('rb'),'sha256').hexdigest()!='ff01dcb449279d5b4cfccdb01fee639cf5ff1803f1749a77844dd33915422c49':raise\
+        \ SystemExit('Source differs')\nwith tarfile.open(A)as t:t.extractall(S,filter='data')\n\
+        script='''set -euo pipefail\numask 022\nulimit -v 4194304\ncd /sources/nav-desktop-kernel/linux-7.1.8\n\
+        cp /boot/config-7.1.8-nav1 .config\nscripts/config --enable USER_NS --set-str LOCALVERSION\
+        \ '-nav-desktop2'\nmake olddefconfig\npython3 - <<'CONFIG'\nfrom pathlib import Path\nimport\
+        \ json\ndef parse(p):\n d={}\n for line in Path(p).read_text().splitlines():\n  if line.startswith('CONFIG_'):k,v=line.split('=',1);d[k]=v\n\
+        \  elif line.startswith('# CONFIG_')and line.endswith(' is not set'):d[line[2:-11]]='n'\n\
+        \ return d\nold=parse('/boot/config-7.1.8-nav1');new=parse('.config')\ndiff={k:[old.get(k),new.get(k)]for\
+        \ k in sorted(old.keys()|new.keys())if old.get(k)!=new.get(k)}\nassert set(diff)=={'CONFIG_USER_NS','CONFIG_LOCALVERSION'},diff\n\
+        assert new['CONFIG_USER_NS']=='y'and new['CONFIG_LOCALVERSION']=='\"-nav-desktop2\"'\nfor\
+        \ key in ['CONFIG_NAMESPACES','CONFIG_PID_NS','CONFIG_NET_NS','CONFIG_IPC_NS','CONFIG_UTS_NS','CONFIG_SECCOMP','CONFIG_SECCOMP_FILTER','CONFIG_CGROUPS','CONFIG_MEMCG']:assert\
+        \ new.get(key)=='y',(key,new.get(key))\nout=Path('/sources/nav-desktop-kernel/output');out.mkdir()\n\
+        (out/'config-diff.json').write_text(json.dumps(diff,indent=2)+'\\\\n')\nCONFIG\nmake -j2\
+        \ bzImage modules\nmake INSTALL_MOD_PATH=/sources/nav-desktop-kernel/output/module-root DEPMOD=/bin/true\
+        \ modules_install\nrm -f /sources/nav-desktop-kernel/output/module-root/lib/modules/7.1.8-nav-desktop2/build\
+        \ /sources/nav-desktop-kernel/output/module-root/lib/modules/7.1.8-nav-desktop2/source\n\
+        /usr/sbin/depmod -b /sources/nav-desktop-kernel/output/module-root 7.1.8-nav-desktop2\ntar\
+        \ -cJf /sources/nav-desktop-kernel/output/modules-7.1.8-nav-desktop2.tar.xz -C /sources/nav-desktop-kernel/output/module-root\
+        \ lib/modules/7.1.8-nav-desktop2\ncp arch/x86/boot/bzImage /sources/nav-desktop-kernel/output/vmlinuz-7.1.8-nav-desktop2\n\
+        cp .config /sources/nav-desktop-kernel/output/config-7.1.8-nav-desktop2\nmake -s kernelrelease\
+        \ > /sources/nav-desktop-kernel/output/kernelrelease.txt\n'''\n(S/'build.sh').write_text(script)\n\
+        subprocess.run(['chown','-hR','root:root',str(ROOT)],check=True)\nmount='''set -euo pipefail\n\
+        LFS=/mnt/nav-lfs\nmount --bind \"$LFS\" \"$LFS\"\nmount --bind /dev \"$LFS/dev\"\nmount -t\
+        \ devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\nmount -t proc proc \"$LFS/proc\"\nmount\
+        \ -t sysfs -o ro sysfs \"$LFS/sys\"\nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\n\
+        chroot \"$LFS\" /usr/bin/env -i HOME=/root LC_ALL=C.UTF-8 PATH=/usr/bin:/usr/sbin:/bin:/sbin\
+        \ /bin/bash /sources/nav-desktop-kernel/build.sh\n'''\nsubprocess.run(['unshare','--mount','--propagation','private','/bin/bash','-se'],input=mount,text=True,check=True)\n\
+        D=Path(os.environ['GITHUB_WORKSPACE'])/'desktop-kernel-output';D.mkdir()\nfor p in (S/'output').iterdir():\n\
+        \ if p.is_file():shutil.copyfile(p,D/p.name)\nif (D/'kernelrelease.txt').read_text().strip()!='7.1.8-nav-desktop2':raise\
+        \ SystemExit('Release differs')\nreceipt={'scope':'PUBLIC_DESKTOP_KERNEL_USERNS_PREREQUISITE_COMPILED_ONLY','run':os.environ['GITHUB_RUN_ID'],'source_sha256':'ff01dcb449279d5b4cfccdb01fee639cf5ff1803f1749a77844dd33915422c49','base_config_sha256':'8353d5ca03a30b4e4141155d683260e8130300e883db577755fa206707ae3e23','files':{p.name:{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}for\
+        \ p in D.iterdir()if p.is_file()},'tests':False,'booted':False,'activated':False,'installer_recovery_kernel_unchanged':True,'browser_sandbox_accepted':False,'warning':'Desktop\
+        \ prerequisite only. No boot or namespace/seccomp behavior executed. No privileged/sandbox-disable\
+        \ workaround. Existing installer/recovery kernel and private NAV inputs untouched.'}\n(D/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\\\
+        n');print(json.dumps(receipt,indent=2))\n\nPUBLIC_KERNEL_INPUT\nsudo --preserve-env=GITHUB_WORKSPACE,GITHUB_RUN_ID\
+        \ python3 /tmp/nav-desktop-kernel.py\n"
+    - name: Retain public desktop kernel prerequisite only
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: nav-public-desktop-userns-kernel-compiled-only
+        path: desktop-kernel-output/
+        if-no-files-found: error
+        retention-days: 1
