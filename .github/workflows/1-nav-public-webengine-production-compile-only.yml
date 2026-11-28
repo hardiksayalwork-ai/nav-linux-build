@@ -1,0 +1,207 @@
+name: NAV public native WebEngine production compile only no tests
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nav-public-webengine-production-once
+  cancel-in-progress: false
+jobs:
+  webengine:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private ==
+      false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: One-shot free public input and storage guard
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 - <<'PYGUARD'
+        import json,urllib.request,os,shutil
+        base='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'
+        def get(s):
+         with urllib.request.urlopen(urllib.request.Request(base+s,headers={'Accept':'application/vnd.github+json','Authorization':'Bearer '+os.environ['GH_READ_TOKEN']}),timeout=30)as r:return json.load(r)
+        r=get('');assert r['private'] is False
+        assert os.environ['GITHUB_RUN_NUMBER']=='1' and os.environ['GITHUB_RUN_ATTEMPT']=='1'
+        a=get('/actions/artifacts?per_page=100');assert a['total_count']<=100
+        assert sum(x['size_in_bytes']for x in a['artifacts']if not x['expired'])<100*1024**2
+        c=get('/actions/caches?per_page=100');assert any(x['key']=='nav-blfs13.1-x86_64-librsvg-transitional-open-v1' and x['size_in_bytes']==1477765679 for x in c['actions_caches'])
+        assert shutil.disk_usage('/mnt').free>18*1024**3
+        print('Public standard runner. No tests, cache writes, private source or paid capacity.')
+        PYGUARD
+      env:
+        GH_READ_TOKEN: ${{ github.token }}
+    - name: Prepare isolated build input destination
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo mkdir -p /mnt/nav-lfs
+        sudo chown "$(id -u):$(id -g)" /mnt/nav-lfs
+        sudo install -o "$(id -u)" -g "$(id -g)" -m0600 /dev/null /mnt/nav-rsvg-root.tar.zst
+    - name: Restore existing native input readonly no cache update
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-rsvg-root.tar.zst
+        key: nav-blfs13.1-x86_64-librsvg-transitional-open-v1
+        fail-on-cache-miss: true
+      env:
+        TAR_OPTIONS: --overwrite
+    - name: Download exact completed public Qt prerequisite only
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      with:
+        name: nav-public-qt-browser-prerequisites-compiled-only
+        path: qt-input
+        run-id: 46141278713
+        github-token: ${{ github.token }}
+    - name: Compile production NSS QtWebChannel WebEngine no suites
+      shell: bash
+      run: |
+        set -euo pipefail
+        cat > /tmp/nav-public-webengine.py <<'PUBLIC_ENGINE_INPUT'
+        #!/usr/bin/env python3
+        """Public-only native WebEngine production build. No NAV input or tests.
+        Production-target compile only, current official security patchlevel and blocklist backport.
+        """
+        from pathlib import Path
+        import hashlib,json,os,shutil,subprocess,tarfile,urllib.request
+        R=Path('/mnt/nav-lfs');S=R/'sources/nav-webengine-public';S.mkdir(parents=True,exist_ok=False)
+        def digest(p):return hashlib.file_digest(p.open('rb'),'sha256').hexdigest()
+        cache=Path('/mnt/nav-rsvg-root.tar.zst')
+        assert digest(cache)=='b18303bde2a0da1f126fd595f21fd56ae353e1f2561adc0616337c380f21d2de'
+        subprocess.run(['tar','--zstd','-xf',str(cache),'-C',str(R)],check=True)
+        qt=Path(os.environ['GITHUB_WORKSPACE'])/'qt-input/qt-6.11.2-native-dev.tar.zst'
+        assert qt.stat().st_size==54736694 and digest(qt)=='a3309064a5831f4eaa6333e5adba052aaac3a871c3d6bf8247d711e379330229'
+        subprocess.run(['tar','--zstd','-xf',str(qt),'-C',str(R)],check=True)
+        assert int(next(x.split()[1] for x in Path('/proc/meminfo').read_text().splitlines()if x.startswith('MemTotal:')))>=14*1024**2,'14GiB RAM needed'
+        assert shutil.disk_usage(R).free>=18*1024**3,'18GiB actual free needed before engine sources/build'
+        rows=[
+        ('qtwebchannel-everywhere-src-6.11.2.tar.xz','https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qtwebchannel-everywhere-src-6.11.2.tar.xz',193460,'feb3149758bda887f0c292656194812dd2c227595badc8fbdeb2fb2311c5575f'),
+        ('qtwebengine-everywhere-src-6.11.3.tar.xz','https://download.qt.io/archive/qt/6.11/6.11.3/submodules/qtwebengine-everywhere-src-6.11.3.tar.xz',580447120,'4f4701b4976d90571e67557f2c12cbfee8c64ecc8295430236921cae2f9f43ca'),
+        ('nss-3.132.tar.gz','https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_132_RTM/src/nss-3.132.tar.gz',89219720,'c220ea83378e55f2e4d7f7d83477756d622f79b5b91d1ff4157d5e3f494d2b49'),
+        ('node-v22.23.5-linux-x64.tar.xz','https://nodejs.org/dist/v22.23.5/node-v22.23.5-linux-x64.tar.xz',None,'cdeb8670a0c81f51b4dc4ac61919f9b1ad917b304bf8221eb939570663d240f8')]
+        for name,url,size,pin in rows:
+         p=S/name
+         with urllib.request.urlopen(url,timeout=120)as response,p.open('xb')as f:shutil.copyfileobj(response,f)
+         assert (size is None or p.stat().st_size==size)and digest(p)==pin
+         with tarfile.open(p)as t:t.extractall(S,filter='data')
+        assert shutil.disk_usage(R).free>=13*1024**3,'13GiB free required after public source expansion'
+        # Current official patchlevel still lacks the downstream documented emergency
+        # intermediate-CA blocklist entries. Exact Gentoo backport, no certificate bypass.
+        patch_url='https://raw.githubusercontent.com/gentoo/gentoo/cda95970042e3f9efd0ac1eb8e6e4c2c52718b11/dev-qt/qtwebengine/files/qtwebengine-6.11.2-CVE-2026-111943.patch'
+        patch_file=S/'qtwebengine-emudhra-blocklist.patch'
+        with urllib.request.urlopen(patch_url,timeout=120)as response,patch_file.open('xb')as f:shutil.copyfileobj(response,f)
+        assert digest(patch_file)=='2c65ee79dcbca9c021b0b4c51f3b346973679cdf8394875267ceb237e676f69d'
+        subprocess.run(['patch','--batch','--fuzz=0','-p1','-i',str(patch_file)],cwd=S/'qtwebengine-everywhere-src-6.11.3',check=True)
+        # Host build Python modules only. Do not run pip/setup or select test packages.
+        python_sources=[('html5lib','1.1','b2e5b40261e20f354d198eae92afc10d750afb487ed5e50f9c4eaf07c184146f'),('six','1.17.0','ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81'),('webencodings','0.5.1','b36a1c245f2d304965eb4e0a82848379241dc04b865afcc4aab16748587e1923')]
+        for package,version,pin in python_sources:
+         with urllib.request.urlopen('https://pypi.org/pypi/'+package+'/'+version+'/json')as response:j=json.load(response)
+         row=next(x for x in j['urls']if x['packagetype']=='sdist'and x['digests']['sha256']==pin);p=S/row['filename']
+         with urllib.request.urlopen(row['url'],timeout=120)as response,p.open('xb')as f:shutil.copyfileobj(response,f)
+         assert digest(p)==pin
+         with tarfile.open(p)as t:
+          for m in t:
+           parts=Path(m.name).parts
+           if not m.isfile()or len(parts)<2:continue
+           rel=Path(*parts[1:]);take=(package=='six'and str(rel)=='six.py')or(package!='six'and parts[1]==package and rel.suffix=='.py'and not any('test'in x.lower()for x in rel.parts))
+           if take:
+            q=S/'python'/rel;q.parent.mkdir(parents=True,exist_ok=True);q.write_bytes(t.extractfile(m).read())
+        # Production-only NSS recursion verified in local corrected build. No command
+        # utilities, gtests, cpputil, NSPR tests, builtins fixture or shlibsign.
+        nss=S/'nss-3.132'
+        for rel,old,new in [('nss/manifest.mn','DIRS = coreconf lib cmd cpputil gtests','DIRS = coreconf lib'),('nss/lib/ckfw/builtins/manifest.mn','DIRS = . testlib','DIRS = .')]:
+         p=nss/rel;data=p.read_text();assert data.count(old)==1;p.write_text(data.replace(old,new))
+        private=nss/'dist/private/nss';private.mkdir(parents=True)
+        for name in ['secutil.h','basicutil.h']:shutil.copyfile(nss/'nss/cmd/lib'/name,private/name)
+        script='''set -euo pipefail
+        umask 022
+        export PATH=/sources/nav-webengine-public/node-v22.23.5-linux-x64/bin:/opt/nav-browser-qt/bin:/usr/bin:/usr/sbin:/bin:/sbin
+        export LC_ALL=C.UTF-8
+        export PYTHONPATH=/sources/nav-webengine-public/python
+        export NINJAFLAGS='-j3 -l3'
+        export QTWEBENGINE_GN_THREADS=2
+        cd /sources/nav-webengine-public/nss-3.132/nss
+        make -j2 BUILD_OPT=1 USE_64=1 NSS_DISABLE_GTESTS=1 NSS_DISABLE_NSPR_TESTS=1 NSS_USE_SYSTEM_SQLITE=1 nss_build_all 2>&1 | tee /sources/nav-webengine-public/nss-production.log
+        python3 - <<'NSS_BOUNDARY'
+        from pathlib import Path
+        s=Path('/sources/nav-webengine-public/nss-production.log').read_text()
+        for x in ['/cmd/','/gtests','/cpputil','/pr/tests','/builtins/testlib','/shlibsign']:assert x not in s,x
+        NSS_BOUNDARY
+        cd /sources/nav-webengine-public
+        python3 install-nss-development.py
+        export PKG_CONFIG_PATH=/opt/nav-browser-nss/lib/pkgconfig:/opt/nav-browser-qt/lib/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
+        export LD_LIBRARY_PATH=/opt/nav-browser-nss/lib:/opt/nav-browser-qt/lib
+        export CC=/sources/nav-webengine-public/cc-safe
+        export CXX=/sources/nav-webengine-public/cxx-safe
+        cd qtwebchannel-everywhere-src-6.11.2
+        /opt/nav-browser-qt/bin/qt-cmake -S . -B nav-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQT_BUILD_TESTS=OFF -DQT_BUILD_TESTS_BY_DEFAULT=OFF -DQT_BUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON
+        cmake --build nav-build --parallel 3
+        cmake --install nav-build
+        cd ../qtwebengine-everywhere-src-6.11.3
+        /opt/nav-browser-qt/bin/qt-cmake -S . -B nav-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQT_BUILD_TESTS=OFF -DQT_BUILD_TESTS_BY_DEFAULT=OFF -DQT_BUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON -DCMAKE_C_COMPILER=/sources/nav-webengine-public/cc-safe -DCMAKE_CXX_COMPILER=/sources/nav-webengine-public/cxx-safe -DCMAKE_C_FLAGS_RELEASE=-O2 -DCMAKE_CXX_FLAGS_RELEASE=-O2 -DFEATURE_qtpdf_build=OFF -DFEATURE_qtwebengine_widgets_build=OFF -DFEATURE_qtwebengine_quick_build=ON -DFEATURE_webengine_jumbo_build=2 -DFEATURE_webengine_rust_build=OFF -DFEATURE_webengine_precompiled_headers=OFF -DFEATURE_webengine_proprietary_codecs=OFF -DFEATURE_webengine_printing_and_pdf=OFF -DFEATURE_webengine_extensions=OFF -DFEATURE_webengine_spellchecker=OFF -DFEATURE_webengine_webrtc=OFF -DFEATURE_webengine_full_debug_info=OFF
+        python3 - <<'BUILD_BOUNDARY'
+        from pathlib import Path
+        c=Path('nav-build/CMakeCache.txt').read_text()
+        for flag in ['QT_BUILD_TESTS:BOOL=OFF','QT_BUILD_EXAMPLES:BOOL=OFF']:
+         assert flag in c,flag
+        assert not list(Path('nav-build').rglob('CTestTestfile.cmake')),'Unexpected test setup'
+        BUILD_BOUNDARY
+        # These are production targets. Never all/check/test or a suite target.
+        cmake --build nav-build --parallel 3 --target WebEngineQuick qtwebenginequickplugin qtwebenginequickdelegatesplugin QtWebEngineProcess qwebengine_convert_dict
+        cmake --install nav-build
+        '''
+        # GCC16 -O3 has a documented QtWebEngine runtime issue. Keep the native GCC
+        # toolchain but deterministically cap high optimization in compiler arguments.
+        for name,compiler in [('cc-safe','gcc'),('cxx-safe','g++')]:
+         wrapper=S/name
+         wrapper.write_text('#!/bin/bash\nset -euo pipefail\na=()\nfor x in "$@";do case "$x" in -O3|-Ofast) a+=(-O2);; *) a+=("$x");; esac;done\nexec /usr/bin/'+compiler+' "${a[@]}"\n')
+         wrapper.chmod(0o755)
+        (S/'build.sh').write_text(script)
+        # Reuse upstream pkg-config templates and copies, no generated library load.
+        install='''from pathlib import Path
+        import shutil,re
+        S=Path('/sources/nav-webengine-public/nss-3.132');D=S/'dist';obj=(D/'latest').read_text().strip();dist=D/obj;P=Path('/opt/nav-browser-nss')
+        for x in ['lib/pkgconfig','include/nss','include/nspr']:(P/x).mkdir(parents=True)
+        for n in ['libnspr4.so','libplc4.so','libplds4.so','libnss3.so','libnssutil3.so','libssl3.so','libsmime3.so','libsoftokn3.so','libfreebl3.so','libfreeblpriv3.so','libnssdbm3.so','libnssckbi.so','libnsssysinit.so']:shutil.copyfile(dist/'lib'/n,P/'lib'/n)
+        for src,target in [(D/'public/nss',P/'include/nss'),(dist/'include',P/'include/nspr')]:
+         for p in src.rglob('*'):
+          if p.is_file():q=target/p.relative_to(src);q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,q)
+        text=(S/'nspr/pr/include/prinit.h').read_text();v=[re.search(r'#define\\s+PR_V'+x+r'\\s+(\\d+)',text).group(1)for x in ['MAJOR','MINOR','PATCH']]
+        x=(S/'nss/pkg/pkg-config/nss.pc.in').read_text()
+        for k,z in {'prefix':'/opt/nav-browser-nss','exec_prefix':'${prefix}','libdir':'${prefix}/lib','includedir':'${prefix}/include/nss','NSS_VERSION':'3.132','NSPR_VERSION':'.'.join(v)}.items():x=x.replace('%'+k+'%',z)
+        (P/'lib/pkgconfig/nss.pc').write_text(x)
+        x=(S/'nspr/config/nspr.pc.in').read_text()
+        for k,z in {'prefix':'/opt/nav-browser-nss','exec_prefix':'${prefix}','libdir':'${prefix}/lib','includedir':'${prefix}/include/nspr','MOD_MAJOR_VERSION':v[0],'MOD_MINOR_VERSION':v[1],'MOD_PATCH_VERSION':v[2]}.items():x=x.replace('@'+k+'@',z)
+        (P/'lib/pkgconfig/nspr.pc').write_text(x)
+        '''
+        (S/'install-nss-development.py').write_text(install)
+        subprocess.run(['chown','-hR','root:root',str(R)],check=True)
+        mount='''set -euo pipefail
+        LFS=/mnt/nav-lfs
+        mount --bind "$LFS" "$LFS"
+        mount --bind /dev "$LFS/dev"
+        mount -t devpts devpts -o gid=5,mode=0620 "$LFS/dev/pts"
+        mount -t proc proc "$LFS/proc"
+        mount -t sysfs -o ro sysfs "$LFS/sys"
+        mount -t tmpfs -o nosuid,nodev tmpfs "$LFS/run"
+        ulimit -n 8192
+        chroot "$LFS" /usr/bin/env -i HOME=/root LC_ALL=C.UTF-8 PATH=/usr/bin:/usr/sbin:/bin:/sbin /bin/bash /sources/nav-webengine-public/build.sh
+        '''
+        subprocess.run(['unshare','--mount','--propagation','private','/bin/bash','-se'],input=mount,text=True,check=True)
+        O=Path(os.environ['GITHUB_WORKSPACE'])/'webengine-output';O.mkdir()
+        subprocess.run(['tar','--zstd','-cf',str(O/'webengine-native-dev.tar.zst'),'-C',str(R),'opt/nav-browser-qt','opt/nav-browser-nss'],check=True)
+        a=O/'webengine-native-dev.tar.zst';assert a.stat().st_size<400*1024**2
+        receipt={'scope':'PUBLIC_WEBENGINE_AND_NATIVE_PREREQUISITES_COMPILED_ONLY','run':os.environ['GITHUB_RUN_ID'],'sources':rows,'security_backport_url':patch_url,'security_backport_sha256':digest(patch_file),'compiler_optimization':'native GCC high optimization flags capped at O2 for documented GCC16 hazard','python_sources':python_sources,'archive_bytes':a.stat().st_size,'archive_sha256':digest(a),'tests':False,'NAV_input':False,'NAV_execution':False,'cache_saved':False,'booted':False,'sandbox_runtime_accepted':False,'NAV_Qt_ABI_accepted':False,'warning':'Public native development outputs only. No browser UI/app, TLS/site, sandbox, media, rendering, host-kernel or installed-root acceptance.'}
+        (O/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n');print(json.dumps(receipt,indent=2))
+
+        PUBLIC_ENGINE_INPUT
+        sudo --preserve-env=GITHUB_WORKSPACE,GITHUB_RUN_ID python3 /tmp/nav-public-webengine.py
+    - name: Retain public engine development output only
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: nav-public-webengine-native-compiled-only
+        path: webengine-output/
+        if-no-files-found: error
+        retention-days: 1
