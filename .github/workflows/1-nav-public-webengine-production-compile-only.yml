@@ -24,7 +24,7 @@ jobs:
         def get(s):
          with urllib.request.urlopen(urllib.request.Request(base+s,headers={'Accept':'application/vnd.github+json','Authorization':'Bearer '+os.environ['GH_READ_TOKEN']}),timeout=30)as r:return json.load(r)
         r=get('');assert r['private'] is False
-        assert os.environ['GITHUB_RUN_NUMBER']=='1' and os.environ['GITHUB_RUN_ATTEMPT']=='1'
+        assert os.environ['GITHUB_RUN_NUMBER']=='2' and os.environ['GITHUB_RUN_ATTEMPT']=='1'
         a=get('/actions/artifacts?per_page=100');assert a['total_count']<=100
         assert sum(x['size_in_bytes']for x in a['artifacts']if not x['expired'])<100*1024**2
         c=get('/actions/caches?per_page=100');assert any(x['key']=='nav-blfs13.1-x86_64-librsvg-transitional-open-v1' and x['size_in_bytes']==1477765679 for x in c['actions_caches'])
@@ -79,12 +79,13 @@ jobs:
         rows=[
         ('qtwebchannel-everywhere-src-6.11.2.tar.xz','https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qtwebchannel-everywhere-src-6.11.2.tar.xz',193460,'feb3149758bda887f0c292656194812dd2c227595badc8fbdeb2fb2311c5575f'),
         ('qtwebengine-everywhere-src-6.11.3.tar.xz','https://download.qt.io/archive/qt/6.11/6.11.3/submodules/qtwebengine-everywhere-src-6.11.3.tar.xz',580447120,'4f4701b4976d90571e67557f2c12cbfee8c64ecc8295430236921cae2f9f43ca'),
-        ('nss-3.132.tar.gz','https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_132_RTM/src/nss-3.132.tar.gz',89219720,'c220ea83378e55f2e4d7f7d83477756d622f79b5b91d1ff4157d5e3f494d2b49'),
+        ('nss-3.132-with-nspr-4.39.tar.gz','https://ftp.mozilla.org/pub/security/nss/releases/NSS_3_132_RTM/src/nss-3.132-with-nspr-4.39.tar.gz',89219720,'c220ea83378e55f2e4d7f7d83477756d622f79b5b91d1ff4157d5e3f494d2b49'),
         ('node-v22.23.5-linux-x64.tar.xz','https://nodejs.org/dist/v22.23.5/node-v22.23.5-linux-x64.tar.xz',None,'cdeb8670a0c81f51b4dc4ac61919f9b1ad917b304bf8221eb939570663d240f8')]
         for name,url,size,pin in rows:
          p=S/name
          with urllib.request.urlopen(url,timeout=120)as response,p.open('xb')as f:shutil.copyfileobj(response,f)
-         assert (size is None or p.stat().st_size==size)and digest(p)==pin
+         actual={'source':name,'url':url,'bytes':p.stat().st_size,'sha256':digest(p)};print(json.dumps(actual),flush=True)
+         assert (size is None or actual['bytes']==size)and actual['sha256']==pin,actual
          with tarfile.open(p)as t:t.extractall(S,filter='data')
         assert shutil.disk_usage(R).free>=13*1024**3,'13GiB free required after public source expansion'
         # Current official patchlevel still lacks the downstream documented emergency
