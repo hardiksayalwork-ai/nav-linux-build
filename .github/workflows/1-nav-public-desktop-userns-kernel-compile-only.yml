@@ -3,6 +3,7 @@ name: NAV public desktop userns kernel compile only no tests
   workflow_dispatch: {}
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: nav-public-desktop-userns-kernel-once
   cancel-in-progress: false
@@ -16,14 +17,16 @@ jobs:
     - name: One-shot free public input and storage guard
       shell: bash
       run: "set -euo pipefail\npython3 - <<'PYGUARD'\nimport json,urllib.request,os,shutil\nbase='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\n\
-        def get(s):\n with urllib.request.urlopen(urllib.request.Request(base+s,headers={'Accept':'application/vnd.github+json'}),timeout=30)as\
-        \ r:return json.load(r)\nr=get('');assert r['private'] is False\nassert os.environ['GITHUB_RUN_NUMBER']=='1'\
-        \ and os.environ['GITHUB_RUN_ATTEMPT']=='1'\na=get('/actions/artifacts?per_page=100');assert\
-        \ a['total_count']<=100\nassert sum(x['size_in_bytes']for x in a['artifacts']if not x['expired'])<100*1024**2\n\
-        c=get('/actions/caches?per_page=100');assert any(x['key']=='nav-blfs13.1-x86_64-librsvg-transitional-open-v1'\
-        \ and x['size_in_bytes']==1477765679 for x in c['actions_caches'])\nassert shutil.disk_usage('/mnt').free>18*1024**3\n\
-        print('Public standard runner. No tests, cache writes, private source or paid capacity.')\n\
-        PYGUARD\n"
+        def get(s):\n with urllib.request.urlopen(urllib.request.Request(base+s,headers={'Accept':'application/vnd.github+json','Authorization':'Bearer\
+        \ '+os.environ['GH_READ_TOKEN']}),timeout=30)as r:return json.load(r)\nr=get('');assert r['private']\
+        \ is False\nassert os.environ['GITHUB_RUN_NUMBER']=='2' and os.environ['GITHUB_RUN_ATTEMPT']=='1'\n\
+        a=get('/actions/artifacts?per_page=100');assert a['total_count']<=100\nassert sum(x['size_in_bytes']for\
+        \ x in a['artifacts']if not x['expired'])<100*1024**2\nc=get('/actions/caches?per_page=100');assert\
+        \ any(x['key']=='nav-blfs13.1-x86_64-librsvg-transitional-open-v1' and x['size_in_bytes']==1477765679\
+        \ for x in c['actions_caches'])\nassert shutil.disk_usage('/mnt').free>18*1024**3\nprint('Public\
+        \ standard runner. No tests, cache writes, private source or paid capacity.')\nPYGUARD\n"
+      env:
+        GH_READ_TOKEN: ${{ github.token }}
     - name: Prepare isolated build input destination
       shell: bash
       run: 'set -euo pipefail
