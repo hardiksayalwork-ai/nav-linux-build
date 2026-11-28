@@ -1,0 +1,102 @@
+name: NAV public Qt browser prerequisites compile only no tests
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: nav-public-browser-prerequisites-once
+  cancel-in-progress: false
+jobs:
+  qt:
+    if: github.repository == 'hardiksayalwork-ai/nav-linux-build' && github.event.repository.private
+      == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+    - name: One-shot free public input and storage guard
+      shell: bash
+      run: "set -euo pipefail\npython3 - <<'PYGUARD'\nimport json,urllib.request,os,shutil\n\
+        base='https://api.github.com/repos/hardiksayalwork-ai/nav-linux-build'\ndef\
+        \ get(s):\n with urllib.request.urlopen(urllib.request.Request(base+s,headers={'Accept':'application/vnd.github+json'}),timeout=30)as\
+        \ r:return json.load(r)\nr=get('');assert r['private'] is False\nassert os.environ['GITHUB_RUN_NUMBER']=='1'\
+        \ and os.environ['GITHUB_RUN_ATTEMPT']=='1'\na=get('/actions/artifacts?per_page=100');assert\
+        \ a['total_count']<=100\nassert sum(x['size_in_bytes']for x in a['artifacts']if\
+        \ not x['expired'])<40*1024**2\nc=get('/actions/caches?per_page=100');assert\
+        \ any(x['key']=='nav-blfs13.1-x86_64-librsvg-transitional-open-v1' and x['size_in_bytes']==1477765679\
+        \ for x in c['actions_caches'])\nassert shutil.disk_usage('/mnt').free>18*1024**3\n\
+        print('Public standard runner. No tests, cache writes, private source or paid\
+        \ capacity.')\nPYGUARD\n"
+    - name: Prepare isolated build input destination
+      shell: bash
+      run: 'set -euo pipefail
+
+        sudo mkdir -p /mnt/nav-lfs
+
+        sudo chown "$(id -u):$(id -g)" /mnt/nav-lfs
+
+        sudo install -o "$(id -u)" -g "$(id -g)" -m0600 /dev/null /mnt/nav-rsvg-root.tar.zst
+
+        '
+    - name: Restore existing native input readonly no cache update
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: /mnt/nav-rsvg-root.tar.zst
+        key: nav-blfs13.1-x86_64-librsvg-transitional-open-v1
+        fail-on-cache-miss: true
+      env:
+        TAR_OPTIONS: --overwrite
+    - name: Compile official Qt prerequisites only no tests
+      shell: bash
+      run: "set -euo pipefail\ncat > /tmp/nav-browser-public-qt.py <<'PUBLIC_QT_INPUT'\n\
+        #!/usr/bin/env python3\n\"\"\"Public Qt prerequisites only. No NAV product\
+        \ input, tests or cache mutation.\"\"\"\nimport os, pathlib, hashlib, urllib.request,\
+        \ tarfile, subprocess, json, shutil\nroot=pathlib.Path('/mnt/nav-lfs')\nassert\
+        \ hashlib.file_digest(open('/mnt/nav-rsvg-root.tar.zst','rb'),'sha256').hexdigest()=='b18303bde2a0da1f126fd595f21fd56ae353e1f2561adc0616337c380f21d2de'\n\
+        subprocess.run(['tar','--zstd','-xf','/mnt/nav-rsvg-root.tar.zst','-C',str(root)],check=True)\n\
+        assert shutil.disk_usage(root).free>=12*1024**3,'insufficient actual build\
+        \ space'\nsources=root/'sources/nav-browser-public';sources.mkdir(parents=True,exist_ok=False)\n\
+        rows=[\n('qtbase',50582668,'5b2e00eccaf5a4d8c14134ffa0ea8dfd0a35ae1ffc7f8d87fa4305a1ed23cf22'),\n\
+        ('qtshadertools',1216816,'805046b8b7757665586890b375940047e874ae3ab00adb6d3f2b38fc6b200b1c'),\n\
+        ('qtdeclarative',38780392,'215b7b70517e380123eabc6b92243f3c47b6f016a91d126057dbe53551c6b430')]\n\
+        for name,size,pin in rows:\n p=sources/(name+'-everywhere-src-6.11.2.tar.xz')\n\
+        \ with urllib.request.urlopen('https://download.qt.io/archive/qt/6.11/6.11.2/submodules/'+p.name,timeout=120)as\
+        \ response,p.open('xb')as f:shutil.copyfileobj(response,f)\n assert p.stat().st_size==size\
+        \ and hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==pin\n with tarfile.open(p)as\
+        \ t:\n  for m in t:assert not m.name.startswith('/') and '..'not in pathlib.PurePosixPath(m.name).parts\n\
+        \  t.extractall(sources,filter='data')\n# Standard upstream configure/build/install\
+        \ only. No tests or examples configured.\nscript='''set -euo pipefail\numask\
+        \ 022\nexport PATH=/opt/qt6/bin:/usr/bin:/usr/sbin:/bin:/sbin LC_ALL=C.UTF-8\n\
+        cd /sources/nav-browser-public/qtbase-everywhere-src-6.11.2\nmkdir nav-build\n\
+        cd nav-build\n../configure -prefix /opt/nav-browser-qt -release -sysconfdir\
+        \ /etc/xdg -dbus-linked -openssl-linked -system-sqlite -system-doubleconversion\
+        \ -system-freetype -system-harfbuzz -system-libpng -system-libjpeg -icu -fontconfig\
+        \ -opengl desktop -xcb -egl -nomake tests -nomake examples -- -DQT_BUILD_TESTS=OFF\
+        \ -DQT_BUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DFEATURE_optimize_size=OFF\
+        \ -DQT_FEATURE_pch=OFF\ncmake --build . --parallel 3\ncmake --install .\n\
+        for module in qtshadertools qtdeclarative;do\n cd /sources/nav-browser-public/${module}-everywhere-src-6.11.2\n\
+        \ /opt/nav-browser-qt/bin/qt-cmake -S . -B nav-build -G Ninja -DCMAKE_BUILD_TYPE=Release\
+        \ -DQT_BUILD_TESTS=OFF -DQT_BUILD_TESTS_BY_DEFAULT=OFF -DQT_BUILD_EXAMPLES=OFF\
+        \ -DBUILD_TESTING=OFF -DQT_FEATURE_pch=OFF\n cmake --build nav-build --parallel\
+        \ 3\n cmake --install nav-build\ndone\n'''\n(sources/'build.sh').write_text(script)\n\
+        subprocess.run(['chown','-hR','root:root',str(root)],check=True)\nmount='''set\
+        \ -euo pipefail\nLFS=/mnt/nav-lfs\nmount --bind \"$LFS\" \"$LFS\"\nmount --bind\
+        \ /dev \"$LFS/dev\"\nmount -t devpts devpts -o gid=5,mode=0620 \"$LFS/dev/pts\"\
+        \nmount -t proc proc \"$LFS/proc\"\nmount -t sysfs -o ro sysfs \"$LFS/sys\"\
+        \nmount -t tmpfs -o nosuid,nodev tmpfs \"$LFS/run\"\nchroot \"$LFS\" /usr/bin/env\
+        \ -i HOME=/root LC_ALL=C.UTF-8 PATH=/usr/bin:/usr/sbin:/bin:/sbin /bin/bash\
+        \ /sources/nav-browser-public/build.sh\n'''\nsubprocess.run(['unshare','--mount','--propagation','private','/bin/bash','-se'],input=mount,text=True,check=True)\n\
+        output=pathlib.Path(os.environ['GITHUB_WORKSPACE'])/'browser-prerequisites';output.mkdir()\n\
+        # Only new public Qt output is eligible for artifact retention. No base root.\n\
+        qt=root/'opt/nav-browser-qt';assert qt.is_dir()\nsubprocess.run(['tar','--zstd','-cf',str(output/'qt-6.11.2-native-dev.tar.zst'),'-C',str(root),'opt/nav-browser-qt'],check=True)\n\
+        a=output/'qt-6.11.2-native-dev.tar.zst';assert a.stat().st_size<450*1024**2,'free\
+        \ artifact storage budget bound'\nreceipt={'scope':'PUBLIC_QT_BROWSER_PREREQUISITES_COMPILED_ONLY','tests':False,'browser_compiled':False,'product_source_included':False,'cache_saved':False,'run':os.environ['GITHUB_RUN_ID'],'input_cache_sha256':'b18303bde2a0da1f126fd595f21fd56ae353e1f2561adc0616337c380f21d2de','sources':rows,'artifact_bytes':a.stat().st_size,'artifact_sha256':hashlib.file_digest(a.open('rb'),'sha256').hexdigest(),'install_prefix':'/opt/nav-browser-qt','compatibility_with_existing_NAV_qt_not_established':True}\n\
+        (output/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\\n');print(json.dumps(receipt))\n\
+        \nPUBLIC_QT_INPUT\nsudo --preserve-env=GITHUB_WORKSPACE,GITHUB_RUN_ID python3\
+        \ /tmp/nav-browser-public-qt.py\n"
+    - name: Retain only newly built public Qt prerequisites
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: nav-public-qt-browser-prerequisites-compiled-only
+        path: browser-prerequisites/
+        if-no-files-found: error
+        retention-days: 1
